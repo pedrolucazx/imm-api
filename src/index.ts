@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
 import jwt from "@fastify/jwt";
+import cors from "@fastify/cors";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 
 const start = async () => {
@@ -28,6 +29,14 @@ const start = async () => {
   // Register JWT plugin
   await fastify.register(jwt, {
     secret: env.JWT_SECRET,
+  });
+
+  // Register CORS plugin
+  await fastify.register(cors, {
+    origin: env.CORS_ORIGIN.includes(",")
+      ? env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+      : env.CORS_ORIGIN,
+    credentials: true,
   });
 
   await fastify.register(swagger, {
