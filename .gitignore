@@ -1,0 +1,29 @@
+# deps
+node_modules/
+
+# build
+dist/
+build/
+
+# env — NUNCA commite credenciais reais
+.env
+.env.local
+.env.production
+
+# logs
+*.log
+logs/
+
+# misc
+.DS_Store
+*.pem
+
+# docker
+docker-compose.override.yml
+
+# testing
+coverage/
+.nyc_output
+
+# drizzle
+drizzle/migrations/*.sql
