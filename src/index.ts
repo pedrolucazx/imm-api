@@ -5,7 +5,22 @@ import swaggerUI from "@fastify/swagger-ui";
 
 const start = async () => {
   const fastify = Fastify({
-    logger: true,
+    logger: {
+      level: env.LOG_LEVEL || "info",
+      transport:
+        env.NODE_ENV === "development"
+          ? {
+              target: "pino-pretty",
+              options: {
+                colorize: true,
+                translateTime: "HH:MM:ss",
+                ignore: "pid,hostname",
+                singleLine: false,
+                hideObject: false,
+              },
+            }
+          : undefined,
+    },
   });
 
   await fastify.register(swagger, {
@@ -53,14 +68,18 @@ const start = async () => {
   );
 
   try {
-    await fastify.listen({ port: env.PORT });
-    fastify.log.info(`Server is running on http://localhost:${env.PORT}`);
-    fastify.log.info(
-      `Swagger documentation available at http://localhost:${env.PORT}/documentation`
-    );
+    await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
+
+    const protocol = env.NODE_ENV === "production" ? "https" : "http";
+    const baseUrl =
+      env.NODE_ENV === "production"
+        ? `${protocol}://${env.API_HOST}`
+        : `${protocol}://localhost:${env.PORT}`;
+
+    fastify.log.info(`✓ Server running at ${baseUrl}`);
+    fastify.log.info(`✓ API documentation at ${baseUrl}/documentation`);
   } catch (err) {
     fastify.log.error(err);
-    process.exit(1);
   }
 };
 
