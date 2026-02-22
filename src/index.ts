@@ -1,3 +1,4 @@
+import { env } from "./core/config/env.js";
 import Fastify from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
@@ -14,8 +15,8 @@ const start = async () => {
         description: "API documentation for Inside My Mind project",
         version: "1.0.0",
       },
-      host: "localhost:3000",
-      schemes: ["http"],
+      host: env.API_HOST,
+      schemes: ["http", "https"],
       consumes: ["application/json"],
       produces: ["application/json"],
     },
@@ -52,9 +53,11 @@ const start = async () => {
   );
 
   try {
-    await fastify.listen({ port: 3000 });
-    fastify.log.info("Server is running on http://localhost:3000");
-    fastify.log.info("Swagger documentation available at http://localhost:3000/documentation");
+    await fastify.listen({ port: env.PORT });
+    fastify.log.info(`Server is running on http://localhost:${env.PORT}`);
+    fastify.log.info(
+      `Swagger documentation available at http://localhost:${env.PORT}/documentation`
+    );
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
