@@ -2,6 +2,8 @@ import { env } from "./core/config/env.js";
 import Fastify from "fastify";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
+import jwt from "@fastify/jwt";
+import { authRoutes } from "./modules/auth/auth.routes.js";
 
 const start = async () => {
   const fastify = Fastify({
@@ -21,6 +23,11 @@ const start = async () => {
             }
           : undefined,
     },
+  });
+
+  // Register JWT plugin
+  await fastify.register(jwt, {
+    secret: env.JWT_SECRET,
   });
 
   await fastify.register(swagger, {
@@ -66,6 +73,9 @@ const start = async () => {
       };
     }
   );
+
+  // Register auth routes
+  await fastify.register(authRoutes);
 
   try {
     await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
