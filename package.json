@@ -1,0 +1,17 @@
+{
+  "name": "imm-api",
+  "version": "1.0.0",
+  "description": "Backend API for Inside My Mind — a habit tracking and AI-powered journaling SaaS.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "fastify": "^4.25.0"
+  }
+}
