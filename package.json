@@ -20,6 +20,7 @@
     "fastify": "^4.25.0"
   },
   "devDependencies": {
+    "@types/node": "^25.3.0",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^9.0.0",
     "prettier": "^3.0.0",
