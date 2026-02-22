@@ -11,7 +11,9 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.{ts,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,json,md}\""
+    "format:check": "prettier --check \"src/**/*.{ts,json,md}\"",
+    "prepare": "husky install",
+    "commit": "cz commit"
   },
   "keywords": [],
   "author": "",
@@ -20,9 +22,15 @@
     "fastify": "^4.25.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^18.0.0",
+    "@commitlint/config-conventional": "^18.0.0",
     "@types/node": "^25.3.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.0.0",
     "eslint-config-prettier": "^9.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
     "prettier": "^3.0.0",
     "tsx": "^4.7.0"
   }
