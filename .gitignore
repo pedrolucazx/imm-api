@@ -27,3 +27,6 @@ coverage/
 
 # drizzle
 drizzle/migrations/*.sql
+
+# Postgres data
+postgres-data/
