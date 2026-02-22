@@ -21,7 +21,7 @@
   "dependencies": {
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
-    "fastify": "^4.25.0"
+    "fastify": "^5.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.0.0",
