@@ -26,8 +26,9 @@ coverage/
 .nyc_output
 *.tsbuildinfo
 
-# lock files from other package managers
-package-lock.json
+# lock files from other package managers (except package-lock.json for npm)
+yarn.lock
+pnpm-lock.yaml
 
 # drizzle
 drizzle/migrations/*.sql
