@@ -1,10 +1,17 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.src.json",
   "compilerOptions": {
     "module": "CommonJS",
     "moduleResolution": "node",
+    "rootDir": ".",
+    "composite": true,
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "types": ["jest", "node"],
+    "paths": {
+      "@/*.js": ["./src/*"],
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src", "tests"]
 }
