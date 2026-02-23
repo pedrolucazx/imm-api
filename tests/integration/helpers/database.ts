@@ -14,7 +14,8 @@ export interface TestDatabase {
 export async function setupTestDatabase(): Promise<TestDatabase> {
   // In CI environment, use testcontainers for full isolation
   // In local dev, can fallback to existing Docker PostgreSQL for speed
-  const useTestcontainers = process.env.CI === "true" || !process.env.DATABASE_URL;
+  const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+  const useTestcontainers = isCI || !process.env.DATABASE_URL;
 
   let container: StartedPostgreSqlContainer | undefined;
   let connectionUri: string;
@@ -24,6 +25,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
       .withDatabase("imm_test")
       .withUsername("postgres")
       .withPassword("postgres")
+      .withStartupTimeout(120000) // 2 minutes timeout for CI
       .start();
 
     connectionUri = container.getConnectionUri();
