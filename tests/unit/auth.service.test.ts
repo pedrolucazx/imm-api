@@ -33,7 +33,7 @@ describe("AuthService", () => {
   });
 
   describe("register", () => {
-    it("should throw if user with email already exists", async () => {
+    it("throws if user with email already exists", async () => {
       mockRepo.findByEmail.mockResolvedValue(mockUser);
 
       await expect(
@@ -48,7 +48,7 @@ describe("AuthService", () => {
       expect(mockRepo.create).not.toHaveBeenCalled();
     });
 
-    it("should create user and return auth response without token", async () => {
+    it("creates user and returns auth response without passwordHash", async () => {
       mockRepo.findByEmail.mockResolvedValue(undefined);
       mockRepo.create.mockResolvedValue({
         ...mockUser,
@@ -69,7 +69,7 @@ describe("AuthService", () => {
   });
 
   describe("login", () => {
-    it("should throw if user is not found", async () => {
+    it("throws if user is not found", async () => {
       mockRepo.findByEmail.mockResolvedValue(undefined);
 
       await expect(
@@ -77,7 +77,7 @@ describe("AuthService", () => {
       ).rejects.toThrow("Invalid email or password");
     });
 
-    it("should throw if password is wrong", async () => {
+    it("throws if password is wrong", async () => {
       mockRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(false);
 
@@ -86,7 +86,7 @@ describe("AuthService", () => {
       ).rejects.toThrow("Invalid email or password");
     });
 
-    it("should return auth response for valid credentials", async () => {
+    it("returns auth response for valid credentials", async () => {
       mockRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(true);
 
