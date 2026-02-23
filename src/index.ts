@@ -5,6 +5,7 @@ import swaggerUI from "@fastify/swagger-ui";
 import jwt from "@fastify/jwt";
 import cors from "@fastify/cors";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { healthRoutes } from "./modules/health/health.routes.js";
 
 const start = async () => {
   const fastify = Fastify({
@@ -82,6 +83,9 @@ const start = async () => {
       };
     }
   );
+
+  // Register health route (anti-sleep ping target)
+  await fastify.register(healthRoutes);
 
   // Register auth routes
   await fastify.register(authRoutes);
