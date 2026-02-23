@@ -4,18 +4,18 @@ import { users } from "@/core/database/schema/index.js";
 import { setupTestDatabase, type TestDatabase } from "./helpers/database.js";
 
 describe("Users — database integration", () => {
-  let testDb: TestDatabase;
+  let testDb: TestDatabase | undefined;
 
   beforeAll(async () => {
     testDb = await setupTestDatabase();
-  });
+  }, 120000);
 
   afterAll(async () => {
-    await testDb.teardown();
+    if (testDb) await testDb.teardown();
   });
 
   it("inserts and retrieves a user", async () => {
-    const { db } = testDb;
+    const { db } = testDb!;
     const passwordHash = await hashPassword("password123");
     const uniqueEmail = `integration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
 
@@ -38,7 +38,7 @@ describe("Users — database integration", () => {
   });
 
   it("enforces email uniqueness", async () => {
-    const { db } = testDb;
+    const { db } = testDb!;
     const passwordHash = await hashPassword("password123");
 
     const firstEmail = `unique-first-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
