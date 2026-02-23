@@ -1,5 +1,11 @@
 import { authService } from "@/modules/auth/auth.service.js";
 import { usersRepository } from "@/modules/users/users.repository.js";
+import { comparePassword } from "@/shared/utils/password.js";
+
+jest.mock("@/shared/utils/password.js", () => ({
+  hashPassword: jest.fn().mockResolvedValue("hashed-password"),
+  comparePassword: jest.fn(),
+}));
 
 jest.mock("@/modules/users/users.repository.js", () => ({
   usersRepository: {
@@ -10,6 +16,7 @@ jest.mock("@/modules/users/users.repository.js", () => ({
 }));
 
 const mockRepo = usersRepository as jest.Mocked<typeof usersRepository>;
+const mockCompare = comparePassword as jest.MockedFunction<typeof comparePassword>;
 
 const mockUser = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -68,6 +75,29 @@ describe("AuthService", () => {
       await expect(
         authService.login({ email: "nobody@example.com", password: "pass" })
       ).rejects.toThrow("Invalid email or password");
+    });
+
+    it("should throw if password is wrong", async () => {
+      mockRepo.findByEmail.mockResolvedValue(mockUser);
+      mockCompare.mockResolvedValue(false);
+
+      await expect(
+        authService.login({ email: "test@example.com", password: "wrong" })
+      ).rejects.toThrow("Invalid email or password");
+    });
+
+    it("should return auth response for valid credentials", async () => {
+      mockRepo.findByEmail.mockResolvedValue(mockUser);
+      mockCompare.mockResolvedValue(true);
+
+      const result = await authService.login({
+        email: "test@example.com",
+        password: "password123",
+      });
+
+      expect(result.user.email).toBe("test@example.com");
+      expect(result.user.id).toBe(mockUser.id);
+      expect(result.user).not.toHaveProperty("passwordHash");
     });
   });
 });

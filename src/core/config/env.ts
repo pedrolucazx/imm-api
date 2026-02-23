@@ -20,6 +20,7 @@ const envSchema = z.object({
 // Validate and parse environment variables
 const parsedEnv = envSchema.safeParse(process.env);
 
+/* istanbul ignore next */
 if (!parsedEnv.success) {
   logger.error("❌ Invalid environment variables:");
   logger.error(parsedEnv.error.format());

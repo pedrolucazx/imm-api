@@ -85,4 +85,32 @@ describe("POST /auth/register + /auth/login", () => {
 
     expect(response.body.token).toBeDefined();
   });
+
+  it("returns 401 for wrong password", async () => {
+    await request(app.server)
+      .post("/auth/register")
+      .send({ email: "wrongpw@example.com", password: "correct-password", name: "WrongPw User" });
+
+    const response = await request(app.server)
+      .post("/auth/login")
+      .send({ email: "wrongpw@example.com", password: "wrong-password" })
+      .expect(401);
+
+    expect(response.body.error).toBe("Invalid email or password");
+  });
+
+  it("finds a user by id and returns undefined for unknown id", async () => {
+    const { usersRepository } = await import("@/modules/users/users.repository.js");
+
+    const registerRes = await request(app.server)
+      .post("/auth/register")
+      .send({ email: "findbyid@example.com", password: "password123", name: "FindById User" });
+
+    const userId = registerRes.body.user.id;
+    const found = await usersRepository.findById(userId);
+    expect(found?.email).toBe("findbyid@example.com");
+
+    const notFound = await usersRepository.findById("00000000-0000-0000-0000-000000000099");
+    expect(notFound).toBeUndefined();
+  });
 });

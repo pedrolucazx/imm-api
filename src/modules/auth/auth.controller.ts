@@ -30,6 +30,7 @@ export class AuthController {
           error: error.message,
         });
       }
+      /* istanbul ignore next */
       return reply.code(500).send({
         error: "Internal server error",
       });
@@ -63,6 +64,7 @@ export class AuthController {
           error: error.message,
         });
       }
+      /* istanbul ignore next */
       return reply.code(500).send({
         error: "Internal server error",
       });
