@@ -4,20 +4,18 @@ import { users } from "@/core/database/schema/index.js";
 import { setupTestDatabase, type TestDatabase } from "./helpers/database.js";
 
 describe("Users — database integration", () => {
-  let testDb: TestDatabase;
+  let testDb: TestDatabase | undefined;
 
   beforeAll(async () => {
     testDb = await setupTestDatabase();
   }, 60000); // 60s timeout for Testcontainers to download/start PostgreSQL in CI
 
   afterAll(async () => {
-    if (testDb) {
-      await testDb.teardown();
-    }
+    if (testDb) await testDb.teardown();
   });
 
   it("inserts and retrieves a user", async () => {
-    const { db } = testDb;
+    const { db } = testDb!;
     const passwordHash = await hashPassword("password123");
 
     const [created] = await db
@@ -39,7 +37,7 @@ describe("Users — database integration", () => {
   });
 
   it("enforces email uniqueness", async () => {
-    const { db } = testDb;
+    const { db } = testDb!;
     const passwordHash = await hashPassword("password123");
 
     await db.insert(users).values({

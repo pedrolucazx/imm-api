@@ -26,8 +26,8 @@ describe("GET /", () => {
 });
 
 describe("POST /auth/register + /auth/login", () => {
-  let app: FastifyInstance;
-  let testDb: TestDatabase;
+  let app: FastifyInstance | undefined;
+  let testDb: TestDatabase | undefined;
 
   beforeAll(async () => {
     testDb = await setupTestDatabase();
@@ -36,14 +36,12 @@ describe("POST /auth/register + /auth/login", () => {
   }, 60000); // 60s timeout for Testcontainers to download/start PostgreSQL in CI
 
   afterAll(async () => {
-    await app.close();
-    if (testDb) {
-      await testDb.teardown();
-    }
+    if (app) await app.close();
+    if (testDb) await testDb.teardown();
   });
 
   it("registers a new user and returns a token", async () => {
-    const response = await request(app.server)
+    const response = await request(app!.server)
       .post("/auth/register")
       .send({ email: "e2e@example.com", password: "password123", name: "E2E User" })
       .expect(201);
@@ -54,18 +52,18 @@ describe("POST /auth/register + /auth/login", () => {
 
   it("returns 400 when registering a duplicate email", async () => {
     const payload = { email: "dup@example.com", password: "password123", name: "Dup" };
-    await request(app.server).post("/auth/register").send(payload);
+    await request(app!.server).post("/auth/register").send(payload);
 
-    const response = await request(app.server).post("/auth/register").send(payload);
+    const response = await request(app!.server).post("/auth/register").send(payload);
     expect(response.status).toBe(400);
   });
 
   it("logs in and returns a token", async () => {
-    await request(app.server)
+    await request(app!.server)
       .post("/auth/register")
       .send({ email: "login@example.com", password: "password123", name: "Login User" });
 
-    const response = await request(app.server)
+    const response = await request(app!.server)
       .post("/auth/login")
       .send({ email: "login@example.com", password: "password123" })
       .expect(200);
@@ -74,11 +72,11 @@ describe("POST /auth/register + /auth/login", () => {
   });
 
   it("returns 401 for wrong password", async () => {
-    await request(app.server)
+    await request(app!.server)
       .post("/auth/register")
       .send({ email: "wrongpw@example.com", password: "correct-password", name: "WrongPw User" });
 
-    const response = await request(app.server)
+    const response = await request(app!.server)
       .post("/auth/login")
       .send({ email: "wrongpw@example.com", password: "wrong-password" })
       .expect(401);
@@ -87,7 +85,7 @@ describe("POST /auth/register + /auth/login", () => {
   });
 
   it("finds a user by id and returns undefined for unknown id", async () => {
-    const registerRes = await request(app.server)
+    const registerRes = await request(app!.server)
       .post("/auth/register")
       .send({ email: "findbyid@example.com", password: "password123", name: "FindById User" });
 
