@@ -3,7 +3,7 @@ import { z } from "zod";
 import { logger } from "./logger.js";
 
 // Load environment variables from .env file
-config();
+config({ quiet: process.env.NODE_ENV === "test" });
 
 // Define the schema for environment variables
 const envSchema = z.object({
