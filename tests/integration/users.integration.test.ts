@@ -8,10 +8,12 @@ describe("Users — database integration", () => {
 
   beforeAll(async () => {
     testDb = await setupTestDatabase();
-  });
+  }, 60000); // 60s timeout for Testcontainers to download/start PostgreSQL in CI
 
   afterAll(async () => {
-    await testDb.teardown();
+    if (testDb) {
+      await testDb.teardown();
+    }
   });
 
   it("inserts and retrieves a user", async () => {

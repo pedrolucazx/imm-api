@@ -33,11 +33,13 @@ describe("POST /auth/register + /auth/login", () => {
     testDb = await setupTestDatabase();
     process.env.DATABASE_URL = testDb.connectionUri;
     app = await buildTestApp();
-  });
+  }, 60000); // 60s timeout for Testcontainers to download/start PostgreSQL in CI
 
   afterAll(async () => {
     await app.close();
-    await testDb.teardown();
+    if (testDb) {
+      await testDb.teardown();
+    }
   });
 
   it("registers a new user and returns a token", async () => {
