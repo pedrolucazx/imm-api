@@ -2,10 +2,8 @@ import { config } from "dotenv";
 import { z } from "zod";
 import { logger } from "./logger.js";
 
-// Load environment variables from .env file
 config({ quiet: process.env.NODE_ENV === "test" });
 
-// Define the schema for environment variables
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(3001),
@@ -17,15 +15,12 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
 });
 
-// Validate and parse environment variables
 const parsedEnv = envSchema.safeParse(process.env);
 
-/* istanbul ignore next */
 if (!parsedEnv.success) {
   logger.error("❌ Invalid environment variables:");
   logger.error(parsedEnv.error.format());
   process.exit(1);
 }
 
-// Export validated and typed environment variables
 export const env = parsedEnv.data;
