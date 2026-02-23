@@ -1,94 +1,17 @@
-name: "CI — imm-api"
+name: CI — imm-api
 
 on:
   pull_request:
-    branches: [main, develop]
-  push:
-    branches: [main, develop]
+    branches:
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write # Necessário para o CodeRabbit
 
 jobs:
-  # ─────────────────────────────────────────────────────────────
-  # 1. Lint & Format
-  # ─────────────────────────────────────────────────────────────
-  lint:
-    name: "Lint & Format"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Check Prettier formatting
-        run: npm run format:check
-
-  # ─────────────────────────────────────────────────────────────
-  # 2. TypeScript Type-check
-  # ─────────────────────────────────────────────────────────────
-  typecheck:
-    name: "TypeScript Type-check"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tsc
-        run: npx tsc --noEmit
-
-  # ─────────────────────────────────────────────────────────────
-  # 3. Unit Tests
-  # ─────────────────────────────────────────────────────────────
-  test-unit:
-    name: "Unit Tests"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: api-coverage
-          path: coverage/
-          retention-days: 7
-
-  # ─────────────────────────────────────────────────────────────
-  # 4. Integration Tests (PostgreSQL via GitHub Service)
-  # ─────────────────────────────────────────────────────────────
-  test-integration:
-    name: "Integration Tests"
+  quality_gate:
+    name: "Quality Gate (Lint, Types, Tests)"
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -104,31 +27,38 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     env:
       DATABASE_URL: postgresql://imm:imm_password@localhost:5432/imm_test
       NODE_ENV: test
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-jwt-secret-that-is-at-least-32-characters-long!!' }}
-      PORT: 3333
-      API_HOST: localhost:3333
-      CORS_ORIGIN: http://localhost:3000
-      LOG_LEVEL: error
+      JWT_SECRET: ci-test-jwt-secret-that-is-at-least-32-characters-long
 
     steps:
-      - name: Checkout
+      - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
+      - name: "Install dependencies"
         run: npm ci
 
-      - name: Run database migrations
-        run: npm run db:migrate
+      - name: "Step 1: Code Quality (Lint & Format)"
+        run: |
+          npm run lint
+          npm run format:check
 
-      - name: Run integration tests
-        run: npm run test:integration
+      - name: "Step 2: Type Check & Automated Tests"
+        run: |
+          npx tsc --noEmit
+          npm run test:unit
+          npm run db:migrate
+          npm run test:integration
+
+      - name: "Step 3: AI Code Review (CodeRabbit)"
+        if: success() # Só executa se os passos anteriores passarem
+        uses: coderabbitai/ai-pr-reviewer@latest
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
