@@ -1,10 +1,15 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { env } from "../config/env.js";
 import * as schema from "./schema/index.js";
 
-// Create postgres client
-const client = postgres(env.DATABASE_URL);
+let cachedUrl: string | undefined;
+let cachedDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
-// Create drizzle instance
-export const db = drizzle(client, { schema });
+export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
+  const url = process.env.DATABASE_URL!;
+  if (!cachedDb || cachedUrl !== url) {
+    cachedUrl = url;
+    cachedDb = drizzle(postgres(url), { schema });
+  }
+  return cachedDb;
+}

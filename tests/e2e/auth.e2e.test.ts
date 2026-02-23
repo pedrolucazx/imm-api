@@ -1,16 +1,8 @@
 import request from "supertest";
-import { buildTestApp } from "./helpers/app.js";
 import type { FastifyInstance } from "fastify";
+import { buildTestApp } from "./helpers/app.js";
+import { usersRepository } from "@/modules/users/users.repository.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
-
-/**
- * E2E tests run the full Fastify application and test it via HTTP
- * requests (Supertest). Auth-related tests use Testcontainers to
- * start a real PostgreSQL instance and set DATABASE_URL before
- * building the app.
- *
- * Test scope: routes → controllers → services → repositories → DB
- */
 
 describe("GET /", () => {
   let app: FastifyInstance;
@@ -38,16 +30,9 @@ describe("POST /auth/register + /auth/login", () => {
   let testDb: TestDatabase;
 
   beforeAll(async () => {
-    // Spin up a real Postgres container for this E2E suite
     testDb = await setupTestDatabase();
     process.env.DATABASE_URL = testDb.connectionUri;
-
-    // Reset module registry so connection.ts picks up the new DATABASE_URL
-    jest.resetModules();
-
-    // Re-import buildTestApp after module reset
-    const { buildTestApp: build } = await import("./helpers/app.js");
-    app = await build();
+    app = await buildTestApp();
   });
 
   afterAll(async () => {
@@ -100,8 +85,6 @@ describe("POST /auth/register + /auth/login", () => {
   });
 
   it("finds a user by id and returns undefined for unknown id", async () => {
-    const { usersRepository } = await import("@/modules/users/users.repository.js");
-
     const registerRes = await request(app.server)
       .post("/auth/register")
       .send({ email: "findbyid@example.com", password: "password123", name: "FindById User" });
