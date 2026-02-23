@@ -24,6 +24,10 @@ docker-compose.override.yml
 # testing
 coverage/
 .nyc_output
+*.tsbuildinfo
+
+# lock files from other package managers
+package-lock.json
 
 # drizzle
 drizzle/migrations/*.sql
