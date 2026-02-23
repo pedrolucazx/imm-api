@@ -50,7 +50,13 @@ const config = {
       setupFiles: ["<rootDir>/tests/__setup__/env.ts"],
     },
   ],
-  collectCoverageFrom: ["src/**/*.ts", "!src/index.ts", "!src/**/*.d.ts", "!src/migrations/**"],
+  collectCoverageFrom: [
+    "src/**/*.ts",
+    "!src/index.ts",
+    "!src/**/*.d.ts",
+    "!src/migrations/**",
+    "!src/core/config/**",
+  ],
 };
 
 module.exports = config;
