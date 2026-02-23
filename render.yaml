@@ -1,0 +1,11 @@
+# Render deployment configuration
+services:
+  - type: web
+    name: imm-api
+    runtime: node
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production

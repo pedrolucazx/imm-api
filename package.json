@@ -1,7 +1,7 @@
 {
   "name": "imm-api",
   "version": "1.0.0",
-  "description": "Backend API for Inside My Mind — a habit tracking and AI-powered journaling SaaS.",
+  "description": "Backend API for Inside My Mind — habit tracking and AI journaling SaaS.",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.{ts,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,json,md}\"",
-    "prepare": "husky install",
+    "prepare": "node -e \"if (process.env.NODE_ENV !== 'production' && !process.env.CI) require('child_process').exec('husky install')\"",
     "commit": "cz commit",
     "test": "jest --config jest.config.cjs",
     "test:unit": "jest --config jest.config.cjs --selectProjects unit",
@@ -59,6 +59,7 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^9.0.0",
     "husky": "^9.0.0",
+    "is-ci": "^4.1.0",
     "jest": "^30.2.0",
     "lint-staged": "^15.0.0",
     "prettier": "^3.0.0",

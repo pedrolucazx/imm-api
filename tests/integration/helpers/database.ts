@@ -6,22 +6,38 @@ import * as schema from "@/core/database/schema/index.js";
 
 export interface TestDatabase {
   db: PostgresJsDatabase<typeof schema>;
-  container: StartedPostgreSqlContainer;
+  container?: StartedPostgreSqlContainer;
   connectionUri: string;
   teardown: () => Promise<void>;
 }
 
 export async function setupTestDatabase(): Promise<TestDatabase> {
-  const container = await new PostgreSqlContainer("postgres:16-alpine")
-    .withDatabase("imm_test")
-    .withUsername("postgres")
-    .withPassword("postgres")
-    .start();
+  // In CI environment, use testcontainers for full isolation
+  // In local dev, can fallback to existing Docker PostgreSQL for speed
+  const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+  const useTestcontainers = isCI || !process.env.DATABASE_URL;
 
-  const connectionUri = container.getConnectionUri();
+  let container: StartedPostgreSqlContainer | undefined;
+  let connectionUri: string;
+
+  if (useTestcontainers) {
+    container = await new PostgreSqlContainer("postgres:16-alpine")
+      .withDatabase("imm_test")
+      .withUsername("postgres")
+      .withPassword("postgres")
+      .withStartupTimeout(120000) // 2 minutes timeout for CI
+      .start();
+
+    connectionUri = container.getConnectionUri();
+  } else {
+    // Fallback to existing database for local development speed
+    connectionUri = process.env.DATABASE_URL!;
+  }
+
   const client = postgres(connectionUri, { max: 1 });
   const db = drizzle(client, { schema });
 
+  // Ensure migrations are up to date
   await migrate(db, { migrationsFolder: "./src/migrations" });
 
   return {
@@ -30,7 +46,9 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     connectionUri,
     teardown: async () => {
       await client.end();
-      await container.stop();
+      if (container) {
+        await container.stop();
+      }
     },
   };
 }
