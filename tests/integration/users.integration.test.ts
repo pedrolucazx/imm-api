@@ -17,20 +17,21 @@ describe("Users — database integration", () => {
   it("inserts and retrieves a user", async () => {
     const { db } = testDb;
     const passwordHash = await hashPassword("password123");
+    const uniqueEmail = `integration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
 
     const [created] = await db
       .insert(users)
       .values({
-        email: "integration@example.com",
+        email: uniqueEmail,
         name: "Integration User",
         passwordHash,
       })
       .returning();
 
     expect(created.id).toBeDefined();
-    expect(created.email).toBe("integration@example.com");
+    expect(created.email).toBe(uniqueEmail);
 
-    const [found] = await db.select().from(users).where(eq(users.email, "integration@example.com"));
+    const [found] = await db.select().from(users).where(eq(users.email, uniqueEmail));
 
     expect(found.id).toBe(created.id);
     expect(found.name).toBe("Integration User");
@@ -40,15 +41,16 @@ describe("Users — database integration", () => {
     const { db } = testDb;
     const passwordHash = await hashPassword("password123");
 
+    const firstEmail = `unique-first-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
     await db.insert(users).values({
-      email: "unique@example.com",
+      email: firstEmail,
       name: "First User",
       passwordHash,
     });
 
     await expect(
       db.insert(users).values({
-        email: "unique@example.com",
+        email: firstEmail, // Same email to trigger duplicate error
         name: "Duplicate User",
         passwordHash,
       })
