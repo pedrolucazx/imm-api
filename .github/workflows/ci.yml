@@ -1,17 +1,46 @@
 name: CI — imm-api
 
 on:
+  push:
+    branches:
+      - develop
   pull_request:
     branches:
       - develop
 
 permissions:
   contents: read
-  pull-requests: write # Necessário para o CodeRabbit
+  pull-requests: write
 
 jobs:
-  quality_gate:
-    name: "Quality Gate (Lint, Types, Tests)"
+  code_quality:
+    name: "Step 1: Code Quality (Lint, Format, Types)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v4
+
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: "Install dependencies"
+        run: npm ci
+
+      - name: "Check Format"
+        run: npm run format:check
+
+      - name: "Lint"
+        run: npm run lint
+
+      - name: "Type Check"
+        run: npx tsc --noEmit
+
+  tests:
+    name: "Step 2: Automated Tests (Unit & Integration)"
+    needs: code_quality
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -30,7 +59,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://imm:imm_password@localhost:5432/imm_test
       NODE_ENV: test
-      JWT_SECRET: ci-test-jwt-secret-that-is-at-least-32-characters-long
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
 
     steps:
       - name: "Checkout"
@@ -45,20 +74,20 @@ jobs:
       - name: "Install dependencies"
         run: npm ci
 
-      - name: "Step 1: Code Quality (Lint & Format)"
-        run: |
-          npm run lint
-          npm run format:check
+      - name: "Unit Tests"
+        run: npm run test:unit
 
-      - name: "Step 2: Type Check & Automated Tests"
-        run: |
-          npx tsc --noEmit
-          npm run test:unit
-          npm run db:migrate
-          npm run test:integration
+      - name: "Run Database Migrations"
+        run: npm run db:migrate
 
+      - name: "Integration Tests"
+        run: npm run test:integration
+
+  ai_review:
+    name: "Step 3: AI Code Review (CodeRabbit)"
+    needs: tests
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request' && needs.tests.result == 'success'
+    steps:
       - name: "Step 3: AI Code Review (CodeRabbit)"
-        if: success() # Só executa se os passos anteriores passarem
-        uses: coderabbitai/ai-pr-reviewer@latest
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        uses: coderabbitai/ai-pr-reviewer@1.16.2
