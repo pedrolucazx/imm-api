@@ -26,17 +26,17 @@ reviews:
     - "!yarn.lock"
     - "!package-lock.json"
 
+  instructions: |
+    Este repositório é o backend do projeto 'Inside My Mind', uma SaaS de habit tracking com journaling assistido por IA.
+    Stack: Node.js + Fastify v5 + TypeScript + Drizzle ORM + PostgreSQL + Zod.
+    Sempre verifique a existência de testes para as funcionalidades adicionadas.
+    Verifique questões de segurança nas rotas de autenticação que usam @fastify/jwt.
+    Certifique-se de que variáveis de ambiente sensíveis NÃO estão hardcoded.
+    Utilize Zod para validação dos schemas de entrada em todas as rotas Fastify.
+    Siga o padrão de módulos: cada feature tem pasta própria em src/modules/.
+    Siga os padrões de commit convencional (feat, fix, chore, docs, test, refactor).
+    Aponte qualquer migration do Drizzle que possa causar perda de dados em produção.
+    Verifique se as rotas estão documentadas corretamente no Swagger (@fastify/swagger).
+
 chat:
   auto_reply: true
-
-instructions:
-  - "Este repositório é o backend do projeto 'Inside My Mind', uma SaaS de habit tracking com journaling assistido por IA."
-  - "Stack: Node.js + Fastify v5 + TypeScript + Drizzle ORM + PostgreSQL + Zod."
-  - "Sempre verifique a existência de testes para as funcionalidades adicionadas."
-  - "Verifique questões de segurança nas rotas de autenticação que usam @fastify/jwt."
-  - "Certifique-se de que variáveis de ambiente sensíveis NÃO estão hardcoded."
-  - "Utilize Zod para validação dos schemas de entrada em todas as rotas Fastify."
-  - "Siga o padrão de módulos: cada feature tem pasta própria em src/modules/."
-  - "Siga os padrões de commit convencional (feat, fix, chore, docs, test, refactor)."
-  - "Aponte qualquer migration do Drizzle que possa causar perda de dados em produção."
-  - "Verifique se as rotas estão documentadas corretamente no Swagger (@fastify/swagger)."
