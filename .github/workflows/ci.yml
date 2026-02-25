@@ -96,3 +96,16 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  quality_gate:
+    needs: [code_quality, tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: "All required checks passed"
+        run: |
+          if [ "${{ needs.code_quality.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "Required checks failed."
+            exit 1
+          fi
+          echo "All required checks passed."
