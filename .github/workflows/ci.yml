@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   code_quality:
@@ -88,13 +87,15 @@ jobs:
     needs: tests
     runs-on: ubuntu-latest
     if: always() && github.event_name == 'pull_request' && needs.tests.result == 'success'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: "Step 3: AI Code Review (CodeRabbit)"
         continue-on-error: true
         uses: coderabbitai/ai-pr-reviewer@1.16.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
   quality_gate:
