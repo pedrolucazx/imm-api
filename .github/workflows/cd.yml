@@ -3,8 +3,8 @@ name: CD — Deploy (Render)
 on:
   push:
     branches:
-      - main # → Produção
-      - develop # → Homologação
+      - main
+      - develop
   workflow_dispatch:
 
 concurrency:
@@ -28,7 +28,7 @@ jobs:
             HOOK_URL="${{ secrets.RENDER_DEPLOY_HOOK_HOMOLOG }}"
           fi
           echo "🚀 Triggering Render deploy for ${{ github.ref_name }}"
-          RESPONSE=$(curl -s -w "%{http_code}" -X POST "$HOOK_URL")
+          RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK_URL")
           if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
             echo "✅ Deploy triggered successfully (HTTP $RESPONSE)"
           else
