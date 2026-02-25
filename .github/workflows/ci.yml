@@ -7,40 +7,54 @@ on:
   pull_request:
     branches:
       - develop
+      - main
 
 permissions:
   contents: read
 
+# Cancela runs em andamento para o mesmo branch quando há novo push
+concurrency:
+  group: ci-api-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Step 1: Code Quality — falha imediata; bloqueia tudo abaixo
+  # ─────────────────────────────────────────────────────────────
   code_quality:
-    name: "Step 1: Code Quality (Lint, Format, Types)"
+    name: "Step 1: Code Quality"
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout"
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: "Setup Node.js"
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: "Install dependencies"
+      - name: Install dependencies
         run: npm ci
 
-      - name: "Check Format"
+      - name: Format Check
         run: npm run format:check
 
-      - name: "Lint"
+      - name: Lint
         run: npm run lint
 
-      - name: "Type Check"
+      - name: Type Check
         run: npx tsc --noEmit
 
+  # ─────────────────────────────────────────────────────────────
+  # Step 2: Automated Tests — só roda se Step 1 passar
+  # Service container PostgreSQL incluído neste job
+  # ─────────────────────────────────────────────────────────────
   tests:
-    name: "Step 2: Automated Tests (Unit & Integration)"
+    name: "Step 2: Automated Tests"
     needs: code_quality
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -55,58 +69,73 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
     env:
       DATABASE_URL: postgresql://imm:imm_password@localhost:5432/imm_test
       NODE_ENV: test
       JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
 
     steps:
-      - name: "Checkout"
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: "Setup Node.js"
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: "Install dependencies"
+      - name: Install dependencies
         run: npm ci
 
-      - name: "Unit Tests"
+      - name: Unit Tests
         run: npm run test:unit
 
-      - name: "Run Database Migrations"
+      - name: Run Database Migrations
         run: npm run db:migrate
 
-      - name: "Integration Tests"
+      - name: Integration Tests
         run: npm run test:integration
 
+  # ─────────────────────────────────────────────────────────────
+  # Step 3: CodeRabbit — só em PRs, só se Step 2 passar
+  # continue-on-error: true → falha do CodeRabbit é aviso, não bloqueio
+  # ─────────────────────────────────────────────────────────────
   ai_review:
     name: "Step 3: AI Code Review (CodeRabbit)"
     needs: tests
     runs-on: ubuntu-latest
-    if: always() && github.event_name == 'pull_request' && needs.tests.result == 'success'
+    if: github.event_name == 'pull_request' && needs.tests.result == 'success'
     permissions:
       contents: read
       pull-requests: write
+
     steps:
-      - name: "Step 3: AI Code Review (CodeRabbit)"
+      - name: CodeRabbit Review
         continue-on-error: true
         uses: coderabbitai/ai-pr-reviewer@1.16.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+  # ─────────────────────────────────────────────────────────────
+  # Quality Gate — status check obrigatório para branch protection
+  # NÃO depende do ai_review: CodeRabbit nunca bloqueia merge
+  # ─────────────────────────────────────────────────────────────
   quality_gate:
+    name: "Quality Gate"
     needs: [code_quality, tests]
     runs-on: ubuntu-latest
     if: always()
+
     steps:
-      - name: "All required checks passed"
+      - name: Evaluate required checks
         run: |
-          if [ "${{ needs.code_quality.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
-            echo "Required checks failed."
+          if [ "${{ needs.code_quality.result }}" != "success" ] || \
+             [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "❌ Required checks failed."
+            echo "  code_quality : ${{ needs.code_quality.result }}"
+            echo "  tests        : ${{ needs.tests.result }}"
             exit 1
           fi
-          echo "All required checks passed."
+          echo "✅ All required checks passed."
