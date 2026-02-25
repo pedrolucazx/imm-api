@@ -1,94 +1,45 @@
-name: "CI — imm-api"
+name: CI — imm-api
 
 on:
-  pull_request:
-    branches: [main, develop]
   push:
-    branches: [main, develop]
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
 
 jobs:
-  # ─────────────────────────────────────────────────────────────
-  # 1. Lint & Format
-  # ─────────────────────────────────────────────────────────────
-  lint:
-    name: "Lint & Format"
+  code_quality:
+    name: "Step 1: Code Quality (Lint, Format, Types)"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
+      - name: "Install dependencies"
         run: npm ci
 
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Check Prettier formatting
+      - name: "Check Format"
         run: npm run format:check
 
-  # ─────────────────────────────────────────────────────────────
-  # 2. TypeScript Type-check
-  # ─────────────────────────────────────────────────────────────
-  typecheck:
-    name: "TypeScript Type-check"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: "Lint"
+        run: npm run lint
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tsc
+      - name: "Type Check"
         run: npx tsc --noEmit
 
-  # ─────────────────────────────────────────────────────────────
-  # 3. Unit Tests
-  # ─────────────────────────────────────────────────────────────
-  test-unit:
-    name: "Unit Tests"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm run test:unit
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: api-coverage
-          path: coverage/
-          retention-days: 7
-
-  # ─────────────────────────────────────────────────────────────
-  # 4. Integration Tests (PostgreSQL via GitHub Service)
-  # ─────────────────────────────────────────────────────────────
-  test-integration:
-    name: "Integration Tests"
+  tests:
+    name: "Step 2: Automated Tests (Unit & Integration)"
+    needs: code_quality
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -104,31 +55,58 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     env:
       DATABASE_URL: postgresql://imm:imm_password@localhost:5432/imm_test
       NODE_ENV: test
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-jwt-secret-that-is-at-least-32-characters-long!!' }}
-      PORT: 3333
-      API_HOST: localhost:3333
-      CORS_ORIGIN: http://localhost:3000
-      LOG_LEVEL: error
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
 
     steps:
-      - name: Checkout
+      - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: "Setup Node.js"
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies
+      - name: "Install dependencies"
         run: npm ci
 
-      - name: Run database migrations
+      - name: "Unit Tests"
+        run: npm run test:unit
+
+      - name: "Run Database Migrations"
         run: npm run db:migrate
 
-      - name: Run integration tests
+      - name: "Integration Tests"
         run: npm run test:integration
+
+  ai_review:
+    name: "Step 3: AI Code Review (CodeRabbit)"
+    needs: tests
+    runs-on: ubuntu-latest
+    if: always() && github.event_name == 'pull_request' && needs.tests.result == 'success'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: "Step 3: AI Code Review (CodeRabbit)"
+        continue-on-error: true
+        uses: coderabbitai/ai-pr-reviewer@1.16.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+  quality_gate:
+    needs: [code_quality, tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: "All required checks passed"
+        run: |
+          if [ "${{ needs.code_quality.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "Required checks failed."
+            exit 1
+          fi
+          echo "All required checks passed."
