@@ -90,4 +90,9 @@ jobs:
     if: always() && github.event_name == 'pull_request' && needs.tests.result == 'success'
     steps:
       - name: "Step 3: AI Code Review (CodeRabbit)"
+        continue-on-error: true
         uses: coderabbitai/ai-pr-reviewer@1.16.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
