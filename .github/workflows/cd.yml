@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
-      url: ${{ github.ref_name == 'main' && 'https://imm-api.onrender.com' || 'https://imm-api-homolog.onrender.com' }}
+      url: ${{ github.ref_name == 'main' && 'https://imm-production.onrender.com' || 'https://imm-homolog.onrender.com' }}
 
     steps:
       - name: "Trigger Render Deploy Hook"
@@ -27,11 +27,16 @@ jobs:
           else
             HOOK_URL="${{ secrets.RENDER_DEPLOY_HOOK_HOMOLOG }}"
           fi
-          echo "🚀 Triggering Render deploy for ${{ github.ref_name }}"
-          RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 -X POST "$HOOK_URL")
+
+          echo "Triggering Render deploy for ${{ github.ref_name }}"
+
+          RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            -X POST "$HOOK_URL")
+
           if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
-            echo "✅ Deploy triggered successfully (HTTP $RESPONSE)"
+            echo "Deploy triggered successfully (HTTP $RESPONSE)"
           else
-            echo "❌ Failed to trigger deploy (HTTP $RESPONSE)"
+            echo "Failed to trigger deploy (HTTP $RESPONSE)"
             exit 1
           fi

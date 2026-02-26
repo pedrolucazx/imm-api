@@ -5,7 +5,7 @@ import { logger } from "./logger.js";
 config({ quiet: process.env.NODE_ENV === "test" });
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z.enum(["development", "production", "test", "homolog"]).default("development"),
   PORT: z.coerce.number().default(3001),
   API_HOST: z.string().default("localhost:3001"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),

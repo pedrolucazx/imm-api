@@ -1,11 +1,42 @@
-# Render deployment configuration
+# Render deployment configuration — Infrastructure as Code
+# autoDeploy: false em ambos os serviços — deploys são disparados via cd.yml (após CI)
 services:
   - type: web
-    name: imm-api
+    name: imm-production
     runtime: node
     rootDir: .
-    buildCommand: npm ci && npm run build
+    branch: main
+    autoDeploy: false
+    buildCommand: npm ci && npm run db:migrate && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
+      - key: API_HOST
+        value: imm-production.onrender.com
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: imm-homolog
+    runtime: node
+    rootDir: .
+    branch: develop
+    autoDeploy: false
+    buildCommand: npm ci && npm run db:migrate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: homolog
+      - key: API_HOST
+        value: imm-homolog.onrender.com
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
