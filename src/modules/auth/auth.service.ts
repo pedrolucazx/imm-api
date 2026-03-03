@@ -21,6 +21,7 @@ export class AuthService {
       email: input.email,
       passwordHash,
       name: input.name,
+      uiLang: input.ui_lang,
     });
 
     // Return user without password
@@ -30,6 +31,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        ui_lang: user.uiLang,
       },
     };
   }
@@ -50,12 +52,19 @@ export class AuthService {
       throw new Error("Invalid email or password");
     }
 
+    // Update ui_lang preference if provided
+    let finalUser = user;
+    if (input.ui_lang !== undefined) {
+      finalUser = await usersRepository.update(user.id, { uiLang: input.ui_lang });
+    }
+
     return {
       token: "", // Will be generated in controller
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
+        id: finalUser.id,
+        email: finalUser.email,
+        name: finalUser.name,
+        ui_lang: finalUser.uiLang,
       },
     };
   }

@@ -11,12 +11,14 @@ export const registerSchema = z.object({
     .string()
     .min(2, "Name must be at least 2 characters")
     .max(255, "Name must be less than 255 characters"),
+  ui_lang: z.string().optional(),
 });
 
 // Login schema
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  ui_lang: z.string().optional(),
 });
 
 // Types
@@ -29,5 +31,6 @@ export interface AuthResponse {
     id: string;
     email: string;
     name: string;
+    ui_lang?: string | null;
   };
 }
