@@ -12,6 +12,7 @@ jest.mock("@/modules/users/users.repository.js", () => ({
     findByEmail: jest.fn(),
     create: jest.fn(),
     findById: jest.fn(),
+    update: jest.fn(),
   },
 }));
 
@@ -23,6 +24,7 @@ const mockUser = {
   email: "test@example.com",
   name: "Test User",
   passwordHash: "$2b$10$examplehashvalue",
+  uiLang: null,
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2025-01-01"),
 };

@@ -14,6 +14,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           email: { type: "string", format: "email" },
           password: { type: "string", minLength: 8, maxLength: 100 },
           name: { type: "string", minLength: 2, maxLength: 255 },
+          ui_lang: { type: "string" },
         },
       },
       response: {
@@ -28,6 +29,7 @@ export async function authRoutes(fastify: FastifyInstance) {
                 id: { type: "string" },
                 email: { type: "string" },
                 name: { type: "string" },
+                ui_lang: { type: "string" },
               },
             },
           },
@@ -55,6 +57,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         properties: {
           email: { type: "string", format: "email" },
           password: { type: "string" },
+          ui_lang: { type: "string" },
         },
       },
       response: {
@@ -69,6 +72,7 @@ export async function authRoutes(fastify: FastifyInstance) {
                 id: { type: "string" },
                 email: { type: "string" },
                 name: { type: "string" },
+                ui_lang: { type: "string" },
               },
             },
           },
