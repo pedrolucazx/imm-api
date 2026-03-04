@@ -14,9 +14,7 @@ export const userProfiles = pgTable(
     aiRequestsToday: integer("ai_requests_today").default(0),
     lastAiRequest: timestamp("last_ai_request", { withTimezone: true, mode: "date" }),
   },
-  (table) => ({
-    userIdUnique: uniqueIndex("idx_profiles_user").on(table.userId),
-  })
+  (table) => [uniqueIndex("idx_profiles_user").on(table.userId)]
 );
 
 export type UserProfile = typeof userProfiles.$inferSelect;

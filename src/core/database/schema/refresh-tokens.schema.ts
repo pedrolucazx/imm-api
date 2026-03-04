@@ -13,9 +13,7 @@ export const refreshTokens = pgTable(
     revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
     userAgent: text("user_agent"),
   },
-  (table) => ({
-    tokenHashActiveIdx: index("idx_refresh_active").on(table.tokenHash),
-  })
+  (table) => [index("idx_refresh_active").on(table.tokenHash)]
 );
 
 export type RefreshToken = typeof refreshTokens.$inferSelect;
