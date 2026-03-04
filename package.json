@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch --tsconfig tsconfig.src.json src/index.ts",
-    "build": "tsc -p tsconfig.src.json && tsc-alias -p tsconfig.src.json",
+    "build": "swc src -d dist --strip-leading-paths --copy-files && tsc-alias -p tsconfig.src.json",
+    "typecheck": "tsc --noEmit -p tsconfig.src.json",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.{ts,json,md}\"",
@@ -51,6 +52,8 @@
   "devDependencies": {
     "@commitlint/cli": "^18.0.0",
     "@commitlint/config-conventional": "^18.0.0",
+    "@swc/cli": "^0.8.0",
+    "@swc/core": "^1.15.18",
     "@testcontainers/postgresql": "^11.12.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.3.0",
