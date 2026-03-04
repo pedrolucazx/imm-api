@@ -1,5 +1,6 @@
 import { hashPassword, comparePassword } from "../../shared/utils/password.js";
 import { usersRepository } from "../users/users.repository.js";
+import { userProfilesRepository } from "../users/user-profiles.repository.js";
 import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 export class AuthService {
@@ -7,31 +8,31 @@ export class AuthService {
    * Register a new user
    */
   async register(input: RegisterInput): Promise<AuthResponse> {
-    // Check if user already exists
     const existingUser = await usersRepository.findByEmail(input.email);
     if (existingUser) {
       throw new Error("User with this email already exists");
     }
 
-    // Hash password
     const passwordHash = await hashPassword(input.password);
 
-    // Create user
     const user = await usersRepository.create({
       email: input.email,
       passwordHash,
       name: input.name,
-      uiLang: input.ui_lang,
     });
 
-    // Return user without password
+    await userProfilesRepository.create({
+      userId: user.id,
+      uiLanguage: input.ui_lang || "pt-BR",
+    });
+
     return {
-      token: "", // Will be generated in controller
+      token: "",
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        ui_lang: user.uiLang,
+        ui_lang: input.ui_lang || "pt-BR",
       },
     };
   }
@@ -40,31 +41,34 @@ export class AuthService {
    * Login user
    */
   async login(input: LoginInput): Promise<AuthResponse> {
-    // Find user by email
     const user = await usersRepository.findByEmail(input.email);
     if (!user) {
       throw new Error("Invalid email or password");
     }
 
-    // Compare passwords
     const isValidPassword = await comparePassword(input.password, user.passwordHash);
     if (!isValidPassword) {
       throw new Error("Invalid email or password");
     }
 
-    // Update ui_lang preference if provided
-    let finalUser = user;
+    let uiLang = "pt-BR";
     if (input.ui_lang !== undefined) {
-      finalUser = await usersRepository.update(user.id, { uiLang: input.ui_lang });
+      const profile = await userProfilesRepository.update(user.id, { uiLanguage: input.ui_lang });
+      uiLang = profile.uiLanguage ?? "pt-BR";
+    } else {
+      const profile = await userProfilesRepository.findByUserId(user.id);
+      if (profile) {
+        uiLang = profile.uiLanguage ?? "pt-BR";
+      }
     }
 
     return {
-      token: "", // Will be generated in controller
+      token: "",
       user: {
-        id: finalUser.id,
-        email: finalUser.email,
-        name: finalUser.name,
-        ui_lang: finalUser.uiLang,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        ui_lang: uiLang,
       },
     };
   }

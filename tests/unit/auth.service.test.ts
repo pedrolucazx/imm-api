@@ -1,5 +1,6 @@
 import { authService } from "@/modules/auth/auth.service.js";
 import { usersRepository } from "@/modules/users/users.repository.js";
+import { userProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import { comparePassword } from "@/shared/utils/password.js";
 
 jest.mock("@/shared/utils/password.js", () => ({
@@ -12,11 +13,19 @@ jest.mock("@/modules/users/users.repository.js", () => ({
     findByEmail: jest.fn(),
     create: jest.fn(),
     findById: jest.fn(),
+  },
+}));
+
+jest.mock("@/modules/users/user-profiles.repository.js", () => ({
+  userProfilesRepository: {
+    create: jest.fn(),
+    findByUserId: jest.fn(),
     update: jest.fn(),
   },
 }));
 
 const mockRepo = usersRepository as jest.Mocked<typeof usersRepository>;
+const mockProfilesRepo = userProfilesRepository as jest.Mocked<typeof userProfilesRepository>;
 const mockCompare = comparePassword as jest.MockedFunction<typeof comparePassword>;
 
 const mockUser = {
@@ -24,9 +33,19 @@ const mockUser = {
   email: "test@example.com",
   name: "Test User",
   passwordHash: "$2b$10$examplehashvalue",
-  uiLang: null,
+  avatarUrl: null,
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2025-01-01"),
+};
+
+const mockProfile = {
+  id: "00000000-0000-0000-0000-000000000002",
+  userId: mockUser.id,
+  uiLanguage: "pt-BR",
+  bio: null,
+  timezone: "America/Sao_Paulo",
+  aiRequestsToday: 0,
+  lastAiRequest: null,
 };
 
 describe("AuthService", () => {
@@ -57,6 +76,7 @@ describe("AuthService", () => {
         email: "new@example.com",
         name: "New User",
       });
+      mockProfilesRepo.create.mockResolvedValue(mockProfile);
 
       const result = await authService.register({
         email: "new@example.com",
@@ -91,6 +111,7 @@ describe("AuthService", () => {
     it("returns auth response for valid credentials", async () => {
       mockRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(true);
+      mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
 
       const result = await authService.login({
         email: "test@example.com",
