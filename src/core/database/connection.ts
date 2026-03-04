@@ -9,6 +9,9 @@ let cachedDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   const url = process.env.DATABASE_URL!;
   if (!cachedDb || cachedUrl !== url) {
+    if (cachedClient && cachedUrl && cachedUrl !== url) {
+      void cachedClient.end();
+    }
     cachedUrl = url;
     cachedClient = postgres(url);
     cachedDb = drizzle(cachedClient, { schema });
