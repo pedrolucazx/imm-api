@@ -1,6 +1,9 @@
 import { hashPassword, comparePassword } from "../../shared/utils/password.js";
 import { usersRepository } from "../users/users.repository.js";
 import { userProfilesRepository } from "../users/user-profiles.repository.js";
+import { getDb } from "../../core/database/connection.js";
+import * as usersSchema from "../../core/database/schema/users.schema.js";
+import * as userProfilesSchema from "../../core/database/schema/user-profiles.schema.js";
 import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 export class AuthService {
@@ -14,25 +17,36 @@ export class AuthService {
     }
 
     const passwordHash = await hashPassword(input.password);
+    const db = getDb();
 
-    const user = await usersRepository.create({
-      email: input.email,
-      passwordHash,
-      name: input.name,
-    });
+    const result = await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(usersSchema.users)
+        .values({
+          email: input.email,
+          passwordHash,
+          name: input.name,
+        })
+        .returning();
 
-    await userProfilesRepository.create({
-      userId: user.id,
-      uiLanguage: input.ui_lang || "pt-BR",
+      const [profile] = await tx
+        .insert(userProfilesSchema.userProfiles)
+        .values({
+          userId: user.id,
+          uiLanguage: input.ui_lang || "pt-BR",
+        })
+        .returning();
+
+      return { user, profile };
     });
 
     return {
       token: "",
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        ui_lang: input.ui_lang || "pt-BR",
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        ui_lang: result.profile.uiLanguage,
       },
     };
   }
@@ -54,7 +68,9 @@ export class AuthService {
     let uiLang = "pt-BR";
     if (input.ui_lang !== undefined) {
       const profile = await userProfilesRepository.update(user.id, { uiLanguage: input.ui_lang });
-      uiLang = profile.uiLanguage ?? "pt-BR";
+      if (profile) {
+        uiLang = profile.uiLanguage ?? "pt-BR";
+      }
     } else {
       const profile = await userProfilesRepository.findByUserId(user.id);
       if (profile) {

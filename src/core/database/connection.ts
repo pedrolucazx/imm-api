@@ -28,6 +28,13 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   return cachedDb;
 }
 
+export function getDbClient(): ReturnType<typeof postgres> {
+  if (!cachedClient) {
+    getDb();
+  }
+  return cachedClient!;
+}
+
 export async function closeDb(): Promise<void> {
   if (!cachedClient) return;
 

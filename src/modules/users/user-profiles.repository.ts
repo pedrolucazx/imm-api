@@ -6,6 +6,8 @@ import {
   type UserProfile,
 } from "../../core/database/schema/index.js";
 
+type MutableUserProfileFields = Omit<NewUserProfile, "id" | "userId">;
+
 export class UserProfilesRepository {
   async create(data: NewUserProfile): Promise<UserProfile> {
     const [profile] = await getDb().insert(userProfiles).values(data).returning();
@@ -20,7 +22,10 @@ export class UserProfilesRepository {
     return profile;
   }
 
-  async update(userId: string, data: Partial<NewUserProfile>): Promise<UserProfile> {
+  async update(
+    userId: string,
+    data: Partial<MutableUserProfileFields>
+  ): Promise<UserProfile | undefined> {
     const [profile] = await getDb()
       .update(userProfiles)
       .set(data)
