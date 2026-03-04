@@ -1,5 +1,7 @@
 import { authService } from "@/modules/auth/auth.service.js";
 import * as connection from "@/core/database/connection.js";
+import { usersRepository } from "@/modules/users/users.repository.js";
+import { userProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import { comparePassword } from "@/shared/utils/password.js";
 
 jest.mock("@/shared/utils/password.js", () => ({
@@ -11,8 +13,23 @@ jest.mock("@/core/database/connection.js", () => ({
   getDb: jest.fn(),
 }));
 
+jest.mock("@/modules/users/users.repository.js", () => ({
+  usersRepository: {
+    findByEmail: jest.fn(),
+    create: jest.fn(),
+  },
+}));
+
+jest.mock("@/modules/users/user-profiles.repository.js", () => ({
+  userProfilesRepository: {
+    create: jest.fn(),
+    findByUserId: jest.fn(),
+    update: jest.fn(),
+  },
+}));
+
 const mockDb = {
-  transaction: jest.fn((callback: (tx: typeof mockDb) => Promise<unknown>) => callback(mockDb)),
+  transaction: jest.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
   select: jest.fn(),
   insert: jest.fn().mockReturnValue({
     values: jest.fn().mockReturnValue({
@@ -29,6 +46,8 @@ const mockDb = {
 } as unknown as ReturnType<typeof connection.getDb>;
 
 const mockGetDb = connection.getDb as jest.MockedFunction<typeof connection.getDb>;
+const mockUsersRepo = usersRepository as jest.Mocked<typeof usersRepository>;
+const mockProfilesRepo = userProfilesRepository as jest.Mocked<typeof userProfilesRepository>;
 const mockCompare = comparePassword as jest.MockedFunction<typeof comparePassword>;
 
 const mockUser = {
@@ -59,11 +78,7 @@ describe("AuthService", () => {
 
   describe("register", () => {
     it("throws if user with email already exists", async () => {
-      mockDb.select = jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue([mockUser]),
-        }),
-      }) as never;
+      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
 
       await expect(
         authService.register({
@@ -72,16 +87,32 @@ describe("AuthService", () => {
           name: "Test User",
         })
       ).rejects.toThrow("User with this email already exists");
+
+      expect(mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
+    });
+
+    it("creates user and profile successfully", async () => {
+      mockUsersRepo.findByEmail.mockResolvedValue(undefined);
+
+      const newUser = { ...mockUser, email: "new@example.com" };
+      mockDb.transaction = jest.fn(async () => {
+        return { user: newUser, profile: mockProfile };
+      }) as never;
+
+      const result = await authService.register({
+        email: "new@example.com",
+        password: "password123",
+        name: "New User",
+      });
+
+      expect(result.user.email).toBe("new@example.com");
+      expect(mockDb.transaction).toHaveBeenCalled();
     });
   });
 
   describe("login", () => {
     it("throws if user is not found", async () => {
-      mockDb.select = jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue([]),
-        }),
-      }) as never;
+      mockUsersRepo.findByEmail.mockResolvedValue(undefined);
 
       await expect(
         authService.login({ email: "nobody@example.com", password: "pass" })
@@ -89,11 +120,7 @@ describe("AuthService", () => {
     });
 
     it("throws if password is wrong", async () => {
-      mockDb.select = jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue([mockUser]),
-        }),
-      }) as never;
+      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(false);
 
       await expect(
@@ -101,21 +128,10 @@ describe("AuthService", () => {
       ).rejects.toThrow("Invalid email or password");
     });
 
-    it("returns auth response for valid credentials", async () => {
-      mockDb.select = jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockResolvedValue([mockUser]),
-        }),
-      }) as never;
+    it("updates profile and returns auth response when ui_lang is provided", async () => {
+      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(true);
-
-      mockDb.update = jest.fn().mockReturnValue({
-        set: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            returning: jest.fn().mockResolvedValue([mockProfile]),
-          }),
-        }),
-      }) as never;
+      mockProfilesRepo.update.mockResolvedValue({ ...mockProfile, uiLanguage: "en-US" });
 
       const result = await authService.login({
         email: "test@example.com",
@@ -125,8 +141,24 @@ describe("AuthService", () => {
 
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.id).toBe(mockUser.id);
-      expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.update).toHaveBeenCalled();
+      expect(mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
+      expect(mockProfilesRepo.update).toHaveBeenCalledWith(mockUser.id, { uiLanguage: "en-US" });
+      expect(result.user.ui_lang).toBe("en-US");
+    });
+
+    it("returns auth response without updating profile if ui_lang not provided", async () => {
+      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      mockCompare.mockResolvedValue(true);
+      mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
+
+      const result = await authService.login({
+        email: "test@example.com",
+        password: "password123",
+      });
+
+      expect(result.user.email).toBe("test@example.com");
+      expect(result.user.id).toBe(mockUser.id);
+      expect(mockProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
       expect(result.user.ui_lang).toBe("pt-BR");
     });
   });
