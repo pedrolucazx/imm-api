@@ -1,15 +1,37 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
+import { logger } from "../config/logger.js";
 
 let cachedUrl: string | undefined;
+let cachedClient: ReturnType<typeof postgres> | undefined;
 let cachedDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   const url = process.env.DATABASE_URL!;
-  if (!cachedDb || cachedUrl !== url) {
-    cachedUrl = url;
-    cachedDb = drizzle(postgres(url), { schema });
+
+  if (cachedDb && cachedUrl === url) return cachedDb;
+
+  if (cachedClient) {
+    void cachedClient.end().catch((err) => {
+      logger.error(err, "Failed to close previous Postgres connection");
+    });
   }
+
+  cachedUrl = url;
+  cachedClient = postgres(url);
+  cachedDb = drizzle(cachedClient, { schema });
+
   return cachedDb;
+}
+
+export async function closeDb(): Promise<void> {
+  if (!cachedClient) return;
+
+  const client = cachedClient;
+  cachedClient = undefined;
+  cachedDb = undefined;
+  cachedUrl = undefined;
+
+  await client.end();
 }

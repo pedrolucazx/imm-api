@@ -35,7 +35,6 @@ export default [
       ],
     },
   },
-  // Test files: enable jest globals and relax some rules
   {
     files: ["tests/**/*.ts"],
     languageOptions: {

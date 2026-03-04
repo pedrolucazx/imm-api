@@ -17,7 +17,7 @@ describe("Users — database integration", () => {
   it("inserts and retrieves a user", async () => {
     const { db } = testDb!;
     const passwordHash = await hashPassword("password123");
-    const uniqueEmail = `integration-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
+    const uniqueEmail = `integration-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
 
     const [created] = await db
       .insert(users)
@@ -41,7 +41,7 @@ describe("Users — database integration", () => {
     const { db } = testDb!;
     const passwordHash = await hashPassword("password123");
 
-    const firstEmail = `unique-first-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
+    const firstEmail = `unique-first-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
     await db.insert(users).values({
       email: firstEmail,
       name: "First User",
