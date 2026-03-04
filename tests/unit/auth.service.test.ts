@@ -125,6 +125,9 @@ describe("AuthService", () => {
 
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.id).toBe(mockUser.id);
+      expect(mockDb.select).toHaveBeenCalled();
+      expect(mockDb.update).toHaveBeenCalled();
+      expect(result.user.ui_lang).toBe("pt-BR");
     });
   });
 });
