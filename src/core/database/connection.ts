@@ -10,7 +10,9 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   const url = process.env.DATABASE_URL!;
   if (!cachedDb || cachedUrl !== url) {
     if (cachedClient && cachedUrl && cachedUrl !== url) {
-      void cachedClient.end();
+      void cachedClient.end().catch((err) => {
+        process.stderr.write(`Failed to close previous Postgres connection: ${String(err)}\n`);
+      });
     }
     cachedUrl = url;
     cachedClient = postgres(url);
@@ -20,10 +22,12 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
 }
 
 export async function closeDb(): Promise<void> {
-  if (cachedClient) {
-    await cachedClient.end();
-    cachedClient = undefined;
-    cachedDb = undefined;
-    cachedUrl = undefined;
-  }
+  if (!cachedClient) return;
+
+  const client = cachedClient;
+  cachedClient = undefined;
+  cachedDb = undefined;
+  cachedUrl = undefined;
+
+  await client.end();
 }

@@ -19,8 +19,8 @@ const start = async () => {
       }
     };
 
-    process.on("SIGTERM", shutdown);
-    process.on("SIGINT", shutdown);
+    process.once("SIGTERM", shutdown);
+    process.once("SIGINT", shutdown);
 
     await fastify.listen({ port: env.PORT, host: "0.0.0.0" });
 
@@ -33,7 +33,7 @@ const start = async () => {
     fastify.log.info(`✓ Server running at ${baseUrl}`);
     fastify.log.info(`✓ API documentation at ${baseUrl}/documentation`);
   } catch (err) {
-    console.error(err);
+    process.stderr.write(`${err instanceof Error ? (err.stack ?? err.message) : String(err)}\n`);
     process.exit(1);
   }
 };
