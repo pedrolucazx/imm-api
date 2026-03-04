@@ -1,21 +1,18 @@
 import pino from "pino";
 
-export const prettyTransport =
-  process.env.NODE_ENV === "development"
-    ? {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "HH:MM:ss",
-          ignore: "pid,hostname,reqId,req,res,responseTime",
-          messageFormat: "{levelLabel} {msg}",
-          customColors: "info:cyan,warn:yellow,error:red",
-          customLevels: "info:30,warn:40,error:50",
-          levelFirst: false,
-          singleLine: false,
-        },
-      }
-    : undefined;
+const isDev = process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test";
+
+export const prettyTransport = isDev
+  ? {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        translateTime: "HH:mm:ss",
+        ignore: "pid,hostname",
+        singleLine: true,
+      },
+    }
+  : undefined;
 
 export const logger = pino({
   level: process.env.LOG_LEVEL || "info",

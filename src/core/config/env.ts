@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { z } from "zod";
 import { logger } from "./logger.js";
 
-config({ quiet: process.env.NODE_ENV === "test" });
+config({ quiet: true });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test", "homolog"]).default("development"),
