@@ -15,6 +15,13 @@
       "when": 1772575334762,
       "tag": "0001_narrow_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772658900000,
+      "tag": "0002_refactor_users_schema",
+      "breakpoints": true
     }
   ]
 }

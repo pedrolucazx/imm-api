@@ -19,10 +19,20 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   }
 
   cachedUrl = url;
-  cachedClient = postgres(url);
+  const isTest = process.env.NODE_ENV === "test";
+  cachedClient = postgres(url, {
+    onnotice: isTest ? () => {} : undefined,
+  });
   cachedDb = drizzle(cachedClient, { schema });
 
   return cachedDb;
+}
+
+export function getDbClient(): ReturnType<typeof postgres> {
+  if (!cachedClient) {
+    getDb();
+  }
+  return cachedClient!;
 }
 
 export async function closeDb(): Promise<void> {
