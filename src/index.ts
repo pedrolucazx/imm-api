@@ -1,12 +1,21 @@
 import { env } from "./core/config/env.js";
 import { buildApp } from "./app.js";
+import { setTimeout } from "timers";
 
 const start = async () => {
   const fastify = await buildApp();
 
   const shutdown = async () => {
-    await fastify.close();
-    process.exit(0);
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Shutdown timed out after 10s")), 10_000)
+    );
+    try {
+      await Promise.race([fastify.close(), timeout]);
+      process.exit(0);
+    } catch (err) {
+      fastify.log.error(err);
+      process.exit(1);
+    }
   };
 
   process.on("SIGTERM", shutdown);

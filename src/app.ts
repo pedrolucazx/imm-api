@@ -21,10 +21,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(rateLimitPlugin);
   await fastify.register(cookiePlugin);
   await fastify.register(swaggerPlugin);
-  fastify.get("/", async () => ({
-    message: "Welcome to Inside My Mind API",
-    version: "1.0.0",
-  }));
 
   await fastify.register(healthRoutes);
   await fastify.register(authRoutes);
