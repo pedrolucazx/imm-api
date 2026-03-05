@@ -4,6 +4,7 @@ import { userProfilesRepository } from "../users/user-profiles.repository.js";
 import { getDb } from "../../core/database/connection.js";
 import * as usersSchema from "../../core/database/schema/users.schema.js";
 import * as userProfilesSchema from "../../core/database/schema/user-profiles.schema.js";
+import { ConflictError, UnauthorizedError } from "../../shared/errors/index.js";
 import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 export class AuthService {
@@ -13,31 +14,39 @@ export class AuthService {
   async register(input: RegisterInput): Promise<AuthResponse> {
     const existingUser = await usersRepository.findByEmail(input.email);
     if (existingUser) {
-      throw new Error("User with this email already exists");
+      throw new ConflictError("User with this email already exists");
     }
 
     const passwordHash = await hashPassword(input.password);
     const db = getDb();
 
     const result = await db.transaction(async (tx) => {
-      const [user] = await tx
-        .insert(usersSchema.users)
-        .values({
-          email: input.email,
-          passwordHash,
-          name: input.name,
-        })
-        .returning();
+      try {
+        const [user] = await tx
+          .insert(usersSchema.users)
+          .values({
+            email: input.email,
+            passwordHash,
+            name: input.name,
+          })
+          .returning();
 
-      const [profile] = await tx
-        .insert(userProfilesSchema.userProfiles)
-        .values({
-          userId: user.id,
-          uiLanguage: input.ui_lang || "pt-BR",
-        })
-        .returning();
+        const [profile] = await tx
+          .insert(userProfilesSchema.userProfiles)
+          .values({
+            userId: user.id,
+            uiLanguage: input.ui_lang || "pt-BR",
+          })
+          .returning();
 
-      return { user, profile };
+        return { user, profile };
+      } catch (error: unknown) {
+        const dbError = error as { code?: string; message?: string };
+        if (dbError.code === "23505" || dbError.message?.includes("duplicate key")) {
+          throw new ConflictError("User with this email already exists");
+        }
+        throw error;
+      }
     });
 
     return {
@@ -57,12 +66,12 @@ export class AuthService {
   async login(input: LoginInput): Promise<AuthResponse> {
     const user = await usersRepository.findByEmail(input.email);
     if (!user) {
-      throw new Error("Invalid email or password");
+      throw new UnauthorizedError("Invalid email or password");
     }
 
     const isValidPassword = await comparePassword(input.password, user.passwordHash);
     if (!isValidPassword) {
-      throw new Error("Invalid email or password");
+      throw new UnauthorizedError("Invalid email or password");
     }
 
     let uiLang = "pt-BR";
