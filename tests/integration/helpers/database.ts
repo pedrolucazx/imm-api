@@ -34,7 +34,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     connectionUri = process.env.DATABASE_URL!;
   }
 
-  const client = postgres(connectionUri, { max: 1 });
+  const client = postgres(connectionUri, { max: 1, onnotice: () => {} });
   const db = drizzle(client, { schema });
 
   // Ensure migrations are up to date

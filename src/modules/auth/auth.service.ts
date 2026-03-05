@@ -1,5 +1,10 @@
 import { hashPassword, comparePassword } from "../../shared/utils/password.js";
 import { usersRepository } from "../users/users.repository.js";
+import { userProfilesRepository } from "../users/user-profiles.repository.js";
+import { getDb } from "../../core/database/connection.js";
+import * as usersSchema from "../../core/database/schema/users.schema.js";
+import * as userProfilesSchema from "../../core/database/schema/user-profiles.schema.js";
+import { ConflictError, UnauthorizedError } from "../../shared/errors/index.js";
 import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 export class AuthService {
@@ -7,31 +12,50 @@ export class AuthService {
    * Register a new user
    */
   async register(input: RegisterInput): Promise<AuthResponse> {
-    // Check if user already exists
     const existingUser = await usersRepository.findByEmail(input.email);
     if (existingUser) {
-      throw new Error("User with this email already exists");
+      throw new ConflictError("User with this email already exists");
     }
 
-    // Hash password
     const passwordHash = await hashPassword(input.password);
+    const db = getDb();
 
-    // Create user
-    const user = await usersRepository.create({
-      email: input.email,
-      passwordHash,
-      name: input.name,
-      uiLang: input.ui_lang,
+    const result = await db.transaction(async (tx) => {
+      try {
+        const [user] = await tx
+          .insert(usersSchema.users)
+          .values({
+            email: input.email,
+            passwordHash,
+            name: input.name,
+          })
+          .returning();
+
+        const [profile] = await tx
+          .insert(userProfilesSchema.userProfiles)
+          .values({
+            userId: user.id,
+            uiLanguage: input.ui_lang || "pt-BR",
+          })
+          .returning();
+
+        return { user, profile };
+      } catch (error: unknown) {
+        const dbError = error as { code?: string; message?: string };
+        if (dbError.code === "23505" || dbError.message?.includes("duplicate key")) {
+          throw new ConflictError("User with this email already exists");
+        }
+        throw error;
+      }
     });
 
-    // Return user without password
     return {
-      token: "", // Will be generated in controller
+      token: "",
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        ui_lang: user.uiLang,
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        ui_lang: result.profile.uiLanguage,
       },
     };
   }
@@ -40,31 +64,36 @@ export class AuthService {
    * Login user
    */
   async login(input: LoginInput): Promise<AuthResponse> {
-    // Find user by email
     const user = await usersRepository.findByEmail(input.email);
     if (!user) {
-      throw new Error("Invalid email or password");
+      throw new UnauthorizedError("Invalid email or password");
     }
 
-    // Compare passwords
     const isValidPassword = await comparePassword(input.password, user.passwordHash);
     if (!isValidPassword) {
-      throw new Error("Invalid email or password");
+      throw new UnauthorizedError("Invalid email or password");
     }
 
-    // Update ui_lang preference if provided
-    let finalUser = user;
+    let uiLang = "pt-BR";
     if (input.ui_lang !== undefined) {
-      finalUser = await usersRepository.update(user.id, { uiLang: input.ui_lang });
+      const profile = await userProfilesRepository.update(user.id, { uiLanguage: input.ui_lang });
+      if (profile) {
+        uiLang = profile.uiLanguage ?? "pt-BR";
+      }
+    } else {
+      const profile = await userProfilesRepository.findByUserId(user.id);
+      if (profile) {
+        uiLang = profile.uiLanguage ?? "pt-BR";
+      }
     }
 
     return {
-      token: "", // Will be generated in controller
+      token: "",
       user: {
-        id: finalUser.id,
-        email: finalUser.email,
-        name: finalUser.name,
-        ui_lang: finalUser.uiLang,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        ui_lang: uiLang,
       },
     };
   }
