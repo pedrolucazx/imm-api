@@ -41,7 +41,7 @@ describe("POST /auth/register + /auth/login", () => {
     await request(app!.server).post("/auth/register").send(payload);
 
     const response = await request(app!.server).post("/auth/register").send(payload);
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(409);
   });
 
   it("logs in and returns a token", async () => {

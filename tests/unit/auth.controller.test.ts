@@ -1,5 +1,6 @@
 import { AuthController } from "@/modules/auth/auth.controller.js";
 import { authService } from "@/modules/auth/auth.service.js";
+import { ConflictError, UnauthorizedError } from "@/shared/errors/index.js";
 
 jest.mock("@/modules/auth/auth.service.js", () => ({
   authService: {
@@ -55,7 +56,9 @@ describe("AuthController.register", () => {
   });
 
   it("returns 400 when authService throws an Error", async () => {
-    mockService.register.mockRejectedValue(new Error("User with this email already exists"));
+    mockService.register.mockRejectedValue(
+      new ConflictError("User with this email already exists")
+    );
     const request = makeRequest({
       email: "test@example.com",
       password: "password123",
@@ -65,7 +68,7 @@ describe("AuthController.register", () => {
 
     await controller.register(request as never, reply as never);
 
-    expect(reply.code).toHaveBeenCalledWith(400);
+    expect(reply.code).toHaveBeenCalledWith(409);
     expect(reply.send).toHaveBeenCalledWith({ error: "User with this email already exists" });
   });
 
@@ -98,7 +101,7 @@ describe("AuthController.login", () => {
   });
 
   it("returns 401 when authService throws an Error", async () => {
-    mockService.login.mockRejectedValue(new Error("Invalid email or password"));
+    mockService.login.mockRejectedValue(new UnauthorizedError("Invalid email or password"));
     const request = makeRequest({ email: "test@example.com", password: "wrong" });
     const reply = makeReply();
 

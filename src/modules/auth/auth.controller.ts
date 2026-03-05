@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { authService } from "./auth.service.js";
 import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from "./auth.types.js";
+import { AppError } from "../../shared/errors/index.js";
 
 export class AuthController {
   async register(request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) {
@@ -14,8 +15,8 @@ export class AuthController {
 
       return reply.code(201).send({ token, user: result.user });
     } catch (error) {
-      if (error instanceof Error) {
-        return reply.code(400).send({ error: error.message });
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send({ error: error.message });
       }
       return reply.code(500).send({ error: "Internal server error" });
     }
@@ -32,8 +33,8 @@ export class AuthController {
 
       return reply.code(200).send({ token, user: result.user });
     } catch (error) {
-      if (error instanceof Error) {
-        return reply.code(401).send({ error: error.message });
+      if (error instanceof AppError) {
+        return reply.code(error.statusCode).send({ error: error.message });
       }
       return reply.code(500).send({ error: "Internal server error" });
     }
