@@ -71,31 +71,45 @@ const mockProfile = {
   lastAiRequest: null,
 };
 
+let mockTx: {
+  select: ReturnType<typeof jest.fn>;
+  insert: ReturnType<typeof jest.fn>;
+};
+
 describe("AuthService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetDb.mockReturnValue(mockDb);
+
+    mockTx = {
+      select: jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      }),
+      insert: jest.fn().mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          returning: jest.fn().mockResolvedValue([]),
+        }),
+      }),
+    };
+
+    mockDb.transaction = jest.fn(async (callback) => {
+      return callback(mockTx);
+    }) as never;
   });
 
   describe("register", () => {
     it("throws if user with email already exists", async () => {
-      const mockTx = {
-        select: jest.fn().mockReturnValue({
-          from: jest.fn().mockReturnValue({
-            where: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue([mockUser]),
-            }),
+      mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([mockUser]),
           }),
         }),
-        insert: jest.fn().mockReturnValue({
-          values: jest.fn().mockReturnValue({
-            returning: jest.fn().mockResolvedValue([]),
-          }),
-        }),
-      };
-      mockDb.transaction = jest.fn(async (callback) => {
-        return callback(mockTx);
-      }) as never;
+      });
 
       await expect(
         authService.register({
@@ -110,26 +124,24 @@ describe("AuthService", () => {
 
     it("creates user and profile successfully", async () => {
       const newUser = { ...mockUser, email: "new@example.com" };
-      const mockTx = {
-        select: jest.fn().mockReturnValue({
-          from: jest.fn().mockReturnValue({
-            where: jest.fn().mockReturnValue({
-              limit: jest.fn().mockResolvedValue([]),
-            }),
+
+      mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([]),
           }),
         }),
-        insert: jest.fn().mockReturnValue({
-          values: jest.fn().mockReturnValue({
-            returning: jest
-              .fn()
-              .mockResolvedValueOnce([newUser])
-              .mockResolvedValueOnce([mockProfile]),
-          }),
+      });
+
+      const mockInsert = mockTx.insert as jest.Mock;
+      mockInsert.mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          returning: jest
+            .fn()
+            .mockResolvedValueOnce([newUser])
+            .mockResolvedValueOnce([mockProfile]),
         }),
-      };
-      mockDb.transaction = jest.fn(async (callback) => {
-        return callback(mockTx);
-      }) as never;
+      });
 
       const result = await authService.register({
         email: "new@example.com",
