@@ -79,7 +79,23 @@ describe("AuthService", () => {
 
   describe("register", () => {
     it("throws if user with email already exists", async () => {
-      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      const mockTx = {
+        select: jest.fn().mockReturnValue({
+          from: jest.fn().mockReturnValue({
+            where: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue([mockUser]),
+            }),
+          }),
+        }),
+        insert: jest.fn().mockReturnValue({
+          values: jest.fn().mockReturnValue({
+            returning: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      };
+      mockDb.transaction = jest.fn(async (callback) => {
+        return callback(mockTx);
+      }) as never;
 
       await expect(
         authService.register({
@@ -89,14 +105,19 @@ describe("AuthService", () => {
         })
       ).rejects.toBeInstanceOf(ConflictError);
 
-      expect(mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
+      expect(mockTx.select).toHaveBeenCalled();
     });
 
     it("creates user and profile successfully", async () => {
-      mockUsersRepo.findByEmail.mockResolvedValue(undefined);
-
       const newUser = { ...mockUser, email: "new@example.com" };
       const mockTx = {
+        select: jest.fn().mockReturnValue({
+          from: jest.fn().mockReturnValue({
+            where: jest.fn().mockReturnValue({
+              limit: jest.fn().mockResolvedValue([]),
+            }),
+          }),
+        }),
         insert: jest.fn().mockReturnValue({
           values: jest.fn().mockReturnValue({
             returning: jest
