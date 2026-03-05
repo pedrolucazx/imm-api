@@ -55,7 +55,7 @@ describe("AuthController.register", () => {
     expect(reply.send).toHaveBeenCalledWith({ token: "token", user: mockUser });
   });
 
-  it("returns 400 when authService throws an Error", async () => {
+  it("returns 409 when authService throws ConflictError", async () => {
     mockService.register.mockRejectedValue(
       new ConflictError("User with this email already exists")
     );
