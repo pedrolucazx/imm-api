@@ -3,6 +3,7 @@ import * as connection from "@/core/database/connection.js";
 import { usersRepository } from "@/modules/users/users.repository.js";
 import { userProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import { comparePassword } from "@/shared/utils/password.js";
+import { ConflictError, UnauthorizedError } from "@/shared/errors/index.js";
 
 jest.mock("@/shared/utils/password.js", () => ({
   hashPassword: jest.fn().mockResolvedValue("hashed-password"),
@@ -86,7 +87,7 @@ describe("AuthService", () => {
           password: "password123",
           name: "Test User",
         })
-      ).rejects.toThrow("User with this email already exists");
+      ).rejects.toBeInstanceOf(ConflictError);
 
       expect(mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
     });
@@ -117,6 +118,7 @@ describe("AuthService", () => {
 
       expect(result.user.email).toBe("new@example.com");
       expect(mockDb.transaction).toHaveBeenCalled();
+      expect(mockTx.insert).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -126,7 +128,7 @@ describe("AuthService", () => {
 
       await expect(
         authService.login({ email: "nobody@example.com", password: "pass" })
-      ).rejects.toThrow("Invalid email or password");
+      ).rejects.toBeInstanceOf(UnauthorizedError);
     });
 
     it("throws if password is wrong", async () => {
@@ -135,7 +137,7 @@ describe("AuthService", () => {
 
       await expect(
         authService.login({ email: "test@example.com", password: "wrong" })
-      ).rejects.toThrow("Invalid email or password");
+      ).rejects.toBeInstanceOf(UnauthorizedError);
     });
 
     it("updates profile and returns auth response when ui_lang is provided", async () => {
@@ -169,6 +171,7 @@ describe("AuthService", () => {
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.id).toBe(mockUser.id);
       expect(mockProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
+      expect(mockProfilesRepo.update).not.toHaveBeenCalled();
       expect(result.user.ui_lang).toBe("pt-BR");
     });
   });
