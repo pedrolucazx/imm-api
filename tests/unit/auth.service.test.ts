@@ -95,8 +95,18 @@ describe("AuthService", () => {
       mockUsersRepo.findByEmail.mockResolvedValue(undefined);
 
       const newUser = { ...mockUser, email: "new@example.com" };
-      mockDb.transaction = jest.fn(async () => {
-        return { user: newUser, profile: mockProfile };
+      const mockTx = {
+        insert: jest.fn().mockReturnValue({
+          values: jest.fn().mockReturnValue({
+            returning: jest
+              .fn()
+              .mockResolvedValueOnce([newUser])
+              .mockResolvedValueOnce([mockProfile]),
+          }),
+        }),
+      };
+      mockDb.transaction = jest.fn(async (callback) => {
+        return callback(mockTx);
       }) as never;
 
       const result = await authService.register({
