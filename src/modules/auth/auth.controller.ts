@@ -4,6 +4,16 @@ import { authService } from "./auth.service.js";
 import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from "./auth.types.js";
 import { AppError } from "../../shared/errors/index.js";
 
+function handleControllerError(error: unknown, reply: FastifyReply) {
+  if (error instanceof AppError) {
+    return reply.code(error.statusCode).send({ error: error.message });
+  }
+  if (error instanceof ZodError) {
+    return reply.code(422).send({ error: "Validation failed", details: error.issues });
+  }
+  return reply.code(500).send({ error: "Internal server error" });
+}
+
 export class AuthController {
   async register(request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) {
     try {
@@ -16,13 +26,7 @@ export class AuthController {
 
       return reply.code(201).send({ token, user: result.user });
     } catch (error) {
-      if (error instanceof AppError) {
-        return reply.code(error.statusCode).send({ error: error.message });
-      }
-      if (error instanceof ZodError) {
-        return reply.code(422).send({ error: "Validation failed", details: error.issues });
-      }
-      return reply.code(500).send({ error: "Internal server error" });
+      return handleControllerError(error, reply);
     }
   }
 
@@ -37,13 +41,7 @@ export class AuthController {
 
       return reply.code(200).send({ token, user: result.user });
     } catch (error) {
-      if (error instanceof AppError) {
-        return reply.code(error.statusCode).send({ error: error.message });
-      }
-      if (error instanceof ZodError) {
-        return reply.code(422).send({ error: "Validation failed", details: error.issues });
-      }
-      return reply.code(500).send({ error: "Internal server error" });
+      return handleControllerError(error, reply);
     }
   }
 }
