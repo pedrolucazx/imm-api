@@ -11,6 +11,7 @@ function handleControllerError(error: unknown, reply: FastifyReply) {
   if (error instanceof ZodError) {
     return reply.code(422).send({ error: "Validation failed", details: error.issues });
   }
+  console.error("Unexpected error:", error);
   return reply.code(500).send({ error: "Internal server error" });
 }
 

@@ -23,10 +23,23 @@ CREATE TABLE "user_profiles" (
 CREATE UNIQUE INDEX "idx_profiles_user" ON "user_profiles"("user_id");
 
 -- Step 5: Backfill user_profiles for existing users (using ui_lang if exists, else default)
-INSERT INTO "user_profiles" ("user_id", "ui_language", "timezone")
-SELECT "id", COALESCE("ui_lang", 'pt-BR'), 'America/Sao_Paulo'
-FROM "users"
-ON CONFLICT ("user_id") DO NOTHING;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'users' AND column_name = 'ui_lang'
+  ) THEN
+    INSERT INTO "user_profiles" ("user_id", "ui_language", "timezone")
+    SELECT "id", COALESCE("ui_lang", 'pt-BR'), 'America/Sao_Paulo'
+    FROM "users"
+    ON CONFLICT ("user_id") DO NOTHING;
+  ELSE
+    INSERT INTO "user_profiles" ("user_id", "ui_language", "timezone")
+    SELECT "id", 'pt-BR', 'America/Sao_Paulo'
+    FROM "users"
+    ON CONFLICT ("user_id") DO NOTHING;
+  END IF;
+END $$;
 
 -- Step 6: Drop the old ui_lang column from users
 ALTER TABLE "users" DROP COLUMN IF EXISTS "ui_lang";

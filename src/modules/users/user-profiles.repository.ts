@@ -26,6 +26,10 @@ export class UserProfilesRepository {
     userId: string,
     data: Partial<MutableUserProfileFields>
   ): Promise<UserProfile | undefined> {
+    const hasValidField = Object.values(data).some((v) => v !== undefined);
+    if (!hasValidField) {
+      return undefined;
+    }
     const [profile] = await getDb()
       .update(userProfiles)
       .set(data)

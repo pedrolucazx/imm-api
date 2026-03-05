@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { hashPassword, comparePassword } from "../../shared/utils/password.js";
 import { usersRepository } from "../users/users.repository.js";
 import { userProfilesRepository } from "../users/user-profiles.repository.js";
@@ -12,15 +13,20 @@ export class AuthService {
    * Register a new user
    */
   async register(input: RegisterInput): Promise<AuthResponse> {
-    const existingUser = await usersRepository.findByEmail(input.email);
-    if (existingUser) {
-      throw new ConflictError("User with this email already exists");
-    }
-
     const passwordHash = await hashPassword(input.password);
     const db = getDb();
 
     const result = await db.transaction(async (tx) => {
+      const [existingUser] = await tx
+        .select()
+        .from(usersSchema.users)
+        .where(eq(usersSchema.users.email, input.email))
+        .limit(1);
+
+      if (existingUser) {
+        throw new ConflictError("User with this email already exists");
+      }
+
       try {
         const [user] = await tx
           .insert(usersSchema.users)
@@ -76,15 +82,23 @@ export class AuthService {
 
     let uiLang = "pt-BR";
     if (input.ui_lang !== undefined) {
-      const profile = await userProfilesRepository.update(user.id, { uiLanguage: input.ui_lang });
-      if (profile) {
-        uiLang = profile.uiLanguage ?? "pt-BR";
+      let profile = await userProfilesRepository.update(user.id, { uiLanguage: input.ui_lang });
+      if (!profile) {
+        profile = await userProfilesRepository.create({
+          userId: user.id,
+          uiLanguage: input.ui_lang,
+        });
       }
+      uiLang = profile.uiLanguage ?? "pt-BR";
     } else {
-      const profile = await userProfilesRepository.findByUserId(user.id);
-      if (profile) {
-        uiLang = profile.uiLanguage ?? "pt-BR";
+      let profile = await userProfilesRepository.findByUserId(user.id);
+      if (!profile) {
+        profile = await userProfilesRepository.create({
+          userId: user.id,
+          uiLanguage: "pt-BR",
+        });
       }
+      uiLang = profile.uiLanguage ?? "pt-BR";
     }
 
     return {

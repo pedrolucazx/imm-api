@@ -1,15 +1,13 @@
-const SKILL_BUILDING_VALUES = ["en-US", "es-ES", "fr-FR", "pt-BR"] as const;
-const SKILL_BUILDING = new Set(SKILL_BUILDING_VALUES);
+const SKILL_BUILDING_LOCALES = ["en-US", "es-ES", "fr-FR", "pt-BR"] as const;
+const SKILL_BUILDING_LOCALE_SET: Set<string> = new Set(SKILL_BUILDING_LOCALES);
 
 export type TargetSkill =
-  | (typeof SKILL_BUILDING_VALUES)[number]
+  | (typeof SKILL_BUILDING_LOCALES)[number]
   | "general"
   | "fitness"
   | "mindfulness";
 export type HabitMode = "skill-building" | "tracking-coached";
 
 export function deriveHabitMode(targetSkill: TargetSkill): HabitMode {
-  return SKILL_BUILDING.has(targetSkill as (typeof SKILL_BUILDING_VALUES)[number])
-    ? "skill-building"
-    : "tracking-coached";
+  return SKILL_BUILDING_LOCALE_SET.has(targetSkill) ? "skill-building" : "tracking-coached";
 }

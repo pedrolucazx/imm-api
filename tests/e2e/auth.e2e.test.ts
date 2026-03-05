@@ -38,7 +38,8 @@ describe("POST /auth/register + /auth/login", () => {
   it("returns 409 when registering a duplicate email", async () => {
     const uniqueEmail = `dup-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
     const payload = { email: uniqueEmail, password: "password123", name: "Dup" };
-    await request(app!.server).post("/auth/register").send(payload);
+    const firstResponse = await request(app!.server).post("/auth/register").send(payload);
+    expect(firstResponse.status).toBe(201);
 
     const response = await request(app!.server).post("/auth/register").send(payload);
     expect(response.status).toBe(409);
