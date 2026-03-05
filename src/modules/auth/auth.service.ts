@@ -21,24 +21,32 @@ export class AuthService {
     const db = getDb();
 
     const result = await db.transaction(async (tx) => {
-      const [user] = await tx
-        .insert(usersSchema.users)
-        .values({
-          email: input.email,
-          passwordHash,
-          name: input.name,
-        })
-        .returning();
+      try {
+        const [user] = await tx
+          .insert(usersSchema.users)
+          .values({
+            email: input.email,
+            passwordHash,
+            name: input.name,
+          })
+          .returning();
 
-      const [profile] = await tx
-        .insert(userProfilesSchema.userProfiles)
-        .values({
-          userId: user.id,
-          uiLanguage: input.ui_lang || "pt-BR",
-        })
-        .returning();
+        const [profile] = await tx
+          .insert(userProfilesSchema.userProfiles)
+          .values({
+            userId: user.id,
+            uiLanguage: input.ui_lang || "pt-BR",
+          })
+          .returning();
 
-      return { user, profile };
+        return { user, profile };
+      } catch (error: unknown) {
+        const dbError = error as { code?: string; message?: string };
+        if (dbError.code === "23505" || dbError.message?.includes("duplicate key")) {
+          throw new ConflictError("User with this email already exists");
+        }
+        throw error;
+      }
     });
 
     return {
