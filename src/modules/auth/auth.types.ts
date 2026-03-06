@@ -1,13 +1,11 @@
 import { z } from "zod";
 
-// Reusable ui_lang validator — ISO 639-1 / BCP 47 simple codes (e.g. "en", "pt-BR")
 const uiLangSchema = z
   .string()
   .max(10, { error: "Language code must be at most 10 characters" })
   .regex(/^[a-z]{2}(-[A-Z]{2})?$/, { error: "Language code must match format: 'xx' or 'xx-XX'" })
   .optional();
 
-// Register schema
 export const registerSchema = z.object({
   email: z.email({ error: "Invalid email address" }),
   password: z
@@ -21,19 +19,18 @@ export const registerSchema = z.object({
   ui_lang: uiLangSchema,
 });
 
-// Login schema
 export const loginSchema = z.object({
   email: z.email({ error: "Invalid email address" }),
   password: z.string().min(1, { error: "Password is required" }),
   ui_lang: uiLangSchema,
 });
 
-// Types
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
     email: string;

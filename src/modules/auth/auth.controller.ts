@@ -3,7 +3,15 @@ import { ZodError } from "zod";
 import { authService } from "./auth.service.js";
 import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from "./auth.types.js";
 import { AppError } from "../../shared/errors/index.js";
+import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
+import { logger } from "../../core/config/logger.js";
 
+/**
+ * Handles errors from controller actions.
+ * @param error - The error that occurred
+ * @param reply - Fastify reply object
+ * @returns Error response
+ */
 function handleControllerError(error: unknown, reply: FastifyReply) {
   if (error instanceof AppError) {
     return reply.code(error.statusCode).send({ error: error.message });
@@ -11,39 +19,113 @@ function handleControllerError(error: unknown, reply: FastifyReply) {
   if (error instanceof ZodError) {
     return reply.code(422).send({ error: "Validation failed", details: error.issues });
   }
-  console.error("Unexpected error:", error);
+  logger.error({ err: error }, "Unexpected error");
   return reply.code(500).send({ error: "Internal server error" });
 }
 
+/**
+ * Sets the refresh token as an HTTP-only cookie.
+ * @param reply - Fastify reply object
+ * @param token - The refresh token to set
+ */
+function setRefreshTokenCookie(reply: FastifyReply, token: string) {
+  reply.setCookie("refreshToken", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: Math.floor(REFRESH_TOKEN_EXPIRES_MS / 1000),
+    path: "/",
+  });
+}
+
+/**
+ * Clears the refresh token cookie.
+ * @param reply - Fastify reply object
+ */
+function clearRefreshTokenCookie(reply: FastifyReply) {
+  reply.clearCookie("refreshToken", {
+    path: "/",
+  });
+}
+
+/**
+ * Controller for handling authentication endpoints.
+ */
 export class AuthController {
+  /**
+   * Handles user registration.
+   */
   async register(request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) {
     try {
       const data = registerSchema.parse(request.body);
-      const result = await authService.register(data);
-      const token = request.server.jwt.sign({
-        id: result.user.id,
-        email: result.user.email,
-      });
+      const jwt = request.server.jwt.sign.bind(request.server.jwt);
+      const result = await authService.register(data, jwt);
 
-      return reply.code(201).send({ token, user: result.user });
+      setRefreshTokenCookie(reply, result.refreshToken);
+
+      return reply.code(201).send({ accessToken: result.accessToken, user: result.user });
     } catch (error) {
       return handleControllerError(error, reply);
     }
   }
 
+  /**
+   * Handles user login.
+   */
   async login(request: FastifyRequest<{ Body: LoginInput }>, reply: FastifyReply) {
     try {
       const data = loginSchema.parse(request.body);
-      const result = await authService.login(data);
-      const token = request.server.jwt.sign({
-        id: result.user.id,
-        email: result.user.email,
-      });
+      const jwt = request.server.jwt.sign.bind(request.server.jwt);
+      const result = await authService.login(data, jwt);
 
-      return reply.code(200).send({ token, user: result.user });
+      setRefreshTokenCookie(reply, result.refreshToken);
+
+      return reply.code(200).send({ accessToken: result.accessToken, user: result.user });
     } catch (error) {
       return handleControllerError(error, reply);
     }
+  }
+
+  /**
+   * Handles token refresh using the refresh token from cookie.
+   */
+  async refresh(request: FastifyRequest, reply: FastifyReply) {
+    const refreshToken = request.cookies.refreshToken;
+    if (!refreshToken) {
+      return reply.code(401).send({ error: "Refresh token not provided" });
+    }
+
+    try {
+      const jwt = request.server.jwt.sign.bind(request.server.jwt);
+      const result = await authService.refresh(refreshToken, jwt);
+
+      setRefreshTokenCookie(reply, result.refreshToken);
+
+      return reply.code(200).send({ accessToken: result.accessToken, user: result.user });
+    } catch (error) {
+      if (error instanceof AppError && error.statusCode === 401) {
+        clearRefreshTokenCookie(reply);
+      }
+      return handleControllerError(error, reply);
+    }
+  }
+
+  /**
+   * Handles user logout by revoking the refresh token.
+   */
+  async logout(request: FastifyRequest, reply: FastifyReply) {
+    const refreshToken = request.cookies.refreshToken;
+    try {
+      if (refreshToken) {
+        await authService.logout(refreshToken);
+      }
+    } catch (error) {
+      clearRefreshTokenCookie(reply);
+      return handleControllerError(error, reply);
+    }
+
+    clearRefreshTokenCookie(reply);
+    return reply.code(204).send();
   }
 }
 

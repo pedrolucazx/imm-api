@@ -25,7 +25,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:wipe": "tsx scripts/db-wipe.ts"
+    "db:wipe": "tsx scripts/db-wipe.ts",
+    "db:start": "docker compose up -d --wait && npm run db:migrate"
   },
   "keywords": [],
   "author": "",

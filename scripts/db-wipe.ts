@@ -1,9 +1,10 @@
 import postgres from "postgres";
 import "dotenv/config";
+import { logger } from "../src/core/config/logger.js";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.error("DATABASE_URL not set");
+  logger.error("DATABASE_URL not set");
   process.exit(1);
 }
 
@@ -13,5 +14,5 @@ await sql`DROP SCHEMA public CASCADE`;
 await sql`CREATE SCHEMA public`;
 await sql`GRANT ALL ON SCHEMA public TO PUBLIC`;
 
-console.log("Database wiped. Run `npm run db:migrate` to recreate the schema.");
+logger.info("Database wiped. Run `npm run db:migrate` to recreate the schema.");
 await sql.end();

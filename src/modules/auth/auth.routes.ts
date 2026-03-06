@@ -1,91 +1,131 @@
 import type { FastifyInstance } from "fastify";
 import { authController } from "./auth.controller.js";
 
+const userResponse = {
+  type: "object",
+  properties: {
+    id: { type: "string", format: "uuid", examples: ["550e8400-e29b-41d4-a716-446655440000"] },
+    email: { type: "string", format: "email", examples: ["user@example.com"] },
+    name: { type: "string", examples: ["John Doe"] },
+    ui_lang: { type: "string", examples: ["pt-BR"] },
+  },
+};
+
+const authResponse = {
+  type: "object",
+  properties: {
+    accessToken: { type: "string", examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."] },
+    user: userResponse,
+  },
+};
+
+const errorResponse = (description: string) => ({
+  description,
+  type: "object",
+  properties: {
+    error: { type: "string", examples: [description] },
+  },
+});
+
 export async function authRoutes(fastify: FastifyInstance) {
-  // Register route
   fastify.post("/auth/register", {
     schema: {
-      description: "Register a new user",
+      description: "Register a new user account",
       tags: ["Authentication"],
+      summary: "Register new user",
       body: {
         type: "object",
         required: ["email", "password", "name"],
         properties: {
-          email: { type: "string", format: "email" },
-          password: { type: "string", minLength: 8, maxLength: 100 },
-          name: { type: "string", minLength: 2, maxLength: 255 },
-          ui_lang: { type: "string" },
+          email: { type: "string", format: "email", examples: ["user@example.com"] },
+          password: {
+            type: "string",
+            minLength: 8,
+            maxLength: 100,
+            examples: ["securePassword123"],
+          },
+          name: { type: "string", minLength: 2, maxLength: 255, examples: ["John Doe"] },
+          ui_lang: { type: "string", examples: ["pt-BR", "en-US"] },
         },
       },
       response: {
         201: {
           description: "User successfully registered",
-          type: "object",
-          properties: {
-            token: { type: "string" },
-            user: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                email: { type: "string" },
-                name: { type: "string" },
-                ui_lang: { type: "string" },
-              },
-            },
-          },
+          ...authResponse,
         },
-        400: {
-          description: "Bad request",
-          type: "object",
-          properties: {
-            error: { type: "string" },
-          },
-        },
+        400: errorResponse("Bad request - invalid input"),
+        409: errorResponse("Conflict - email already exists"),
       },
     },
     handler: authController.register.bind(authController),
   });
 
-  // Login route
   fastify.post("/auth/login", {
     schema: {
-      description: "Login with email and password",
+      description: "Authenticate user and receive access tokens",
       tags: ["Authentication"],
+      summary: "User login",
       body: {
         type: "object",
         required: ["email", "password"],
         properties: {
-          email: { type: "string", format: "email" },
-          password: { type: "string" },
-          ui_lang: { type: "string" },
+          email: { type: "string", format: "email", examples: ["user@example.com"] },
+          password: { type: "string", examples: ["securePassword123"] },
+          ui_lang: { type: "string", examples: ["pt-BR", "en-US"] },
         },
       },
       response: {
         200: {
-          description: "Successfully logged in",
-          type: "object",
-          properties: {
-            token: { type: "string" },
-            user: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                email: { type: "string" },
-                name: { type: "string" },
-                ui_lang: { type: "string" },
-              },
-            },
-          },
+          description: "Successfully authenticated",
+          ...authResponse,
         },
-        401: {
-          description: "Unauthorized",
-          type: "object",
-          properties: {
-            error: { type: "string" },
-          },
-        },
+        401: errorResponse("Unauthorized - invalid credentials"),
       },
     },
     handler: authController.login.bind(authController),
+  });
+
+  fastify.post("/auth/refresh", {
+    schema: {
+      description: "Refresh access token using refresh token from cookie",
+      tags: ["Authentication"],
+      summary: "Refresh access token",
+      cookies: {
+        type: "object",
+        properties: {
+          refreshToken: { type: "string", description: "Refresh token stored in HTTP-only cookie" },
+        },
+        required: ["refreshToken"],
+      },
+      response: {
+        200: {
+          description: "Token refreshed successfully",
+          ...authResponse,
+        },
+        401: errorResponse("Unauthorized - invalid or expired refresh token"),
+      },
+    },
+    handler: authController.refresh.bind(authController),
+  });
+
+  fastify.post("/auth/logout", {
+    schema: {
+      description: "Logout user and revoke refresh token",
+      tags: ["Authentication"],
+      summary: "User logout",
+      cookies: {
+        type: "object",
+        properties: {
+          refreshToken: { type: "string", description: "Refresh token to revoke" },
+        },
+      },
+      response: {
+        204: {
+          description: "Successfully logged out",
+        },
+        401: errorResponse("Unauthorized"),
+      },
+    },
+    handler: authController.logout.bind(authController),
   });
 }
