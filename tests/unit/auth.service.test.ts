@@ -228,6 +228,9 @@ describe("AuthService", () => {
       expect(mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
       expect(mockProfilesRepo.update).toHaveBeenCalledWith(mockUser.id, { uiLanguage: "en-US" });
       expect(result.user.ui_lang).toBe("en-US");
+      expect(result.accessToken).toMatch(/^access-token-/);
+      expect(result.refreshToken).toMatch(/^refresh-token-/);
+      expect(result.accessToken).not.toBe(result.refreshToken);
     });
 
     it("returns auth response without updating profile if ui_lang not provided", async () => {
@@ -249,6 +252,9 @@ describe("AuthService", () => {
       expect(mockProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
       expect(mockProfilesRepo.update).not.toHaveBeenCalled();
       expect(result.user.ui_lang).toBe("pt-BR");
+      expect(result.accessToken).toMatch(/^access-token-/);
+      expect(result.refreshToken).toMatch(/^refresh-token-/);
+      expect(result.accessToken).not.toBe(result.refreshToken);
     });
   });
 
@@ -259,6 +265,7 @@ describe("AuthService", () => {
       await expect(authService.refresh("invalid-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
+      expect(mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 
     it("throws if refresh token is expired", async () => {
@@ -274,6 +281,7 @@ describe("AuthService", () => {
       await expect(authService.refresh("expired-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
+      expect(mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 
     it("returns new tokens on successful refresh", async () => {
@@ -306,7 +314,8 @@ describe("AuthService", () => {
 
       await authService.logout("some-token");
 
-      expect(mockRefreshTokensRepo.revoke).toHaveBeenCalled();
+      expect(mockRefreshTokensRepo.revoke).toHaveBeenCalledTimes(1);
+      expect(mockRefreshTokensRepo.revoke).toHaveBeenCalledWith(expect.any(String));
     });
   });
 });

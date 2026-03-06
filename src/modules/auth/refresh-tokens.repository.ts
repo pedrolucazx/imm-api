@@ -46,20 +46,12 @@ export class RefreshTokensRepository {
     const db = getDb();
 
     const result = await db.transaction(async (tx) => {
+      const now = new Date();
       const [token] = await tx
-        .select()
-        .from(refreshTokens)
-        .where(and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt)))
-        .limit(1);
-
-      if (!token) {
-        return undefined;
-      }
-
-      await tx
         .update(refreshTokens)
-        .set({ revokedAt: new Date() })
-        .where(eq(refreshTokens.id, token.id));
+        .set({ revokedAt: now })
+        .where(and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt)))
+        .returning();
 
       return token;
     });
