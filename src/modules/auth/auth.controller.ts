@@ -6,6 +6,12 @@ import { AppError } from "../../shared/errors/index.js";
 import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
 import { logger } from "../../core/config/logger.js";
 
+/**
+ * Handles errors from controller actions.
+ * @param error - The error that occurred
+ * @param reply - Fastify reply object
+ * @returns Error response
+ */
 function handleControllerError(error: unknown, reply: FastifyReply) {
   if (error instanceof AppError) {
     return reply.code(error.statusCode).send({ error: error.message });
@@ -17,6 +23,11 @@ function handleControllerError(error: unknown, reply: FastifyReply) {
   return reply.code(500).send({ error: "Internal server error" });
 }
 
+/**
+ * Sets the refresh token as an HTTP-only cookie.
+ * @param reply - Fastify reply object
+ * @param token - The refresh token to set
+ */
 function setRefreshTokenCookie(reply: FastifyReply, token: string) {
   reply.setCookie("refreshToken", token, {
     httpOnly: true,
@@ -27,13 +38,23 @@ function setRefreshTokenCookie(reply: FastifyReply, token: string) {
   });
 }
 
+/**
+ * Clears the refresh token cookie.
+ * @param reply - Fastify reply object
+ */
 function clearRefreshTokenCookie(reply: FastifyReply) {
   reply.clearCookie("refreshToken", {
     path: "/",
   });
 }
 
+/**
+ * Controller for handling authentication endpoints.
+ */
 export class AuthController {
+  /**
+   * Handles user registration.
+   */
   async register(request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) {
     try {
       const data = registerSchema.parse(request.body);
@@ -48,6 +69,9 @@ export class AuthController {
     }
   }
 
+  /**
+   * Handles user login.
+   */
   async login(request: FastifyRequest<{ Body: LoginInput }>, reply: FastifyReply) {
     try {
       const data = loginSchema.parse(request.body);
@@ -62,6 +86,9 @@ export class AuthController {
     }
   }
 
+  /**
+   * Handles token refresh using the refresh token from cookie.
+   */
   async refresh(request: FastifyRequest, reply: FastifyReply) {
     try {
       const refreshToken = request.cookies.refreshToken;
@@ -80,6 +107,9 @@ export class AuthController {
     }
   }
 
+  /**
+   * Handles user logout by revoking the refresh token.
+   */
   async logout(request: FastifyRequest, reply: FastifyReply) {
     try {
       const refreshToken = request.cookies.refreshToken;

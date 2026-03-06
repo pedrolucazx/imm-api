@@ -13,10 +13,21 @@ import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 type JwtSignFn = (payload: object, options?: { expiresIn?: string | number }) => string;
 
+/**
+ * Hashes a token using SHA256.
+ * @param token - The token to hash
+ * @returns The hashed token
+ */
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * Generates access and refresh tokens for a user.
+ * @param jwt - The JWT signing function
+ * @param user - The user data (id, email)
+ * @returns Object containing accessToken and refreshToken
+ */
 function generateTokens(
   jwt: JwtSignFn,
   user: { id: string; email: string }
@@ -31,7 +42,16 @@ function generateTokens(
   return { accessToken, refreshToken };
 }
 
+/**
+ * Service for handling authentication operations.
+ */
 export class AuthService {
+  /**
+   * Registers a new user in the system.
+   * @param input - Registration input (email, password, name, ui_lang)
+   * @param jwt - The JWT signing function
+   * @returns Authentication response with tokens and user data
+   */
   async register(input: RegisterInput, jwt: JwtSignFn): Promise<AuthResponse> {
     const passwordHash = await hashPassword(input.password);
     const db = getDb();
@@ -98,6 +118,12 @@ export class AuthService {
     };
   }
 
+  /**
+   * Authenticates a user with email and password.
+   * @param input - Login input (email, password, ui_lang)
+   * @param jwt - The JWT signing function
+   * @returns Authentication response with tokens and user data
+   */
   async login(input: LoginInput, jwt: JwtSignFn): Promise<AuthResponse> {
     const user = await usersRepository.findByEmail(input.email);
     if (!user) {
@@ -153,6 +179,13 @@ export class AuthService {
     };
   }
 
+  /**
+   * Refreshes the access token using a valid refresh token.
+   * Implements token rotation - generates new tokens and revokes the old one.
+   * @param refreshToken - The refresh token from cookie
+   * @param jwt - The JWT signing function
+   * @returns New authentication response with fresh tokens
+   */
   async refresh(refreshToken: string, jwt: JwtSignFn): Promise<AuthResponse> {
     const tokenHash = hashToken(refreshToken);
     const token = await refreshTokensRepository.findByHash(tokenHash);
@@ -194,6 +227,10 @@ export class AuthService {
     };
   }
 
+  /**
+   * Logs out a user by revoking their refresh token.
+   * @param refreshToken - The refresh token to revoke
+   */
   async logout(refreshToken: string): Promise<void> {
     const tokenHash = hashToken(refreshToken);
     await refreshTokensRepository.revoke(tokenHash);
