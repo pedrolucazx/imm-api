@@ -1,4 +1,4 @@
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, isNull, lt } from "drizzle-orm";
 import { getDb } from "../../core/database/connection.js";
 import {
   refreshTokens,
@@ -84,7 +84,7 @@ export class RefreshTokensRepository {
    */
   async deleteExpired(): Promise<void> {
     const db = getDb();
-    await db.delete(refreshTokens).where(eq(refreshTokens.expiresAt, new Date()));
+    await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, new Date()));
   }
 }
 

@@ -91,13 +91,18 @@ let mockTx: {
   insert: ReturnType<typeof jest.fn>;
 };
 
-const mockJwt = jest
-  .fn()
-  .mockImplementation((_payload: unknown, _options: unknown) => "mocked-token");
+let tokenCounter = 0;
+const mockJwt = jest.fn().mockImplementation((payload: { type?: string }) => {
+  tokenCounter++;
+  return payload.type === "refresh"
+    ? `refresh-token-${tokenCounter}`
+    : `access-token-${tokenCounter}`;
+});
 
 describe("AuthService", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    tokenCounter = 0;
     mockGetDb.mockReturnValue(mockDb);
 
     mockTx = {
@@ -177,8 +182,9 @@ describe("AuthService", () => {
       );
 
       expect(result.user.email).toBe("new@example.com");
-      expect(result.accessToken).toBe("mocked-token");
-      expect(result.refreshToken).toBe("mocked-token");
+      expect(result.accessToken).toMatch(/^access-token-/);
+      expect(result.refreshToken).toMatch(/^refresh-token-/);
+      expect(result.accessToken).not.toBe(result.refreshToken);
       expect(mockDb.transaction).toHaveBeenCalled();
       expect(mockTx.insert).toHaveBeenCalledTimes(2);
     });
@@ -286,8 +292,9 @@ describe("AuthService", () => {
       const result = await authService.refresh("valid-token", mockJwt);
 
       expect(result.user.email).toBe("test@example.com");
-      expect(result.accessToken).toBe("mocked-token");
-      expect(result.refreshToken).toBe("mocked-token");
+      expect(result.accessToken).toMatch(/^access-token-/);
+      expect(result.refreshToken).toMatch(/^refresh-token-/);
+      expect(result.accessToken).not.toBe(result.refreshToken);
       expect(mockRefreshTokensRepo.consumeActiveByHash).toHaveBeenCalled();
       expect(mockRefreshTokensRepo.create).toHaveBeenCalled();
     });
