@@ -185,6 +185,9 @@ describe("AuthService", () => {
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
+      expect(mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: newUser.id })
+      );
       expect(mockDb.transaction).toHaveBeenCalled();
       expect(mockTx.insert).toHaveBeenCalledTimes(2);
     });
@@ -231,6 +234,9 @@ describe("AuthService", () => {
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
+      expect(mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: mockUser.id })
+      );
     });
 
     it("returns auth response without updating profile if ui_lang not provided", async () => {
@@ -255,6 +261,9 @@ describe("AuthService", () => {
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
+      expect(mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: mockUser.id })
+      );
     });
   });
 
@@ -265,6 +274,7 @@ describe("AuthService", () => {
       await expect(authService.refresh("invalid-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
+      expect(mockJwt).not.toHaveBeenCalled();
       expect(mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 
@@ -281,6 +291,7 @@ describe("AuthService", () => {
       await expect(authService.refresh("expired-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
+      expect(mockJwt).not.toHaveBeenCalled();
       expect(mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 

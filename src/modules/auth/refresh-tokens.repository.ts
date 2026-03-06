@@ -65,10 +65,11 @@ export class RefreshTokensRepository {
    */
   async revoke(tokenHash: string): Promise<void> {
     const db = getDb();
+    const now = new Date();
     await db
       .update(refreshTokens)
-      .set({ revokedAt: new Date() })
-      .where(eq(refreshTokens.tokenHash, tokenHash));
+      .set({ revokedAt: now })
+      .where(and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt)));
   }
 
   /**
