@@ -6,6 +6,8 @@ jest.mock("@/modules/auth/auth.service.js", () => ({
   authService: {
     register: jest.fn(),
     login: jest.fn(),
+    refresh: jest.fn(),
+    logout: jest.fn(),
   },
 }));
 
@@ -15,13 +17,20 @@ function makeReply() {
   const reply = {
     code: jest.fn().mockReturnThis(),
     send: jest.fn().mockReturnThis(),
+    setCookie: jest.fn().mockReturnThis(),
+    clearCookie: jest.fn().mockReturnThis(),
   };
   return reply;
 }
 
-function makeRequest(body: Record<string, unknown>, jwtSign = jest.fn().mockReturnValue("token")) {
+function makeRequest(
+  body: Record<string, unknown>,
+  cookies: Record<string, string> = {},
+  jwtSign = jest.fn().mockReturnValue("token")
+) {
   return {
     body,
+    cookies,
     server: { jwt: { sign: jwtSign } },
   };
 }
@@ -40,8 +49,12 @@ beforeEach(() => {
 });
 
 describe("AuthController.register", () => {
-  it("returns 201 with token and user on success", async () => {
-    mockService.register.mockResolvedValue({ token: "", user: mockUser });
+  it("returns 201 with accessToken and user on success", async () => {
+    mockService.register.mockResolvedValue({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      user: mockUser,
+    });
     const request = makeRequest({
       email: "test@example.com",
       password: "password123",
@@ -52,7 +65,12 @@ describe("AuthController.register", () => {
     await controller.register(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(201);
-    expect(reply.send).toHaveBeenCalledWith({ token: "token", user: mockUser });
+    expect(reply.send).toHaveBeenCalledWith({ accessToken: "access-token", user: mockUser });
+    expect(reply.setCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      "refresh-token",
+      expect.any(Object)
+    );
   });
 
   it("returns 409 when authService throws ConflictError", async () => {
@@ -89,15 +107,24 @@ describe("AuthController.register", () => {
 });
 
 describe("AuthController.login", () => {
-  it("returns 200 with token and user on success", async () => {
-    mockService.login.mockResolvedValue({ token: "", user: mockUser });
+  it("returns 200 with accessToken and user on success", async () => {
+    mockService.login.mockResolvedValue({
+      accessToken: "access-token",
+      refreshToken: "refresh-token",
+      user: mockUser,
+    });
     const request = makeRequest({ email: "test@example.com", password: "password123" });
     const reply = makeReply();
 
     await controller.login(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(200);
-    expect(reply.send).toHaveBeenCalledWith({ token: "token", user: mockUser });
+    expect(reply.send).toHaveBeenCalledWith({ accessToken: "access-token", user: mockUser });
+    expect(reply.setCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      "refresh-token",
+      expect.any(Object)
+    );
   });
 
   it("returns 401 when authService throws an Error", async () => {
@@ -120,5 +147,46 @@ describe("AuthController.login", () => {
 
     expect(reply.code).toHaveBeenCalledWith(500);
     expect(reply.send).toHaveBeenCalledWith({ error: "Internal server error" });
+  });
+});
+
+describe("AuthController.refresh", () => {
+  it("returns 200 with new tokens on success", async () => {
+    mockService.refresh.mockResolvedValue({
+      accessToken: "new-access",
+      refreshToken: "new-refresh",
+      user: mockUser,
+    });
+    const request = makeRequest({}, { refreshToken: "old-refresh-token" });
+    const reply = makeReply();
+
+    await controller.refresh(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(200);
+    expect(reply.send).toHaveBeenCalledWith({ accessToken: "new-access", user: mockUser });
+    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "new-refresh", expect.any(Object));
+  });
+
+  it("returns 401 when refresh token not provided", async () => {
+    const request = makeRequest({}, {});
+    const reply = makeReply();
+
+    await controller.refresh(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(401);
+    expect(reply.send).toHaveBeenCalledWith({ error: "Refresh token not provided" });
+  });
+});
+
+describe("AuthController.logout", () => {
+  it("returns 204 and clears cookie", async () => {
+    mockService.logout.mockResolvedValue();
+    const request = makeRequest({}, { refreshToken: "some-token" });
+    const reply = makeReply();
+
+    await controller.logout(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(204);
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
   });
 });

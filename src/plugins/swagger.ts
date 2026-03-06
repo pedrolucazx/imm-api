@@ -8,30 +8,36 @@ import { API_VERSION } from "@/shared/utils/constants.js";
 export const swaggerPlugin = fp(
   async (fastify: FastifyInstance) => {
     await fastify.register(swagger, {
-      swagger: {
+      openapi: {
         info: {
           title: "Inside My Mind API",
           description: "API documentation for Inside My Mind project",
           version: API_VERSION,
         },
-        host: env.API_HOST,
-        schemes: ["http", "https"],
-        consumes: ["application/json"],
-        produces: ["application/json"],
-        securityDefinitions: {
-          Bearer: {
-            type: "apiKey",
-            name: "Authorization",
-            in: "header",
-            description: 'JWT Authorization header. Example: "Bearer {token}"',
+        servers: [
+          {
+            url: `http://${env.API_HOST}`,
+            description: "Development server",
+          },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: "http",
+              scheme: "bearer",
+              bearerFormat: "JWT",
+            },
           },
         },
-        security: [{ Bearer: [] }],
+        security: [{ bearerAuth: [] }],
       },
     });
 
     await fastify.register(swaggerUI, {
       routePrefix: "/documentation",
+      uiConfig: {
+        persistAuthorization: true,
+      },
     });
   },
   { name: "swagger" }

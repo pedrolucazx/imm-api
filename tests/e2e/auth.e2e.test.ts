@@ -2,7 +2,8 @@ import request from "supertest";
 import type { FastifyInstance } from "fastify";
 import { buildTestApp } from "./helpers/app.js";
 import { usersRepository } from "@/modules/users/users.repository.js";
-import { closeDb } from "@/core/database/connection.js";
+import { closeDb, getDb } from "@/core/database/connection.js";
+import { refreshTokens } from "@/core/database/schema/refresh-tokens.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
 
 describe("POST /auth/register + /auth/login", () => {
@@ -14,6 +15,11 @@ describe("POST /auth/register + /auth/login", () => {
     process.env.DATABASE_URL = testDb.connectionUri;
     app = await buildTestApp();
   }, 120000);
+
+  beforeEach(async () => {
+    const db = getDb();
+    await db.delete(refreshTokens);
+  });
 
   afterAll(async () => {
     try {
@@ -31,7 +37,7 @@ describe("POST /auth/register + /auth/login", () => {
       .send({ email: uniqueEmail, password: "password123", name: "E2E User" })
       .expect(201);
 
-    expect(response.body.token).toBeDefined();
+    expect(response.body.accessToken).toBeDefined();
     expect(response.body.user.email).toBe(uniqueEmail);
   });
 
@@ -56,7 +62,7 @@ describe("POST /auth/register + /auth/login", () => {
       .send({ email: uniqueEmail, password: "password123" })
       .expect(200);
 
-    expect(response.body.token).toBeDefined();
+    expect(response.body.accessToken).toBeDefined();
   });
 
   it("returns 401 for wrong password", async () => {

@@ -1,6 +1,7 @@
 import pino from "pino";
 
-const isDev = process.env.NODE_ENV !== "production" && process.env.NODE_ENV !== "test";
+const isTest = process.env.NODE_ENV === "test";
+const isDev = process.env.NODE_ENV !== "production" && !isTest;
 
 export const prettyTransport = isDev
   ? {
@@ -14,7 +15,10 @@ export const prettyTransport = isDev
     }
   : undefined;
 
-export const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
-  transport: prettyTransport,
-});
+export const logger = pino(
+  {
+    level: isTest ? "silent" : process.env.LOG_LEVEL || "info",
+    transport: prettyTransport,
+  },
+  isTest ? pino.destination({ sync: false }) : undefined
+);
