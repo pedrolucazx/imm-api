@@ -36,6 +36,7 @@ jest.mock("@/modules/auth/refresh-tokens.repository.js", () => ({
   refreshTokensRepository: {
     create: jest.fn(),
     findByHash: jest.fn(),
+    consumeActiveByHash: jest.fn(),
     revoke: jest.fn(),
   },
 }));
@@ -247,7 +248,7 @@ describe("AuthService", () => {
 
   describe("refresh", () => {
     it("throws if refresh token is invalid", async () => {
-      mockRefreshTokensRepo.findByHash.mockResolvedValue(undefined);
+      mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue(undefined);
 
       await expect(authService.refresh("invalid-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
@@ -255,7 +256,7 @@ describe("AuthService", () => {
     });
 
     it("throws if refresh token is expired", async () => {
-      mockRefreshTokensRepo.findByHash.mockResolvedValue({
+      mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
         id: "1",
         userId: mockUser.id,
         tokenHash: "hash",
@@ -270,7 +271,7 @@ describe("AuthService", () => {
     });
 
     it("returns new tokens on successful refresh", async () => {
-      mockRefreshTokensRepo.findByHash.mockResolvedValue({
+      mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
         id: "1",
         userId: mockUser.id,
         tokenHash: "hash",
@@ -280,7 +281,6 @@ describe("AuthService", () => {
       });
       mockUsersRepo.findById.mockResolvedValue(mockUser);
       mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
-      mockRefreshTokensRepo.revoke.mockResolvedValue();
       mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
 
       const result = await authService.refresh("valid-token", mockJwt);
@@ -288,7 +288,7 @@ describe("AuthService", () => {
       expect(result.user.email).toBe("test@example.com");
       expect(result.accessToken).toBe("mocked-token");
       expect(result.refreshToken).toBe("mocked-token");
-      expect(mockRefreshTokensRepo.revoke).toHaveBeenCalled();
+      expect(mockRefreshTokensRepo.consumeActiveByHash).toHaveBeenCalled();
       expect(mockRefreshTokensRepo.create).toHaveBeenCalled();
     });
   });

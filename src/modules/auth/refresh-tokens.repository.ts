@@ -37,6 +37,37 @@ export class RefreshTokensRepository {
   }
 
   /**
+   * Atomically finds and revokes a refresh token.
+   * Prevents race conditions where concurrent requests could use the same token.
+   * @param tokenHash - The hashed refresh token
+   * @returns The refresh token if found and not revoked, undefined otherwise
+   */
+  async consumeActiveByHash(tokenHash: string): Promise<RefreshToken | undefined> {
+    const db = getDb();
+
+    const result = await db.transaction(async (tx) => {
+      const [token] = await tx
+        .select()
+        .from(refreshTokens)
+        .where(and(eq(refreshTokens.tokenHash, tokenHash), isNull(refreshTokens.revokedAt)))
+        .limit(1);
+
+      if (!token) {
+        return undefined;
+      }
+
+      await tx
+        .update(refreshTokens)
+        .set({ revokedAt: new Date() })
+        .where(eq(refreshTokens.id, token.id));
+
+      return token;
+    });
+
+    return result;
+  }
+
+  /**
    * Revokes a refresh token by setting its revokedAt timestamp.
    * @param tokenHash - The hashed refresh token to revoke
    */

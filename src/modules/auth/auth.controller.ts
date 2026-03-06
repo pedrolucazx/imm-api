@@ -90,12 +90,12 @@ export class AuthController {
    * Handles token refresh using the refresh token from cookie.
    */
   async refresh(request: FastifyRequest, reply: FastifyReply) {
-    try {
-      const refreshToken = request.cookies.refreshToken;
-      if (!refreshToken) {
-        return reply.code(401).send({ error: "Refresh token not provided" });
-      }
+    const refreshToken = request.cookies.refreshToken;
+    if (!refreshToken) {
+      return reply.code(401).send({ error: "Refresh token not provided" });
+    }
 
+    try {
       const jwt = request.server.jwt.sign.bind(request.server.jwt);
       const result = await authService.refresh(refreshToken, jwt);
 
@@ -103,6 +103,9 @@ export class AuthController {
 
       return reply.code(200).send({ accessToken: result.accessToken, user: result.user });
     } catch (error) {
+      if (error instanceof AppError && error.statusCode === 401) {
+        clearRefreshTokenCookie(reply);
+      }
       return handleControllerError(error, reply);
     }
   }
@@ -111,17 +114,18 @@ export class AuthController {
    * Handles user logout by revoking the refresh token.
    */
   async logout(request: FastifyRequest, reply: FastifyReply) {
+    const refreshToken = request.cookies.refreshToken;
     try {
-      const refreshToken = request.cookies.refreshToken;
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-
-      clearRefreshTokenCookie(reply);
-      return reply.code(204).send();
     } catch (error) {
+      clearRefreshTokenCookie(reply);
       return handleControllerError(error, reply);
     }
+
+    clearRefreshTokenCookie(reply);
+    return reply.code(204).send();
   }
 }
 

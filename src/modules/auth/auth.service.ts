@@ -8,7 +8,11 @@ import * as usersSchema from "../../core/database/schema/users.schema.js";
 import * as userProfilesSchema from "../../core/database/schema/user-profiles.schema.js";
 import { refreshTokensRepository } from "./refresh-tokens.repository.js";
 import { ConflictError, UnauthorizedError } from "../../shared/errors/index.js";
-import { ACCESS_TOKEN_EXPIRES, REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
+import {
+  ACCESS_TOKEN_EXPIRES,
+  REFRESH_TOKEN_EXPIRES,
+  REFRESH_TOKEN_EXPIRES_MS,
+} from "../../shared/constants.js";
 import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 type JwtSignFn = (payload: object, options?: { expiresIn?: string | number }) => string;
@@ -36,7 +40,7 @@ function generateTokens(
   const accessToken = jwt({ id: user.id, email: user.email }, { expiresIn: ACCESS_TOKEN_EXPIRES });
   const refreshToken = jwt(
     { id: user.id, type: "refresh", nonce },
-    { expiresIn: REFRESH_TOKEN_EXPIRES_MS }
+    { expiresIn: REFRESH_TOKEN_EXPIRES }
   );
 
   return { accessToken, refreshToken };
@@ -188,7 +192,7 @@ export class AuthService {
    */
   async refresh(refreshToken: string, jwt: JwtSignFn): Promise<AuthResponse> {
     const tokenHash = hashToken(refreshToken);
-    const token = await refreshTokensRepository.findByHash(tokenHash);
+    const token = await refreshTokensRepository.consumeActiveByHash(tokenHash);
 
     if (!token) {
       throw new UnauthorizedError("Invalid or expired refresh token");
@@ -197,8 +201,6 @@ export class AuthService {
     if (token.expiresAt < new Date()) {
       throw new UnauthorizedError("Refresh token expired");
     }
-
-    await refreshTokensRepository.revoke(tokenHash);
 
     const user = await usersRepository.findById(token.userId);
     if (!user) {
