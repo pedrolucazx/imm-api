@@ -1,7 +1,7 @@
 import request from "supertest";
 import type { FastifyInstance } from "fastify";
 import { buildTestApp } from "./helpers/app.js";
-import { usersRepository } from "@/modules/users/users.repository.js";
+import { createUsersRepository } from "@/modules/users/users.repository.js";
 import { closeDb, getDb } from "@/core/database/connection.js";
 import { refreshTokens } from "@/core/database/schema/refresh-tokens.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
@@ -86,10 +86,11 @@ describe("POST /auth/register + /auth/login", () => {
       .send({ email: uniqueEmail, password: "password123", name: "FindById User" });
 
     const userId = registerRes.body.user.id;
-    const found = await usersRepository.findById(userId);
+    const usersRepo = createUsersRepository(getDb());
+    const found = await usersRepo.findById(userId);
     expect(found?.email).toBe(uniqueEmail);
 
-    const notFound = await usersRepository.findById("00000000-0000-0000-0000-000000000099");
+    const notFound = await usersRepo.findById("00000000-0000-0000-0000-000000000099");
     expect(notFound).toBeUndefined();
   });
 });

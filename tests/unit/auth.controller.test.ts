@@ -1,26 +1,30 @@
-import { AuthController } from "@/modules/auth/auth.controller.js";
-import { authService } from "@/modules/auth/auth.service.js";
+import { createAuthController } from "@/modules/auth/auth.controller.js";
 import { ConflictError, UnauthorizedError } from "@/shared/errors/index.js";
+import type { AuthService } from "@/modules/auth/auth.service.js";
 
-jest.mock("@/modules/auth/auth.service.js", () => ({
-  authService: {
+const mockUser = {
+  id: "00000000-0000-0000-0000-000000000001",
+  email: "test@example.com",
+  name: "Test User",
+  ui_lang: "pt-BR",
+};
+
+function makeMockService(): jest.Mocked<AuthService> {
+  return {
     register: jest.fn(),
     login: jest.fn(),
     refresh: jest.fn(),
     logout: jest.fn(),
-  },
-}));
-
-const mockService = authService as jest.Mocked<typeof authService>;
+  };
+}
 
 function makeReply() {
-  const reply = {
+  return {
     code: jest.fn().mockReturnThis(),
     send: jest.fn().mockReturnThis(),
     setCookie: jest.fn().mockReturnThis(),
     clearCookie: jest.fn().mockReturnThis(),
   };
-  return reply;
 }
 
 function makeRequest(
@@ -35,20 +39,16 @@ function makeRequest(
   };
 }
 
-const mockUser = {
-  id: "00000000-0000-0000-0000-000000000001",
-  email: "test@example.com",
-  name: "Test User",
-};
-
-let controller: AuthController;
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  controller = new AuthController();
-});
-
 describe("AuthController.register", () => {
+  let mockService: jest.Mocked<AuthService>;
+  let controller: ReturnType<typeof createAuthController>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockService = makeMockService();
+    controller = createAuthController(mockService);
+  });
+
   it("returns 201 with accessToken and user on success", async () => {
     mockService.register.mockResolvedValue({
       accessToken: "access-token",
@@ -107,6 +107,15 @@ describe("AuthController.register", () => {
 });
 
 describe("AuthController.login", () => {
+  let mockService: jest.Mocked<AuthService>;
+  let controller: ReturnType<typeof createAuthController>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockService = makeMockService();
+    controller = createAuthController(mockService);
+  });
+
   it("returns 200 with accessToken and user on success", async () => {
     mockService.login.mockResolvedValue({
       accessToken: "access-token",
@@ -151,6 +160,15 @@ describe("AuthController.login", () => {
 });
 
 describe("AuthController.refresh", () => {
+  let mockService: jest.Mocked<AuthService>;
+  let controller: ReturnType<typeof createAuthController>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockService = makeMockService();
+    controller = createAuthController(mockService);
+  });
+
   it("returns 200 with new tokens on success", async () => {
     mockService.refresh.mockResolvedValue({
       accessToken: "new-access",
@@ -179,6 +197,15 @@ describe("AuthController.refresh", () => {
 });
 
 describe("AuthController.logout", () => {
+  let mockService: jest.Mocked<AuthService>;
+  let controller: ReturnType<typeof createAuthController>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockService = makeMockService();
+    controller = createAuthController(mockService);
+  });
+
   it("returns 204 and clears cookie", async () => {
     mockService.logout.mockResolvedValue();
     const request = makeRequest({}, { refreshToken: "some-token" });

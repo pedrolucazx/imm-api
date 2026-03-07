@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { authController } from "./auth.controller.js";
+import { getDb } from "../../core/database/connection.js";
+import { createAuthModule } from "./auth.module.js";
 
 const userResponse = {
   type: "object",
@@ -28,6 +29,8 @@ const errorResponse = (description: string) => ({
 });
 
 export async function authRoutes(fastify: FastifyInstance) {
+  const { controller } = createAuthModule(getDb());
+
   fastify.post("/auth/register", {
     schema: {
       description: "Register a new user account",
@@ -49,15 +52,12 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        201: {
-          description: "User successfully registered",
-          ...authResponse,
-        },
+        201: { description: "User successfully registered", ...authResponse },
         400: errorResponse("Bad request - invalid input"),
         409: errorResponse("Conflict - email already exists"),
       },
     },
-    handler: authController.register.bind(authController),
+    handler: controller.register,
   });
 
   fastify.post("/auth/login", {
@@ -75,14 +75,11 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        200: {
-          description: "Successfully authenticated",
-          ...authResponse,
-        },
+        200: { description: "Successfully authenticated", ...authResponse },
         401: errorResponse("Unauthorized - invalid credentials"),
       },
     },
-    handler: authController.login.bind(authController),
+    handler: controller.login,
   });
 
   fastify.post("/auth/refresh", {
@@ -98,14 +95,11 @@ export async function authRoutes(fastify: FastifyInstance) {
         required: ["refreshToken"],
       },
       response: {
-        200: {
-          description: "Token refreshed successfully",
-          ...authResponse,
-        },
+        200: { description: "Token refreshed successfully", ...authResponse },
         401: errorResponse("Unauthorized - invalid or expired refresh token"),
       },
     },
-    handler: authController.refresh.bind(authController),
+    handler: controller.refresh,
   });
 
   fastify.post("/auth/logout", {
@@ -120,12 +114,10 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        204: {
-          description: "Successfully logged out",
-        },
+        204: { description: "Successfully logged out" },
         401: errorResponse("Unauthorized"),
       },
     },
-    handler: authController.logout.bind(authController),
+    handler: controller.logout,
   });
 }
