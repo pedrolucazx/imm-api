@@ -10,15 +10,22 @@ export const updateProfileSchema = z.object({
     .max(255, { error: "Name must be less than 255 characters" })
     .optional(),
   avatarUrl: z
-    .url({ error: "Avatar URL must be a valid URL" })
-    .max(500, { error: "Avatar URL must be less than 500 characters" })
+    .union([
+      z
+        .string()
+        .url({ error: "Avatar URL must be a valid URL" })
+        .max(500, { error: "Avatar URL must be less than 500 characters" }),
+      z.null(),
+    ])
     .optional(),
   uiLanguage: z
     .enum(ALLOWED_UI_LANGUAGES, {
       error: `Language must be one of: ${ALLOWED_UI_LANGUAGES.join(", ")}`,
     })
     .optional(),
-  bio: z.string().max(500, { error: "Bio must be less than 500 characters" }).optional(),
+  bio: z
+    .union([z.string().max(500, { error: "Bio must be less than 500 characters" }), z.null()])
+    .optional(),
   timezone: z.string().max(50, { error: "Timezone must be less than 50 characters" }).optional(),
 });
 

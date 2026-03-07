@@ -12,14 +12,14 @@ const profileResponse = {
     id: { type: "string", format: "uuid", examples: ["550e8400-e29b-41d4-a716-446655440000"] },
     email: { type: "string", format: "email", examples: ["user@example.com"] },
     name: { type: "string", examples: ["John Doe"] },
-    avatarUrl: { type: "string", nullable: true, examples: [null] },
+    avatarUrl: { anyOf: [{ type: "string", format: "uri" }, { type: "null" }], examples: [null] },
     profile: {
       type: "object",
       additionalProperties: false,
       required: ["uiLanguage", "bio", "timezone", "aiRequestsToday"],
       properties: {
         uiLanguage: { type: "string", enum: [...ALLOWED_UI_LANGUAGES], examples: ["pt-BR"] },
-        bio: { type: "string", nullable: true, examples: [null] },
+        bio: { anyOf: [{ type: "string" }, { type: "null" }], examples: [null] },
         timezone: { type: "string", examples: ["America/Sao_Paulo"] },
         aiRequestsToday: { type: "integer", examples: [0] },
       },
@@ -66,17 +66,18 @@ export async function profileRoutes(fastify: FastifyInstance) {
         properties: {
           name: { type: "string", minLength: 2, maxLength: 255, examples: ["John Doe"] },
           avatarUrl: {
-            type: "string",
-            format: "uri",
-            maxLength: 500,
-            examples: ["https://example.com/avatar.png"],
+            anyOf: [{ type: "null" }, { type: "string", format: "uri", maxLength: 500 }],
+            examples: ["https://example.com/avatar.png", null],
           },
           uiLanguage: {
             type: "string",
             enum: [...ALLOWED_UI_LANGUAGES],
             examples: ["pt-BR"],
           },
-          bio: { type: "string", maxLength: 500, examples: ["Developer and coffee lover"] },
+          bio: {
+            anyOf: [{ type: "null" }, { type: "string", maxLength: 500 }],
+            examples: ["Developer and coffee lover", null],
+          },
           timezone: {
             type: "string",
             maxLength: 50,

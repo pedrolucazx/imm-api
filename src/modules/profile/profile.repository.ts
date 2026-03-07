@@ -35,14 +35,16 @@ export function createProfileRepository(db: DrizzleDb) {
 
     async updateUser(
       userId: string,
-      data: { name?: string; avatarUrl?: string }
+      data: { name?: string; avatarUrl?: string | null }
     ): Promise<User | undefined> {
-      const hasValidField = Object.values(data).some((v) => v !== undefined);
-      if (!hasValidField) return undefined;
+      const fields = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v !== undefined)
+      ) as Partial<typeof data>;
+      if (Object.keys(fields).length === 0) return undefined;
 
       const [user] = await db
         .update(users)
-        .set({ ...data, updatedAt: new Date() })
+        .set({ ...fields, updatedAt: new Date() })
         .where(eq(users.id, userId))
         .returning();
 
@@ -55,7 +57,10 @@ export function createProfileRepository(db: DrizzleDb) {
       tx?: DrizzleDb
     ): Promise<UserProfile> {
       const client = tx ?? db;
-      const hasValidField = Object.values(data).some((v) => v !== undefined);
+      const fields = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v !== undefined)
+      ) as Partial<typeof data>;
+      const hasValidField = Object.keys(fields).length > 0;
 
       if (!hasValidField) {
         const [existing] = await client
@@ -68,10 +73,10 @@ export function createProfileRepository(db: DrizzleDb) {
 
       const [profile] = await client
         .insert(userProfiles)
-        .values({ userId, ...data })
+        .values({ userId, ...fields })
         .onConflictDoUpdate({
           target: userProfiles.userId,
-          set: data,
+          set: fields,
         })
         .returning();
 
@@ -80,7 +85,7 @@ export function createProfileRepository(db: DrizzleDb) {
 
     async updateProfileAtomic(
       userId: string,
-      userData: { name?: string; avatarUrl?: string },
+      userData: { name?: string; avatarUrl?: string | null },
       profileData: Pick<UpdateProfileInput, "uiLanguage" | "bio" | "timezone">
     ): Promise<{ user: User | undefined; profile: UserProfile }> {
       return db.transaction(async (tx) => {
@@ -88,9 +93,12 @@ export function createProfileRepository(db: DrizzleDb) {
         let user: User | undefined;
 
         if (hasUserFields) {
+          const userFields = Object.fromEntries(
+            Object.entries(userData).filter(([, v]) => v !== undefined)
+          ) as Partial<typeof userData>;
           const [updated] = await tx
             .update(users)
-            .set({ ...userData, updatedAt: new Date() })
+            .set({ ...userFields, updatedAt: new Date() })
             .where(eq(users.id, userId))
             .returning();
           user = updated;
@@ -107,16 +115,19 @@ export function createProfileRepository(db: DrizzleDb) {
           }
         }
 
-        const hasProfileFields = Object.values(profileData).some((v) => v !== undefined);
+        const profileFields = Object.fromEntries(
+          Object.entries(profileData).filter(([, v]) => v !== undefined)
+        ) as Partial<typeof profileData>;
+        const hasProfileFields = Object.keys(profileFields).length > 0;
 
         let profile: UserProfile;
         if (hasProfileFields) {
           const [upserted] = await tx
             .insert(userProfiles)
-            .values({ userId, ...profileData })
+            .values({ userId, ...profileFields })
             .onConflictDoUpdate({
               target: userProfiles.userId,
-              set: profileData,
+              set: profileFields,
             })
             .returning();
           profile = upserted;

@@ -182,5 +182,41 @@ describe("GET /profile + PUT /profile", () => {
 
       expect(response.body.id).toBe(userId);
     });
+
+    it("clears bio with null", async () => {
+      // First set a bio
+      await request(app!.server)
+        .put("/profile")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ bio: "Some bio" })
+        .expect(200);
+
+      // Then clear it with null
+      const response = await request(app!.server)
+        .put("/profile")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ bio: null })
+        .expect(200);
+
+      expect(response.body.profile.bio).toBeNull();
+    });
+
+    it("clears avatarUrl with null", async () => {
+      // First set an avatarUrl
+      await request(app!.server)
+        .put("/profile")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ avatarUrl: "https://example.com/avatar.png" })
+        .expect(200);
+
+      // Then clear it with null
+      const response = await request(app!.server)
+        .put("/profile")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .send({ avatarUrl: null })
+        .expect(200);
+
+      expect(response.body.avatarUrl).toBeNull();
+    });
   });
 });
