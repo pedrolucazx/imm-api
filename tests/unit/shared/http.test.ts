@@ -1,4 +1,4 @@
-import { ZodError } from "zod";
+import { z, ZodError } from "zod";
 import { handleControllerError } from "@/shared/utils/http.js";
 import { UnauthorizedError } from "@/shared/errors/index.js";
 
@@ -22,15 +22,9 @@ describe("handleControllerError", () => {
 
   it("returns 422 with details for ZodError", () => {
     const reply = makeReply();
-    const zodError = new ZodError([
-      {
-        code: "invalid_type",
-        expected: "string",
-        received: "undefined",
-        path: ["email"],
-        message: "Required",
-      } as never,
-    ]);
+    const schema = z.object({ email: z.string().email() });
+    const parsed = schema.safeParse({ email: "not-an-email" });
+    const zodError = (parsed as { success: false; error: ZodError }).error;
 
     handleControllerError(zodError, reply as never);
 

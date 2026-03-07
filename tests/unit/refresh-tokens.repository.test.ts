@@ -14,7 +14,7 @@ function makeInsertDb(result: unknown[]) {
   const returning = jest.fn().mockResolvedValue(result);
   const values = jest.fn().mockReturnValue({ returning });
   const insert = jest.fn().mockReturnValue({ values });
-  return { insert } as unknown as DrizzleDb;
+  return { db: { insert } as unknown as DrizzleDb, mocks: { insert, values, returning } };
 }
 
 function makeSelectDb(result: unknown[]) {
@@ -22,7 +22,7 @@ function makeSelectDb(result: unknown[]) {
   const where = jest.fn().mockReturnValue({ limit });
   const from = jest.fn().mockReturnValue({ where });
   const select = jest.fn().mockReturnValue({ from });
-  return { select } as unknown as DrizzleDb;
+  return { db: { select } as unknown as DrizzleDb, mocks: { select, from, where, limit } };
 }
 
 function makeUpdateDb(result: unknown[]) {
@@ -33,25 +33,28 @@ function makeUpdateDb(result: unknown[]) {
   const transaction = jest
     .fn()
     .mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb({ update }));
-  return { update, transaction } as unknown as DrizzleDb;
+  return {
+    db: { update, transaction } as unknown as DrizzleDb,
+    mocks: { update, set, where, returning },
+  };
 }
 
 function makeRevokeDb() {
   const where = jest.fn().mockResolvedValue(undefined);
   const set = jest.fn().mockReturnValue({ where });
   const update = jest.fn().mockReturnValue({ set });
-  return { update } as unknown as DrizzleDb;
+  return { db: { update } as unknown as DrizzleDb, mocks: { update, set, where } };
 }
 
 function makeDeleteDb() {
   const where = jest.fn().mockResolvedValue(undefined);
   const del = jest.fn().mockReturnValue({ where });
-  return { delete: del } as unknown as DrizzleDb;
+  return { db: { delete: del } as unknown as DrizzleDb, mocks: { delete: del, where } };
 }
 
 describe("RefreshTokensRepository.create", () => {
   it("inserts and returns the created token", async () => {
-    const db = makeInsertDb([mockToken]);
+    const { db, mocks } = makeInsertDb([mockToken]);
     const repo = createRefreshTokensRepository(db);
 
     const result = await repo.create({
@@ -61,21 +64,28 @@ describe("RefreshTokensRepository.create", () => {
     });
 
     expect(result).toEqual(mockToken);
+    expect(mocks.values).toHaveBeenCalledWith({
+      userId: mockToken.userId,
+      tokenHash: mockToken.tokenHash,
+      expiresAt: mockToken.expiresAt,
+    });
   });
 });
 
 describe("RefreshTokensRepository.findByHash", () => {
   it("returns token when found", async () => {
-    const db = makeSelectDb([mockToken]);
+    const { db, mocks } = makeSelectDb([mockToken]);
     const repo = createRefreshTokensRepository(db);
 
     const result = await repo.findByHash(mockToken.tokenHash);
 
     expect(result).toEqual(mockToken);
+    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.limit).toHaveBeenCalledWith(1);
   });
 
   it("returns undefined when not found", async () => {
-    const db = makeSelectDb([]);
+    const { db } = makeSelectDb([]);
     const repo = createRefreshTokensRepository(db);
 
     const result = await repo.findByHash("unknown-hash");
@@ -86,16 +96,18 @@ describe("RefreshTokensRepository.findByHash", () => {
 
 describe("RefreshTokensRepository.consumeActiveByHash", () => {
   it("returns the token after consuming it", async () => {
-    const db = makeUpdateDb([mockToken]);
+    const { db, mocks } = makeUpdateDb([mockToken]);
     const repo = createRefreshTokensRepository(db);
 
     const result = await repo.consumeActiveByHash(mockToken.tokenHash);
 
     expect(result).toEqual(mockToken);
+    expect(mocks.set).toHaveBeenCalledWith({ revokedAt: expect.any(Date) });
+    expect(mocks.where).toHaveBeenCalled();
   });
 
   it("returns undefined when token not found or already consumed", async () => {
-    const db = makeUpdateDb([]);
+    const { db } = makeUpdateDb([]);
     const repo = createRefreshTokensRepository(db);
 
     const result = await repo.consumeActiveByHash("revoked-hash");
@@ -105,19 +117,24 @@ describe("RefreshTokensRepository.consumeActiveByHash", () => {
 });
 
 describe("RefreshTokensRepository.revoke", () => {
-  it("updates revokedAt without returning", async () => {
-    const db = makeRevokeDb();
+  it("updates revokedAt with the correct filter", async () => {
+    const { db, mocks } = makeRevokeDb();
     const repo = createRefreshTokensRepository(db);
 
     await expect(repo.revoke(mockToken.tokenHash)).resolves.toBeUndefined();
+
+    expect(mocks.set).toHaveBeenCalledWith({ revokedAt: expect.any(Date) });
+    expect(mocks.where).toHaveBeenCalled();
   });
 });
 
 describe("RefreshTokensRepository.deleteExpired", () => {
-  it("deletes expired tokens without returning", async () => {
-    const db = makeDeleteDb();
+  it("deletes expired tokens using a where predicate", async () => {
+    const { db, mocks } = makeDeleteDb();
     const repo = createRefreshTokensRepository(db);
 
     await expect(repo.deleteExpired()).resolves.toBeUndefined();
+
+    expect(mocks.where).toHaveBeenCalled();
   });
 });

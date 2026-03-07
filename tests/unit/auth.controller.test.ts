@@ -111,6 +111,7 @@ describe("AuthController.register", () => {
 
     await controller.register(request as never, reply as never);
 
+    expect(mockService.register).not.toHaveBeenCalled();
     expect(reply.code).toHaveBeenCalledWith(422);
     expect(reply.send).toHaveBeenCalledWith(
       expect.objectContaining({ error: "Validation failed" })

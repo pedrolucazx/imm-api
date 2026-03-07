@@ -199,7 +199,7 @@ describe("AuthService", () => {
           { email: "fail@example.com", password: "password123", name: "Fail" },
           mockJwt
         )
-      ).rejects.toThrow("connection lost");
+      ).rejects.toBe(unexpectedError);
     });
 
     it("creates user and profile successfully", async () => {
@@ -406,6 +406,8 @@ describe("AuthService", () => {
       await expect(authService.refresh("valid-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
+      expect(mockJwt).not.toHaveBeenCalled();
+      expect(mocks.mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 
     it("returns new tokens on successful refresh", async () => {

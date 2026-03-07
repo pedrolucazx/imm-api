@@ -11,8 +11,8 @@ const mockUser = {
   updatedAt: new Date("2025-01-01"),
 };
 
-function makeDb(overrides: Partial<Record<string, jest.Mock>> = {}) {
-  const where = jest.fn().mockResolvedValue([mockUser]);
+function makeDb(selectResult = [mockUser]) {
+  const where = jest.fn().mockResolvedValue(selectResult);
   const from = jest.fn().mockReturnValue({ where });
   const select = jest.fn().mockReturnValue({ from });
 
@@ -22,13 +22,13 @@ function makeDb(overrides: Partial<Record<string, jest.Mock>> = {}) {
 
   return {
     db: { select, insert } as unknown as DrizzleDb,
-    mocks: { select, from, where, insert, values, returning, ...overrides },
+    mocks: { select, from, where, insert, values, returning },
   };
 }
 
 describe("UsersRepository.create", () => {
   it("inserts and returns the created user", async () => {
-    const { db } = makeDb();
+    const { db, mocks } = makeDb();
     const repo = createUsersRepository(db);
 
     const result = await repo.create({
@@ -38,24 +38,30 @@ describe("UsersRepository.create", () => {
     });
 
     expect(result).toEqual(mockUser);
+    expect(mocks.values).toHaveBeenCalledWith({
+      email: mockUser.email,
+      passwordHash: mockUser.passwordHash,
+      name: mockUser.name,
+    });
+    expect(mocks.returning).toHaveBeenCalled();
   });
 });
 
 describe("UsersRepository.findByEmail", () => {
   it("returns user when found", async () => {
-    const { db } = makeDb();
+    const { db, mocks } = makeDb([mockUser]);
     const repo = createUsersRepository(db);
 
     const result = await repo.findByEmail("test@example.com");
 
     expect(result).toEqual(mockUser);
+    expect(mocks.select).toHaveBeenCalled();
+    expect(mocks.from).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalled();
   });
 
   it("returns undefined when not found", async () => {
-    const where = jest.fn().mockResolvedValue([]);
-    const from = jest.fn().mockReturnValue({ where });
-    const select = jest.fn().mockReturnValue({ from });
-    const db = { select } as unknown as DrizzleDb;
+    const { db } = makeDb([]);
     const repo = createUsersRepository(db);
 
     const result = await repo.findByEmail("nobody@example.com");
@@ -66,19 +72,19 @@ describe("UsersRepository.findByEmail", () => {
 
 describe("UsersRepository.findById", () => {
   it("returns user when found", async () => {
-    const { db } = makeDb();
+    const { db, mocks } = makeDb([mockUser]);
     const repo = createUsersRepository(db);
 
     const result = await repo.findById(mockUser.id);
 
     expect(result).toEqual(mockUser);
+    expect(mocks.select).toHaveBeenCalled();
+    expect(mocks.from).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalled();
   });
 
   it("returns undefined when not found", async () => {
-    const where = jest.fn().mockResolvedValue([]);
-    const from = jest.fn().mockReturnValue({ where });
-    const select = jest.fn().mockReturnValue({ from });
-    const db = { select } as unknown as DrizzleDb;
+    const { db } = makeDb([]);
     const repo = createUsersRepository(db);
 
     const result = await repo.findById("00000000-0000-0000-0000-000000000000");
