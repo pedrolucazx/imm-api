@@ -45,7 +45,7 @@
 
 ## Agentes de IA
 
-A API orquestra três agentes especializados via Anthropic API, cada um ativado por tipo de hábito:
+A API orquestra três agentes especializados via Google Gemini Flash, cada um ativado por tipo de hábito:
 
 - **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito
 - **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas
@@ -59,7 +59,7 @@ Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o
 
 ```text
 imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
-                                       └──► Anthropic API (agentes de IA)
+                                       └──► Google Gemini Flash (agentes de IA)
 ```
 
 `imm-api` é o backend da plataforma **Inside My Mind**. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Segue um monolito modular organizado por domínio — cada módulo em `src/modules/` possui suas próprias routes, controller, service e repository. A API é documentada via Swagger UI em `/docs`.
@@ -78,7 +78,7 @@ imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
 | Validação           | Zod 4                                                   |
 | Autenticação        | JWT — access + refresh tokens (`@fastify/jwt`)          |
 | Documentação da API | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`) |
-| Integração com IA   | Anthropic API                                           |
+| Integração com IA   | Google Gemini Flash                                     |
 | Logging             | Pino + pino-pretty                                      |
 | Containerização     | Docker + Docker Compose                                 |
 | Deployment          | Render                                                  |
@@ -198,7 +198,7 @@ JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
 
 # Integração com IA
-ANTHROPIC_API_KEY=sua-chave-api-anthropic
+GEMINI_API_KEY=sua-chave-api-gemini
 
 # Rate Limiting (opcional)
 RATE_LIMIT_MAX=100
@@ -212,7 +212,7 @@ RATE_LIMIT_TIMEWINDOW=60000
 | `JWT_ACCESS_EXPIRES`    | Sim         | TTL do access token (ex: `15m`)              |
 | `JWT_REFRESH_EXPIRES`   | Sim         | TTL do refresh token (ex: `7d`)              |
 | `CORS_ORIGIN`           | Sim         | Origem(ns) do frontend permitida(s)          |
-| `ANTHROPIC_API_KEY`     | Não\*       | Obrigatória para features de agentes de IA   |
+| `GEMINI_API_KEY`        | Não\*       | Obrigatória para features de agentes de IA   |
 | `LOG_LEVEL`             | Não         | Nível de log Pino (padrão: `info`)           |
 | `RATE_LIMIT_MAX`        | Não         | Máx requisições por janela (padrão: `100`)   |
 | `RATE_LIMIT_TIMEWINDOW` | Não         | Janela de rate limit em ms (padrão: `60000`) |
