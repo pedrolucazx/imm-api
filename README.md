@@ -1,6 +1,6 @@
 # imm-api
 
-> API Backend para **Inside My Mind** — Rastreamento de hábitos e journaling potencializado por três agentes de inteligência artificial.
+> Backend do **Inside My Mind** — rastreamento de hábitos com orquestração de agentes de IA.
 
 [![CI](https://github.com/pedrolucazx/imm-api/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/pedrolucazx/imm-api/actions/workflows/ci.yml)
 
@@ -18,7 +18,7 @@
 ## Índice
 
 - [O que é Inside My Mind?](#o-que-é-inside-my-mind)
-- [Os Três Agentes de IA](#os-três-agentes-de-ia)
+- [Agentes de IA](#agentes-de-ia)
 - [Arquitetura](#arquitetura)
 - [Stack de Tecnologias](#stack-de-tecnologias)
 - [Estrutura do Projeto](#estrutura-do-projeto)
@@ -28,7 +28,7 @@
 - [Banco de Dados](#banco-de-dados)
 - [Scripts Disponíveis](#scripts-disponíveis)
 - [Testes](#testes)
-- [Pipeline CI/CD](#pipelineCICD)
+- [Pipeline CI/CD](#pipeline-cicd)
 - [Deployment](#deployment)
 - [Estratégia de Branches](#estratégia-de-branches)
 - [Contribuindo](#contribuindo)
@@ -37,65 +37,32 @@
 
 ## O que é Inside My Mind?
 
-**Inside My Mind** é uma aplicação gratuita e de código aberto que ajuda você a construir hábitos consistentes ao longo de 66 dias — o tempo médio que a ciência mostra ser necessário para transformar um comportamento em uma rotina automática.
+**Inside My Mind** é uma aplicação de rastreamento de hábitos que usa IA para gerar feedback personalizado. O usuário registra seu progresso diário, escreve sobre sua experiência e recebe análise de um dos três agentes especializados: um planejador de hábitos, um professor de idiomas ou um coach comportamental.
 
-O diferencial é que o app conta com três agentes de IA que trabalham para você **sem custo nenhum**: um que monta seu plano personalizado, um que corrige sua escrita em outros idiomas e um que analisa seu humor e padrões comportamentais ao longo do tempo. Tudo rodando dentro de cotas gratuitas de IA sem monetização.
-
-É um projeto de portfólio e aprendizado que qualquer pessoa pode usar, estudar e contribuir.
+É um projeto de código aberto, feito para aprendizado e portfólio.
 
 ---
 
-## Os Três Agentes de IA
+## Agentes de IA
 
-### 🧠 Habit Planner — O Estrategista
+A API orquestra três agentes especializados via Anthropic API, cada um ativado por tipo de hábito:
 
-Gera planos personalizados de 66 dias quando você cria um novo hábito. Divide sua jornada em três fases embasadas cientificamente:
+- **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito
+- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas
+- **Behavioral Coach**: identifica padrões de humor e sugere micro-ações para hábitos comportamentais
 
-- **Fase 1 (Dias 1-14)** — Fundação: Tarefas leves e introdutórias para estabelecer a prática diária
-- **Fase 2 (Dias 15-44)** — Produção Ativa: Aumento gradual de dificuldade com prática deliberada
-- **Fase 3 (Dias 45-66)** — Consolidação: Foco em fluência, autonomia e maestria
-
-Cada fase inclui técnicas específicas (spaced repetition, deliberate practice, shadowing) e métricas de sucesso adaptadas ao seu estilo de aprendizado e tempo disponível.
-
-### 📝 Language Teacher — O Coach Linguístico
-
-Ativado para hábitos de aprendizado de idiomas. Analisa suas entradas diárias no journal e retorna feedback linguístico detalhado:
-
-- **Grammar Score** (0-100): Destaca os erros mais impactantes com explicações
-- **Vocabulary Score** (0-100): Avalia a riqueza do vocabulário e sugere alternativas mais avançadas
-- **Fluency Score** (0-100): Mede coerência, fluidez e estrutura do texto
-- **Top 3 erros**: Cada um com a versão original, corrigida e uma explicação clara
-- **Frase-modelo**: Uma sentença exemplar para você praticar seu ponto fraco
-- **Desafio para amanhã**: Uma tarefa concreta para seu próximo journal
-
-### 🎯 Behavioral Coach — O Analista de Padrões
-
-Ativado para todos os hábitos não-linguísticos (fitness, leitura, meditação, etc.). Lê seu journal e analisa padrões comportamentais:
-
-- **Detecção de humor**: Identifica positividade, fadiga, frustração ou neutralidade em sua escrita
-- **Nível de energia**: Classifica a energia percebida (alta, média, baixa)
-- **Score de alinhamento com hábito**: Mede quão bem seu journal está alinhado com o hábito rastreado
-- **Insights comportamentais**: Identifica padrões recorrentes (ex: "Energia mais baixa nos dias de aula")
-- **Micro-ações**: Sugestões específicas e executáveis para amanhã
-
----
-
-## Visão Geral
-
-`imm-api` é o backend da plataforma **Inside My Mind**. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Gerencia autenticação de usuários, rastreamento de hábitos, journaling e orquestra três agentes de IA para gerar insights personalizados.
-
-> Decisões de arquitetura, schema do banco de dados e estratégia de agentes de IA estão documentados em [docs/architecture.pdf](./docs/architecture.pdf).
+Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o usuário.
 
 ---
 
 ## Arquitetura
 
-```
+```text
 imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
-                                      └──► Anthropic API (Agentes de IA)
+                                       └──► Anthropic API (agentes de IA)
 ```
 
-Monolito modular organizado em torno de features por domínio. Cada módulo sob `src/modules/` possui suas routes, controller, service e repository. A API é totalmente documentada via Swagger UI em `/docs`.
+`imm-api` é o backend da plataforma **Inside My Mind**. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Segue um monolito modular organizado por domínio — cada módulo em `src/modules/` possui suas próprias routes, controller, service e repository. A API é documentada via Swagger UI em `/docs`.
 
 ---
 
@@ -120,7 +87,7 @@ Monolito modular organizado em torno de features por domínio. Cada módulo sob 
 
 ## Estrutura do Projeto
 
-```
+```text
 imm-api/
 ├── src/
 │   ├── modules/                  # Feature modules (uma pasta por domínio)
@@ -149,10 +116,10 @@ imm-api/
 │   ├── shared/
 │   │   └── utils/
 │   │       └── password.ts       # Helpers bcrypt
-│   ├── migrations/               # Auto-generated Drizzle SQL migrations
-│   └── index.ts                  # Application entry point
+│   ├── migrations/               # Drizzle SQL migrations geradas automaticamente
+│   └── index.ts                  # Entry point da aplicação
 ├── tests/
-│   ├── __setup__/                # Global setup (env vars, mocks)
+│   ├── __setup__/                # Setup global (env vars, mocks)
 │   ├── unit/                     # Testes unitários puros — sem I/O
 │   ├── integration/              # Testes de integração com DB (TestContainers)
 │   └── e2e/                      # Testes HTTP end-to-end
@@ -279,23 +246,23 @@ npm run db:studio
 
 | Script                     | Descrição                                      |
 | -------------------------- | ---------------------------------------------- |
-| `npm run dev`              | Inicie dev server com hot reload (`tsx watch`) |
-| `npm run build`            | Compile TypeScript para `dist/`                |
-| `npm start`                | Execute servidor compilado (production)        |
-| `npm run lint`             | Execute ESLint em `src/`                       |
-| `npm run lint:fix`         | Execute ESLint com auto-fix                    |
-| `npm run format`           | Formate todos os arquivos com Prettier         |
-| `npm run format:check`     | Verifique formatação sem escrever              |
-| `npm test`                 | Execute todas as test suites                   |
-| `npm run test:unit`        | Execute apenas testes unitários                |
-| `npm run test:integration` | Execute apenas testes de integração            |
-| `npm run test:e2e`         | Execute apenas testes e2e                      |
-| `npm run test:watch`       | Execute testes em watch mode                   |
-| `npm run test:coverage`    | Execute testes e gere relatório de coverage    |
-| `npm run db:generate`      | Gere Drizzle migration a partir do schema diff |
-| `npm run db:migrate`       | Aplique pending migrations                     |
+| `npm run dev`              | Inicia dev server com hot reload (`tsx watch`) |
+| `npm run build`            | Compila TypeScript para `dist/`                |
+| `npm start`                | Executa servidor compilado (production)        |
+| `npm run lint`             | Executa ESLint em `src/`                       |
+| `npm run lint:fix`         | Executa ESLint com auto-fix                    |
+| `npm run format`           | Formata todos os arquivos com Prettier         |
+| `npm run format:check`     | Verifica formatação sem escrever               |
+| `npm test`                 | Executa todas as test suites                   |
+| `npm run test:unit`        | Executa apenas testes unitários                |
+| `npm run test:integration` | Executa apenas testes de integração            |
+| `npm run test:e2e`         | Executa apenas testes e2e                      |
+| `npm run test:watch`       | Executa testes em watch mode                   |
+| `npm run test:coverage`    | Executa testes e gera relatório de coverage    |
+| `npm run db:generate`      | Gera Drizzle migration a partir do schema diff |
+| `npm run db:migrate`       | Aplica pending migrations                      |
 | `npm run db:push`          | Push do schema direto (sem arquivo migration)  |
-| `npm run db:studio`        | Abra Drizzle Studio GUI                        |
+| `npm run db:studio`        | Abre Drizzle Studio GUI                        |
 | `npm run commit`           | Conventional commit interativo via Commitizen  |
 
 ---
@@ -310,7 +277,7 @@ Três projetos Jest isolados, cada um com seu próprio timeout e ambiente:
 | `integration` | `tests/integration/` | 60s     | PostgreSQL real via TestContainers |
 | `e2e`         | `tests/e2e/`         | 60s     | Requisições HTTP completas         |
 
-Testes de integração disparam um container real de PostgreSQL 16 automaticamente via `@testcontainers/postgresql` — Docker deve estar rodando.
+Testes de integração disparam um container real de PostgreSQL 16 automaticamente via `@testcontainers/postgresql` — Docker precisa estar rodando.
 
 ```bash
 npm run test:unit
@@ -325,7 +292,7 @@ npm run test:coverage
 
 Todo push e pull request para `develop` ou `main` dispara o pipeline definido em `.github/workflows/ci.yml`:
 
-```
+```text
 code_quality ──► tests ──► ai_review ──► quality_gate
      │              │           │              │
   ESLint         unit        CodeRabbit     required
@@ -346,7 +313,7 @@ code_quality ──► tests ──► ai_review ──► quality_gate
 
 ## Deployment
 
-Gerenciado via [`render.yaml`](render.yaml) (Infrastructure as Code). O pipeline CD (`.github/workflows/cd.yml`) dispara deployments no Render após CI passar — `autoDeploy: false` está configurado em ambos os serviços para que Render nunca faça deploy em pushes diretos.
+Gerenciado via [`render.yaml`](render.yaml) (Infrastructure as Code). O pipeline CD (`.github/workflows/cd.yml`) dispara deployments no Render após CI passar — `autoDeploy: false` está configurado em ambos os serviços para que o Render nunca faça deploy em pushes diretos.
 
 | Ambiente    | Branch    | Render Service   |
 | ----------- | --------- | ---------------- |
@@ -369,9 +336,9 @@ npm start
 
 ## Estratégia de Branches
 
-```
+```text
 feature/* ──► develop (homolog) ──► main (production)
-                  │                       │
+                   │                       │
              auto-deploys to         admin-only merge
              imm-homolog             to imm-production
 ```
@@ -385,14 +352,16 @@ feature/* ──► develop (homolog) ──► main (production)
 ## Contribuindo
 
 1. Crie uma branch a partir de `develop`: `git checkout -b feat/sua-feature develop`
-2. Implemente suas mudanças, seguindo o padrão de módulos em `src/modules/`
+2. Implemente suas mudanças seguindo o padrão de módulos em `src/modules/`
 3. Escreva testes — unitários para lógica, integração para interações com DB
 4. Verifique se tudo passa localmente: `npm test && npm run lint && npm run format:check`
 5. Faça commit com [Conventional Commits](https://www.conventionalcommits.org/):
+
    ```bash
    npm run commit
    # ou manualmente: git commit -m "feat(habits): adicionar cálculo de streak"
    ```
+
 6. Abra um pull request direcionado para `develop`
 
 **Tipos de commit aceitos:** `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `ci`
@@ -401,20 +370,6 @@ Pre-commit hooks (Husky + lint-staged) executam checagens de lint e format autom
 
 ---
 
-## Por Que Este Projeto Importa para Seu Portfólio
-
-Este backend mostra várias práticas de engenharia de nível production e padrões modernos:
-
-- **Arquitetura Modular**: Domain-driven design com clara separação de responsabilidades. Cada feature tem suas routes, controller, service e repository.
-- **Type Safety**: TypeScript end-to-end garante correção em compile-time em toda a stack.
-- **Integração com IA**: Integração real da API Anthropic com prompt engineering para três agentes distintos (Planner, Language Teacher, Coach).
-- **Testes Abrangentes**: Test suites de unit, integração (com TestContainers) e E2E com automação CI/CD.
-- **IA sem Custo**: Todas as features de IA rodam dentro de quotas gratuitas do modelo — demonstra otimização com restrições e design eficiente de prompts.
-- **DevOps Production**: Containerização Docker, deployments gerenciados no Render, infrastructure as code (IaC) e estratégia dual-environment (homolog + production).
-- **Developer Experience**: Pre-commit hooks, automação com lint-staged, documentação de API via Swagger e Drizzle Studio para gerenciamento visual de banco de dados.
-
----
-
 ## Licença
 
-Este projeto é público e aberto para fins de aprendizado.
+Este projeto está licenciado sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
