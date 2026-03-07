@@ -18,7 +18,7 @@ const profileResponse = {
       additionalProperties: false,
       required: ["uiLanguage", "bio", "timezone", "aiRequestsToday"],
       properties: {
-        uiLanguage: { type: "string", examples: ["pt-BR"] },
+        uiLanguage: { type: "string", enum: [...ALLOWED_UI_LANGUAGES], examples: ["pt-BR"] },
         bio: { type: "string", nullable: true, examples: [null] },
         timezone: { type: "string", examples: ["America/Sao_Paulo"] },
         aiRequestsToday: { type: "integer", examples: [0] },

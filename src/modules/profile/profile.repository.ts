@@ -2,21 +2,16 @@ import { eq } from "drizzle-orm";
 import type { DrizzleDb } from "../../core/database/connection.js";
 import { users, userProfiles } from "../../core/database/schema/index.js";
 import type { User } from "../../core/database/schema/users.schema.js";
-import type { UserProfile } from "../../core/database/schema/user-profiles.schema.js";
+import {
+  DEFAULT_PROFILE_FIELDS,
+  type UserProfile,
+} from "../../core/database/schema/user-profiles.schema.js";
 import type { UpdateProfileInput } from "./profile.types.js";
 
 export type ProfileWithUser = {
   user: User;
   profile: UserProfile;
 };
-
-const DEFAULT_PROFILE_FIELDS = {
-  uiLanguage: "pt-BR",
-  bio: null,
-  timezone: "America/Sao_Paulo",
-  aiRequestsToday: 0,
-  lastAiRequest: null,
-} as const;
 
 export function createProfileRepository(db: DrizzleDb) {
   return {
