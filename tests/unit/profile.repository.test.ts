@@ -25,11 +25,11 @@ const mockProfile = {
 };
 
 describe("ProfileRepository.findByUserId", () => {
-  it("returns user and profile when found", async () => {
+  it("returns user and profile when both exist (leftJoin)", async () => {
     const joinResult = { users: mockUser, user_profiles: mockProfile };
     const where = jest.fn().mockResolvedValue([joinResult]);
-    const innerJoin = jest.fn().mockReturnValue({ where });
-    const from = jest.fn().mockReturnValue({ innerJoin });
+    const leftJoin = jest.fn().mockReturnValue({ where });
+    const from = jest.fn().mockReturnValue({ leftJoin });
     const select = jest.fn().mockReturnValue({ from });
     const db = { select } as unknown as DrizzleDb;
     const repo = createProfileRepository(db);
@@ -39,14 +39,32 @@ describe("ProfileRepository.findByUserId", () => {
     expect(result).toEqual({ user: mockUser, profile: mockProfile });
     expect(select).toHaveBeenCalled();
     expect(from).toHaveBeenCalledWith(users);
-    expect(innerJoin).toHaveBeenCalledWith(userProfiles, eq(userProfiles.userId, users.id));
+    expect(leftJoin).toHaveBeenCalledWith(userProfiles, eq(userProfiles.userId, users.id));
     expect(where).toHaveBeenCalledWith(eq(users.id, mockUser.id));
   });
 
-  it("returns undefined when not found", async () => {
+  it("returns user with default profile when profile row is null (user exists, no profile yet)", async () => {
+    const joinResult = { users: mockUser, user_profiles: null };
+    const where = jest.fn().mockResolvedValue([joinResult]);
+    const leftJoin = jest.fn().mockReturnValue({ where });
+    const from = jest.fn().mockReturnValue({ leftJoin });
+    const select = jest.fn().mockReturnValue({ from });
+    const db = { select } as unknown as DrizzleDb;
+    const repo = createProfileRepository(db);
+
+    const result = await repo.findByUserId(mockUser.id);
+
+    expect(result).toBeDefined();
+    expect(result!.user).toEqual(mockUser);
+    expect(result!.profile.uiLanguage).toBe("pt-BR");
+    expect(result!.profile.timezone).toBe("America/Sao_Paulo");
+    expect(result!.profile.aiRequestsToday).toBe(0);
+  });
+
+  it("returns undefined when user not found", async () => {
     const where = jest.fn().mockResolvedValue([]);
-    const innerJoin = jest.fn().mockReturnValue({ where });
-    const from = jest.fn().mockReturnValue({ innerJoin });
+    const leftJoin = jest.fn().mockReturnValue({ where });
+    const from = jest.fn().mockReturnValue({ leftJoin });
     const select = jest.fn().mockReturnValue({ from });
     const db = { select } as unknown as DrizzleDb;
     const repo = createProfileRepository(db);
@@ -112,6 +130,20 @@ describe("ProfileRepository.upsertProfile", () => {
     expect(select).toHaveBeenCalled();
   });
 
+  it("returns default profile when no valid fields and no existing profile", async () => {
+    const where = jest.fn().mockResolvedValue([]);
+    const from = jest.fn().mockReturnValue({ where });
+    const select = jest.fn().mockReturnValue({ from });
+    const db = { select } as unknown as DrizzleDb;
+    const repo = createProfileRepository(db);
+
+    const result = await repo.upsertProfile(mockUser.id, {});
+
+    expect(result.uiLanguage).toBe("pt-BR");
+    expect(result.timezone).toBe("America/Sao_Paulo");
+    expect(result.aiRequestsToday).toBe(0);
+  });
+
   it("upserts and returns profile with new uiLanguage", async () => {
     const updated = { ...mockProfile, uiLanguage: "en-US" };
     const returning = jest.fn().mockResolvedValue([updated]);
@@ -134,5 +166,67 @@ describe("ProfileRepository.upsertProfile", () => {
         set: expect.objectContaining({ uiLanguage: "en-US" }),
       })
     );
+  });
+});
+
+describe("ProfileRepository.updateProfileAtomic", () => {
+  it("runs both user update and profile upsert inside a transaction", async () => {
+    const updatedUser = { ...mockUser, name: "Atomic Name" };
+    const updatedProfile = { ...mockProfile, uiLanguage: "en-US" };
+
+    const returning = jest.fn().mockResolvedValue([updatedUser]);
+    const where = jest.fn().mockReturnValue({ returning });
+    const set = jest.fn().mockReturnValue({ where });
+    const txUpdate = jest.fn().mockReturnValue({ set });
+
+    const insertReturning = jest.fn().mockResolvedValue([updatedProfile]);
+    const onConflictDoUpdate = jest.fn().mockReturnValue({ returning: insertReturning });
+    const values = jest.fn().mockReturnValue({ onConflictDoUpdate });
+    const txInsert = jest.fn().mockReturnValue({ values });
+
+    const tx = { update: txUpdate, insert: txInsert } as unknown as DrizzleDb;
+    const transaction = jest
+      .fn()
+      .mockImplementation((fn: (tx: DrizzleDb) => Promise<unknown>) => fn(tx));
+    const db = { transaction } as unknown as DrizzleDb;
+    const repo = createProfileRepository(db);
+
+    const result = await repo.updateProfileAtomic(
+      mockUser.id,
+      { name: "Atomic Name" },
+      { uiLanguage: "en-US" }
+    );
+
+    expect(transaction).toHaveBeenCalled();
+    expect(txUpdate).toHaveBeenCalledWith(users);
+    expect(txInsert).toHaveBeenCalledWith(userProfiles);
+    expect(result.user).toEqual(updatedUser);
+    expect(result.profile).toEqual(updatedProfile);
+  });
+
+  it("fetches existing user when no user fields are provided", async () => {
+    const updatedProfile = { ...mockProfile, bio: "New bio" };
+
+    const userWhere = jest.fn().mockResolvedValue([mockUser]);
+    const userFrom = jest.fn().mockReturnValue({ where: userWhere });
+    const txSelect = jest.fn().mockReturnValue({ from: userFrom });
+
+    const insertReturning = jest.fn().mockResolvedValue([updatedProfile]);
+    const onConflictDoUpdate = jest.fn().mockReturnValue({ returning: insertReturning });
+    const values = jest.fn().mockReturnValue({ onConflictDoUpdate });
+    const txInsert = jest.fn().mockReturnValue({ values });
+
+    const tx = { select: txSelect, insert: txInsert } as unknown as DrizzleDb;
+    const transaction = jest
+      .fn()
+      .mockImplementation((fn: (tx: DrizzleDb) => Promise<unknown>) => fn(tx));
+    const db = { transaction } as unknown as DrizzleDb;
+    const repo = createProfileRepository(db);
+
+    const result = await repo.updateProfileAtomic(mockUser.id, {}, { bio: "New bio" });
+
+    expect(txSelect).toHaveBeenCalled();
+    expect(result.user).toEqual(mockUser);
+    expect(result.profile).toEqual(updatedProfile);
   });
 });

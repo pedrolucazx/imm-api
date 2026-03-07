@@ -42,15 +42,15 @@ export function createProfileService({ profileRepo }: ProfileServiceDeps) {
     async updateProfile(userId: string, input: UpdateProfileInput): Promise<ProfileResponse> {
       const { name, avatarUrl, uiLanguage, bio, timezone } = input;
 
-      const [updatedUser, updatedProfile] = await Promise.all([
-        profileRepo.updateUser(userId, { name, avatarUrl }),
-        profileRepo.upsertProfile(userId, { uiLanguage, bio, timezone }),
-      ]);
+      const { user, profile } = await profileRepo.updateProfileAtomic(
+        userId,
+        { name, avatarUrl },
+        { uiLanguage, bio, timezone }
+      );
 
-      const result = await profileRepo.findByUserId(userId);
-      if (!result) throw new NotFoundError("Profile not found");
+      if (!user) throw new NotFoundError("Profile not found");
 
-      return toProfileResponse(updatedUser ?? result.user, updatedProfile ?? result.profile);
+      return toProfileResponse(user, profile);
     },
   };
 }

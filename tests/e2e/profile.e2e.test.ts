@@ -1,5 +1,6 @@
 import request from "supertest";
 import type { FastifyInstance } from "fastify";
+import { eq } from "drizzle-orm";
 import { buildTestApp } from "./helpers/app.js";
 import { closeDb, getDb } from "@/core/database/connection.js";
 import { users } from "@/core/database/schema/users.schema.js";
@@ -65,6 +66,25 @@ describe("GET /profile + PUT /profile", () => {
       expect(response.body.email).toBe(uniqueEmail);
       expect(response.body.name).toBe("Profile User");
       expect(response.body.avatarUrl).toBeNull();
+      expect(response.body.profile).toMatchObject({
+        uiLanguage: expect.any(String),
+        bio: null,
+        timezone: expect.any(String),
+        aiRequestsToday: 0,
+      });
+    });
+
+    it("returns 200 with default profile values when user has no profile row", async () => {
+      // Remove the profile row to simulate a user without a persisted profile
+      const db = getDb();
+      await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
+
+      const response = await request(app!.server)
+        .get("/profile")
+        .set("Authorization", `Bearer ${accessToken}`)
+        .expect(200);
+
+      expect(response.body.id).toBe(userId);
       expect(response.body.profile).toMatchObject({
         uiLanguage: expect.any(String),
         bio: null,

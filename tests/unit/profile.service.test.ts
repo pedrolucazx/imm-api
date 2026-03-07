@@ -27,6 +27,7 @@ function makeMockRepo(): jest.Mocked<ProfileRepository> {
     findByUserId: jest.fn(),
     updateUser: jest.fn(),
     upsertProfile: jest.fn(),
+    updateProfileAtomic: jest.fn(),
   };
 }
 
@@ -77,38 +78,35 @@ describe("ProfileService.updateProfile", () => {
     service = createProfileService({ profileRepo: mockRepo });
   });
 
-  it("updates user name and returns updated profile", async () => {
+  it("updates user name and returns updated profile via atomic transaction", async () => {
     const updatedUser = { ...mockUser, name: "New Name" };
-    mockRepo.updateUser.mockResolvedValue(updatedUser);
-    mockRepo.upsertProfile.mockResolvedValue(mockProfile);
-    mockRepo.findByUserId.mockResolvedValue({ user: updatedUser, profile: mockProfile });
+    mockRepo.updateProfileAtomic.mockResolvedValue({ user: updatedUser, profile: mockProfile });
 
     const result = await service.updateProfile(mockUser.id, { name: "New Name" });
 
     expect(result.name).toBe("New Name");
-    expect(mockRepo.updateUser).toHaveBeenCalledWith(mockUser.id, {
-      name: "New Name",
-      avatarUrl: undefined,
-    });
+    expect(mockRepo.updateProfileAtomic).toHaveBeenCalledWith(
+      mockUser.id,
+      { name: "New Name", avatarUrl: undefined },
+      { uiLanguage: undefined, bio: undefined, timezone: undefined }
+    );
   });
 
-  it("updates uiLanguage and returns updated profile", async () => {
+  it("updates uiLanguage and returns updated profile via atomic transaction", async () => {
     const updatedProfile = { ...mockProfile, uiLanguage: "en-US" };
-    mockRepo.updateUser.mockResolvedValue(undefined);
-    mockRepo.upsertProfile.mockResolvedValue(updatedProfile);
-    mockRepo.findByUserId.mockResolvedValue({ user: mockUser, profile: updatedProfile });
+    mockRepo.updateProfileAtomic.mockResolvedValue({ user: mockUser, profile: updatedProfile });
 
     const result = await service.updateProfile(mockUser.id, { uiLanguage: "en-US" });
 
     expect(result.profile.uiLanguage).toBe("en-US");
-    expect(mockRepo.upsertProfile).toHaveBeenCalledWith(mockUser.id, {
-      uiLanguage: "en-US",
-      bio: undefined,
-      timezone: undefined,
-    });
+    expect(mockRepo.updateProfileAtomic).toHaveBeenCalledWith(
+      mockUser.id,
+      { name: undefined, avatarUrl: undefined },
+      { uiLanguage: "en-US", bio: undefined, timezone: undefined }
+    );
   });
 
-  it("updates all fields at once", async () => {
+  it("updates all fields at once via atomic transaction", async () => {
     const updatedUser = {
       ...mockUser,
       name: "Full Update",
@@ -120,9 +118,7 @@ describe("ProfileService.updateProfile", () => {
       bio: "My bio",
       timezone: "America/New_York",
     };
-    mockRepo.updateUser.mockResolvedValue(updatedUser);
-    mockRepo.upsertProfile.mockResolvedValue(updatedProfile);
-    mockRepo.findByUserId.mockResolvedValue({ user: updatedUser, profile: updatedProfile });
+    mockRepo.updateProfileAtomic.mockResolvedValue({ user: updatedUser, profile: updatedProfile });
 
     const result = await service.updateProfile(mockUser.id, {
       name: "Full Update",
@@ -139,12 +135,13 @@ describe("ProfileService.updateProfile", () => {
     expect(result.profile.timezone).toBe("America/New_York");
   });
 
-  it("throws NotFoundError when profile not found after update", async () => {
-    mockRepo.updateUser.mockResolvedValue(undefined);
-    mockRepo.upsertProfile.mockResolvedValue(mockProfile);
-    mockRepo.findByUserId.mockResolvedValue(undefined);
+  it("throws NotFoundError when updateProfileAtomic resolves with no user", async () => {
+    mockRepo.updateProfileAtomic.mockResolvedValue({
+      user: undefined as never,
+      profile: mockProfile,
+    });
 
-    await expect(service.updateProfile(mockUser.id, { name: "New Name" })).rejects.toBeInstanceOf(
+    await expect(service.updateProfile(mockUser.id, { name: "Ghost" })).rejects.toBeInstanceOf(
       NotFoundError
     );
   });

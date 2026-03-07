@@ -6,6 +6,8 @@ import { ALLOWED_UI_LANGUAGES } from "./profile.types.js";
 
 const profileResponse = {
   type: "object",
+  additionalProperties: false,
+  required: ["id", "email", "name", "avatarUrl", "profile"],
   properties: {
     id: { type: "string", format: "uuid", examples: ["550e8400-e29b-41d4-a716-446655440000"] },
     email: { type: "string", format: "email", examples: ["user@example.com"] },
@@ -13,6 +15,8 @@ const profileResponse = {
     avatarUrl: { type: "string", nullable: true, examples: [null] },
     profile: {
       type: "object",
+      additionalProperties: false,
+      required: ["uiLanguage", "bio", "timezone", "aiRequestsToday"],
       properties: {
         uiLanguage: { type: "string", examples: ["pt-BR"] },
         bio: { type: "string", nullable: true, examples: [null] },
