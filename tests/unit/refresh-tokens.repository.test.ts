@@ -137,6 +137,10 @@ describe("RefreshTokensRepository.revoke", () => {
 });
 
 describe("RefreshTokensRepository.deleteExpired", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("deletes tokens filtering by expiresAt less than now", async () => {
     const fixedNow = new Date("2026-01-01T00:00:00.000Z");
     jest.useFakeTimers();
@@ -148,7 +152,5 @@ describe("RefreshTokensRepository.deleteExpired", () => {
     await expect(repo.deleteExpired()).resolves.toBeUndefined();
 
     expect(mocks.where).toHaveBeenCalledWith(lt(refreshTokens.expiresAt, fixedNow));
-
-    jest.useRealTimers();
   });
 });

@@ -58,7 +58,7 @@ describe("UserProfilesRepository.findByUserId", () => {
     expect(result).toEqual(mockProfile);
     expect(mocks.select).toHaveBeenCalled();
     expect(mocks.from).toHaveBeenCalled();
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(eq(userProfiles.userId, mockProfile.userId));
   });
 
   it("returns undefined when not found", async () => {
