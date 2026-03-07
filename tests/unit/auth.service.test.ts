@@ -130,6 +130,78 @@ describe("AuthService", () => {
       expect(mocks.mockTx.select).toHaveBeenCalled();
     });
 
+    it("throws ConflictError on duplicate key DB error (code 23505)", async () => {
+      mocks.mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const dbError = Object.assign(new Error("duplicate key"), { code: "23505" });
+      mocks.mockTx.insert = jest.fn().mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          returning: jest.fn().mockRejectedValue(dbError),
+        }),
+      });
+
+      await expect(
+        authService.register(
+          { email: "dup@example.com", password: "password123", name: "Dup" },
+          mockJwt
+        )
+      ).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it("throws ConflictError on duplicate key DB error (message includes 'duplicate key')", async () => {
+      mocks.mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const dbError = new Error("duplicate key value violates unique constraint");
+      mocks.mockTx.insert = jest.fn().mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          returning: jest.fn().mockRejectedValue(dbError),
+        }),
+      });
+
+      await expect(
+        authService.register(
+          { email: "dup2@example.com", password: "password123", name: "Dup2" },
+          mockJwt
+        )
+      ).rejects.toBeInstanceOf(ConflictError);
+    });
+
+    it("re-throws unexpected DB error", async () => {
+      mocks.mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const unexpectedError = new Error("connection lost");
+      mocks.mockTx.insert = jest.fn().mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          returning: jest.fn().mockRejectedValue(unexpectedError),
+        }),
+      });
+
+      await expect(
+        authService.register(
+          { email: "fail@example.com", password: "password123", name: "Fail" },
+          mockJwt
+        )
+      ).rejects.toBe(unexpectedError);
+    });
+
     it("creates user and profile successfully", async () => {
       const newUser = { ...mockUser, email: "new@example.com" };
 
@@ -222,6 +294,48 @@ describe("AuthService", () => {
       );
     });
 
+    it("creates profile when update returns null and ui_lang is provided", async () => {
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      mockCompare.mockResolvedValue(true);
+      mocks.mockProfilesRepo.update.mockResolvedValue(undefined);
+      mocks.mockProfilesRepo.create.mockResolvedValue({ ...mockProfile, uiLanguage: "en-US" });
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+
+      const result = await authService.login(
+        { email: "test@example.com", password: "password123", ui_lang: "en-US" },
+        mockJwt
+      );
+
+      expect(mocks.mockProfilesRepo.update).toHaveBeenCalledWith(mockUser.id, {
+        uiLanguage: "en-US",
+      });
+      expect(mocks.mockProfilesRepo.create).toHaveBeenCalledWith({
+        userId: mockUser.id,
+        uiLanguage: "en-US",
+      });
+      expect(result.user.ui_lang).toBe("en-US");
+    });
+
+    it("creates profile when findByUserId returns null and no ui_lang provided", async () => {
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      mockCompare.mockResolvedValue(true);
+      mocks.mockProfilesRepo.findByUserId.mockResolvedValue(undefined);
+      mocks.mockProfilesRepo.create.mockResolvedValue({ ...mockProfile, uiLanguage: "pt-BR" });
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+
+      const result = await authService.login(
+        { email: "test@example.com", password: "password123" },
+        mockJwt
+      );
+
+      expect(mocks.mockProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
+      expect(mocks.mockProfilesRepo.create).toHaveBeenCalledWith({
+        userId: mockUser.id,
+        uiLanguage: "pt-BR",
+      });
+      expect(result.user.ui_lang).toBe("pt-BR");
+    });
+
     it("returns auth response without updating profile if ui_lang not provided", async () => {
       mocks.mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(true);
@@ -272,6 +386,24 @@ describe("AuthService", () => {
       });
 
       await expect(authService.refresh("expired-token", mockJwt)).rejects.toBeInstanceOf(
+        UnauthorizedError
+      );
+      expect(mockJwt).not.toHaveBeenCalled();
+      expect(mocks.mockRefreshTokensRepo.create).not.toHaveBeenCalled();
+    });
+
+    it("throws if user not found after token validation", async () => {
+      mocks.mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
+        id: "1",
+        userId: mockUser.id,
+        tokenHash: "hash",
+        expiresAt: new Date(Date.now() + 86400000),
+        revokedAt: null,
+        userAgent: null,
+      });
+      mocks.mockUsersRepo.findById.mockResolvedValue(undefined);
+
+      await expect(authService.refresh("valid-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
       expect(mockJwt).not.toHaveBeenCalled();
