@@ -87,7 +87,7 @@ export function createProfileRepository(db: DrizzleDb) {
       userId: string,
       userData: { name?: string; avatarUrl?: string },
       profileData: Pick<UpdateProfileInput, "uiLanguage" | "bio" | "timezone">
-    ): Promise<{ user: User; profile: UserProfile }> {
+    ): Promise<{ user: User | undefined; profile: UserProfile }> {
       return db.transaction(async (tx) => {
         const hasUserFields = Object.values(userData).some((v) => v !== undefined);
         let user: User | undefined;

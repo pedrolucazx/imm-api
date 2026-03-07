@@ -62,6 +62,7 @@ export async function profileRoutes(fastify: FastifyInstance) {
       security: [{ bearerAuth: [] }],
       body: {
         type: "object",
+        additionalProperties: false,
         properties: {
           name: { type: "string", minLength: 2, maxLength: 255, examples: ["John Doe"] },
           avatarUrl: {
