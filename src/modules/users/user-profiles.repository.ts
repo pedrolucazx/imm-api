@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { getDb } from "../../core/database/connection.js";
+import type { DrizzleDb } from "../../core/database/connection.js";
 import {
   userProfiles,
   type NewUserProfile,
@@ -8,35 +8,33 @@ import {
 
 type MutableUserProfileFields = Omit<NewUserProfile, "id" | "userId">;
 
-export class UserProfilesRepository {
-  async create(data: NewUserProfile): Promise<UserProfile> {
-    const [profile] = await getDb().insert(userProfiles).values(data).returning();
-    return profile;
-  }
+export function createUserProfilesRepository(db: DrizzleDb) {
+  return {
+    async create(data: NewUserProfile): Promise<UserProfile> {
+      const [profile] = await db.insert(userProfiles).values(data).returning();
+      return profile;
+    },
 
-  async findByUserId(userId: string): Promise<UserProfile | undefined> {
-    const [profile] = await getDb()
-      .select()
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, userId));
-    return profile;
-  }
+    async findByUserId(userId: string): Promise<UserProfile | undefined> {
+      const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, userId));
+      return profile;
+    },
 
-  async update(
-    userId: string,
-    data: Partial<MutableUserProfileFields>
-  ): Promise<UserProfile | undefined> {
-    const hasValidField = Object.values(data).some((v) => v !== undefined);
-    if (!hasValidField) {
-      return undefined;
-    }
-    const [profile] = await getDb()
-      .update(userProfiles)
-      .set(data)
-      .where(eq(userProfiles.userId, userId))
-      .returning();
-    return profile;
-  }
+    async update(
+      userId: string,
+      data: Partial<MutableUserProfileFields>
+    ): Promise<UserProfile | undefined> {
+      const hasValidField = Object.values(data).some((v) => v !== undefined);
+      if (!hasValidField) return undefined;
+
+      const [profile] = await db
+        .update(userProfiles)
+        .set(data)
+        .where(eq(userProfiles.userId, userId))
+        .returning();
+      return profile;
+    },
+  };
 }
 
-export const userProfilesRepository = new UserProfilesRepository();
+export type UserProfilesRepository = ReturnType<typeof createUserProfilesRepository>;

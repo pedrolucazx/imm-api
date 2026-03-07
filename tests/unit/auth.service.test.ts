@@ -1,69 +1,17 @@
-import { authService } from "@/modules/auth/auth.service.js";
-import * as connection from "@/core/database/connection.js";
-import { usersRepository } from "@/modules/users/users.repository.js";
-import { userProfilesRepository } from "@/modules/users/user-profiles.repository.js";
-import { refreshTokensRepository } from "@/modules/auth/refresh-tokens.repository.js";
+import { createAuthService } from "@/modules/auth/auth.service.js";
 import { comparePassword } from "@/shared/utils/password.js";
 import { ConflictError, UnauthorizedError } from "@/shared/errors/index.js";
 import type { RefreshToken } from "@/core/database/schema/refresh-tokens.schema.js";
+import type { UsersRepository } from "@/modules/users/users.repository.js";
+import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
+import type { RefreshTokensRepository } from "@/modules/auth/refresh-tokens.repository.js";
+import type { DrizzleDb } from "@/core/database/connection.js";
 
 jest.mock("@/shared/utils/password.js", () => ({
   hashPassword: jest.fn().mockResolvedValue("hashed-password"),
   comparePassword: jest.fn(),
 }));
 
-jest.mock("@/core/database/connection.js", () => ({
-  getDb: jest.fn(),
-}));
-
-jest.mock("@/modules/users/users.repository.js", () => ({
-  usersRepository: {
-    findByEmail: jest.fn(),
-    findById: jest.fn(),
-    create: jest.fn(),
-  },
-}));
-
-jest.mock("@/modules/users/user-profiles.repository.js", () => ({
-  userProfilesRepository: {
-    create: jest.fn(),
-    findByUserId: jest.fn(),
-    update: jest.fn(),
-  },
-}));
-
-jest.mock("@/modules/auth/refresh-tokens.repository.js", () => ({
-  refreshTokensRepository: {
-    create: jest.fn(),
-    findByHash: jest.fn(),
-    consumeActiveByHash: jest.fn(),
-    revoke: jest.fn(),
-  },
-}));
-
-const mockDb = {
-  transaction: jest.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
-  select: jest.fn(),
-  insert: jest.fn().mockReturnValue({
-    values: jest.fn().mockReturnValue({
-      returning: jest.fn().mockResolvedValue([]),
-    }),
-  }),
-  update: jest.fn().mockReturnValue({
-    set: jest.fn().mockReturnValue({
-      where: jest.fn().mockReturnValue({
-        returning: jest.fn().mockResolvedValue([]),
-      }),
-    }),
-  }),
-} as unknown as ReturnType<typeof connection.getDb>;
-
-const mockGetDb = connection.getDb as jest.MockedFunction<typeof connection.getDb>;
-const mockUsersRepo = usersRepository as jest.Mocked<typeof usersRepository>;
-const mockProfilesRepo = userProfilesRepository as jest.Mocked<typeof userProfilesRepository>;
-const mockRefreshTokensRepo = refreshTokensRepository as jest.Mocked<
-  typeof refreshTokensRepository
->;
 const mockCompare = comparePassword as jest.MockedFunction<typeof comparePassword>;
 
 const mockUser = {
@@ -86,11 +34,6 @@ const mockProfile = {
   lastAiRequest: null,
 };
 
-let mockTx: {
-  select: ReturnType<typeof jest.fn>;
-  insert: ReturnType<typeof jest.fn>;
-};
-
 let tokenCounter = 0;
 const mockJwt = jest.fn().mockImplementation((payload: { type?: string }) => {
   tokenCounter++;
@@ -99,35 +42,73 @@ const mockJwt = jest.fn().mockImplementation((payload: { type?: string }) => {
     : `access-token-${tokenCounter}`;
 });
 
+function makeMocks() {
+  let mockTx: {
+    select: jest.Mock;
+    insert: jest.Mock;
+  };
+
+  mockTx = {
+    select: jest.fn().mockReturnValue({
+      from: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnValue({
+          limit: jest.fn().mockResolvedValue([]),
+        }),
+      }),
+    }),
+    insert: jest.fn().mockReturnValue({
+      values: jest.fn().mockReturnValue({
+        returning: jest.fn().mockResolvedValue([]),
+      }),
+    }),
+  };
+
+  const mockDb = {
+    transaction: jest.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback(mockTx)),
+  } as unknown as DrizzleDb;
+
+  const mockUsersRepo: jest.Mocked<UsersRepository> = {
+    findByEmail: jest.fn(),
+    findById: jest.fn(),
+    create: jest.fn(),
+  };
+
+  const mockProfilesRepo: jest.Mocked<UserProfilesRepository> = {
+    create: jest.fn(),
+    findByUserId: jest.fn(),
+    update: jest.fn(),
+  };
+
+  const mockRefreshTokensRepo: jest.Mocked<RefreshTokensRepository> = {
+    create: jest.fn(),
+    findByHash: jest.fn(),
+    consumeActiveByHash: jest.fn(),
+    revoke: jest.fn(),
+    deleteExpired: jest.fn(),
+  };
+
+  return { mockDb, mockTx, mockUsersRepo, mockProfilesRepo, mockRefreshTokensRepo };
+}
+
 describe("AuthService", () => {
+  let mocks: ReturnType<typeof makeMocks>;
+  let authService: ReturnType<typeof createAuthService>;
+
   beforeEach(() => {
     jest.clearAllMocks();
     tokenCounter = 0;
-    mockGetDb.mockReturnValue(mockDb);
-
-    mockTx = {
-      select: jest.fn().mockReturnValue({
-        from: jest.fn().mockReturnValue({
-          where: jest.fn().mockReturnValue({
-            limit: jest.fn().mockResolvedValue([]),
-          }),
-        }),
-      }),
-      insert: jest.fn().mockReturnValue({
-        values: jest.fn().mockReturnValue({
-          returning: jest.fn().mockResolvedValue([]),
-        }),
-      }),
-    };
-
-    mockDb.transaction = jest.fn(async (callback) => {
-      return callback(mockTx);
-    }) as never;
+    mocks = makeMocks();
+    authService = createAuthService({
+      db: mocks.mockDb,
+      usersRepo: mocks.mockUsersRepo,
+      profilesRepo: mocks.mockProfilesRepo,
+      refreshTokensRepo: mocks.mockRefreshTokensRepo,
+    });
   });
 
   describe("register", () => {
     it("throws if user with email already exists", async () => {
-      mockTx.select = jest.fn().mockReturnValue({
+      mocks.mockTx.select = jest.fn().mockReturnValue({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
             limit: jest.fn().mockResolvedValue([mockUser]),
@@ -146,13 +127,13 @@ describe("AuthService", () => {
         )
       ).rejects.toBeInstanceOf(ConflictError);
 
-      expect(mockTx.select).toHaveBeenCalled();
+      expect(mocks.mockTx.select).toHaveBeenCalled();
     });
 
     it("creates user and profile successfully", async () => {
       const newUser = { ...mockUser, email: "new@example.com" };
 
-      mockTx.select = jest.fn().mockReturnValue({
+      mocks.mockTx.select = jest.fn().mockReturnValue({
         from: jest.fn().mockReturnValue({
           where: jest.fn().mockReturnValue({
             limit: jest.fn().mockResolvedValue([]),
@@ -160,7 +141,7 @@ describe("AuthService", () => {
         }),
       });
 
-      const mockInsert = mockTx.insert as jest.Mock;
+      const mockInsert = mocks.mockTx.insert as jest.Mock;
       mockInsert.mockReturnValue({
         values: jest.fn().mockReturnValue({
           returning: jest
@@ -170,7 +151,7 @@ describe("AuthService", () => {
         }),
       });
 
-      mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
 
       const result = await authService.register(
         {
@@ -185,17 +166,17 @@ describe("AuthService", () => {
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
-      expect(mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+      expect(mocks.mockRefreshTokensRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: newUser.id })
       );
-      expect(mockDb.transaction).toHaveBeenCalled();
-      expect(mockTx.insert).toHaveBeenCalledTimes(2);
+      expect(mocks.mockDb.transaction).toHaveBeenCalled();
+      expect(mocks.mockTx.insert).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("login", () => {
     it("throws if user is not found", async () => {
-      mockUsersRepo.findByEmail.mockResolvedValue(undefined);
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(undefined);
 
       await expect(
         authService.login({ email: "nobody@example.com", password: "pass" }, mockJwt)
@@ -203,7 +184,7 @@ describe("AuthService", () => {
     });
 
     it("throws if password is wrong", async () => {
-      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(false);
 
       await expect(
@@ -212,10 +193,10 @@ describe("AuthService", () => {
     });
 
     it("updates profile and returns auth response when ui_lang is provided", async () => {
-      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(true);
-      mockProfilesRepo.update.mockResolvedValue({ ...mockProfile, uiLanguage: "en-US" });
-      mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+      mocks.mockProfilesRepo.update.mockResolvedValue({ ...mockProfile, uiLanguage: "en-US" });
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
 
       const result = await authService.login(
         {
@@ -228,22 +209,24 @@ describe("AuthService", () => {
 
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.id).toBe(mockUser.id);
-      expect(mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
-      expect(mockProfilesRepo.update).toHaveBeenCalledWith(mockUser.id, { uiLanguage: "en-US" });
+      expect(mocks.mockUsersRepo.findByEmail).toHaveBeenCalledWith("test@example.com");
+      expect(mocks.mockProfilesRepo.update).toHaveBeenCalledWith(mockUser.id, {
+        uiLanguage: "en-US",
+      });
       expect(result.user.ui_lang).toBe("en-US");
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
-      expect(mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+      expect(mocks.mockRefreshTokensRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: mockUser.id })
       );
     });
 
     it("returns auth response without updating profile if ui_lang not provided", async () => {
-      mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(mockUser);
       mockCompare.mockResolvedValue(true);
-      mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
-      mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+      mocks.mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
 
       const result = await authService.login(
         {
@@ -255,13 +238,13 @@ describe("AuthService", () => {
 
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.id).toBe(mockUser.id);
-      expect(mockProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
-      expect(mockProfilesRepo.update).not.toHaveBeenCalled();
+      expect(mocks.mockProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
+      expect(mocks.mockProfilesRepo.update).not.toHaveBeenCalled();
       expect(result.user.ui_lang).toBe("pt-BR");
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
-      expect(mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+      expect(mocks.mockRefreshTokensRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: mockUser.id })
       );
     });
@@ -269,17 +252,17 @@ describe("AuthService", () => {
 
   describe("refresh", () => {
     it("throws if refresh token is invalid", async () => {
-      mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue(undefined);
+      mocks.mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue(undefined);
 
       await expect(authService.refresh("invalid-token", mockJwt)).rejects.toBeInstanceOf(
         UnauthorizedError
       );
       expect(mockJwt).not.toHaveBeenCalled();
-      expect(mockRefreshTokensRepo.create).not.toHaveBeenCalled();
+      expect(mocks.mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 
     it("throws if refresh token is expired", async () => {
-      mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
+      mocks.mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
         id: "1",
         userId: mockUser.id,
         tokenHash: "hash",
@@ -292,11 +275,11 @@ describe("AuthService", () => {
         UnauthorizedError
       );
       expect(mockJwt).not.toHaveBeenCalled();
-      expect(mockRefreshTokensRepo.create).not.toHaveBeenCalled();
+      expect(mocks.mockRefreshTokensRepo.create).not.toHaveBeenCalled();
     });
 
     it("returns new tokens on successful refresh", async () => {
-      mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
+      mocks.mockRefreshTokensRepo.consumeActiveByHash.mockResolvedValue({
         id: "1",
         userId: mockUser.id,
         tokenHash: "hash",
@@ -304,9 +287,9 @@ describe("AuthService", () => {
         revokedAt: null,
         userAgent: null,
       });
-      mockUsersRepo.findById.mockResolvedValue(mockUser);
-      mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
-      mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+      mocks.mockUsersRepo.findById.mockResolvedValue(mockUser);
+      mocks.mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
 
       const result = await authService.refresh("valid-token", mockJwt);
 
@@ -314,19 +297,19 @@ describe("AuthService", () => {
       expect(result.accessToken).toMatch(/^access-token-/);
       expect(result.refreshToken).toMatch(/^refresh-token-/);
       expect(result.accessToken).not.toBe(result.refreshToken);
-      expect(mockRefreshTokensRepo.consumeActiveByHash).toHaveBeenCalled();
-      expect(mockRefreshTokensRepo.create).toHaveBeenCalled();
+      expect(mocks.mockRefreshTokensRepo.consumeActiveByHash).toHaveBeenCalled();
+      expect(mocks.mockRefreshTokensRepo.create).toHaveBeenCalled();
     });
   });
 
   describe("logout", () => {
     it("revokes refresh token", async () => {
-      mockRefreshTokensRepo.revoke.mockResolvedValue();
+      mocks.mockRefreshTokensRepo.revoke.mockResolvedValue();
 
       await authService.logout("some-token");
 
-      expect(mockRefreshTokensRepo.revoke).toHaveBeenCalledTimes(1);
-      expect(mockRefreshTokensRepo.revoke).toHaveBeenCalledWith(expect.any(String));
+      expect(mocks.mockRefreshTokensRepo.revoke).toHaveBeenCalledTimes(1);
+      expect(mocks.mockRefreshTokensRepo.revoke).toHaveBeenCalledWith(expect.any(String));
     });
   });
 });

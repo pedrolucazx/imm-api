@@ -28,6 +28,8 @@ export const loginSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export type JwtSignFn = (payload: object, options?: { expiresIn?: string | number }) => string;
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
@@ -35,6 +37,6 @@ export interface AuthResponse {
     id: string;
     email: string;
     name: string;
-    ui_lang?: string | null;
+    ui_lang: string;
   };
 }
