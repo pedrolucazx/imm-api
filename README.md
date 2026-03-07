@@ -1,6 +1,6 @@
 # imm-api
 
-> Backend API for **Inside My Mind** — a SaaS platform for habit tracking and AI-powered journaling.
+> API Backend para **Inside My Mind** — Rastreamento de hábitos e journaling potencializado por três agentes de inteligência artificial.
 
 [![CI](https://github.com/pedrolucazx/imm-api/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/pedrolucazx/imm-api/actions/workflows/ci.yml)
 
@@ -15,89 +15,129 @@
 
 ---
 
-## Table of Contents
+## Índice
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Database](#database)
-- [Available Scripts](#available-scripts)
-- [Testing](#testing)
-- [CI/CD Pipeline](#cicd-pipeline)
+- [O que é Inside My Mind?](#o-que-é-inside-my-mind)
+- [Os Três Agentes de IA](#os-três-agentes-de-ia)
+- [Arquitetura](#arquitetura)
+- [Stack de Tecnologias](#stack-de-tecnologias)
+- [Estrutura do Projeto](#estrutura-do-projeto)
+- [Pré-requisitos](#pré-requisitos)
+- [Como Começar](#como-começar)
+- [Variáveis de Ambiente](#variáveis-de-ambiente)
+- [Banco de Dados](#banco-de-dados)
+- [Scripts Disponíveis](#scripts-disponíveis)
+- [Testes](#testes)
+- [Pipeline CI/CD](#pipelineCICD)
 - [Deployment](#deployment)
-- [Branch Strategy](#branch-strategy)
-- [Contributing](#contributing)
+- [Estratégia de Branches](#estratégia-de-branches)
+- [Contribuindo](#contribuindo)
 
 ---
 
-## Overview
+## O que é Inside My Mind?
 
-`imm-api` is the backend of the **Inside My Mind** platform. It exposes a RESTful API consumed exclusively by [`imm-web`](https://github.com/pedrolucazx/imm-web). It handles user authentication, habit tracking, journaling, and orchestrates AI agents to generate personalized insights for each user.
+**Inside My Mind** é uma aplicação gratuita e de código aberto que ajuda você a construir hábitos consistentes ao longo de 66 dias — o tempo médio que a ciência mostra ser necessário para transformar um comportamento em uma rotina automática.
 
-**AI Agents (in development):**
+O diferencial é que o app conta com três agentes de IA que trabalham para você **sem custo nenhum**: um que monta seu plano personalizado, um que corrige sua escrita em outros idiomas e um que analisa seu humor e padrões comportamentais ao longo do tempo. Tudo rodando dentro de cotas gratuitas de IA sem monetização.
 
-- **Habit Planner** — generates personalized habit plans based on user goals
-- **Language Teacher** — integrates language learning into the journaling experience
-- **Behavioral Coach** — delivers insights and recommendations based on habit history
-
-> Architecture decisions, database schema, and AI agent strategy are documented in [docs/architecture.pdf](./docs/architecture.pdf).
+É um projeto de portfólio e aprendizado que qualquer pessoa pode usar, estudar e contribuir.
 
 ---
 
-## Architecture
+## Os Três Agentes de IA
+
+### 🧠 Habit Planner — O Estrategista
+
+Gera planos personalizados de 66 dias quando você cria um novo hábito. Divide sua jornada em três fases embasadas cientificamente:
+
+- **Fase 1 (Dias 1-14)** — Fundação: Tarefas leves e introdutórias para estabelecer a prática diária
+- **Fase 2 (Dias 15-44)** — Produção Ativa: Aumento gradual de dificuldade com prática deliberada
+- **Fase 3 (Dias 45-66)** — Consolidação: Foco em fluência, autonomia e maestria
+
+Cada fase inclui técnicas específicas (spaced repetition, deliberate practice, shadowing) e métricas de sucesso adaptadas ao seu estilo de aprendizado e tempo disponível.
+
+### 📝 Language Teacher — O Coach Linguístico
+
+Ativado para hábitos de aprendizado de idiomas. Analisa suas entradas diárias no journal e retorna feedback linguístico detalhado:
+
+- **Grammar Score** (0-100): Destaca os erros mais impactantes com explicações
+- **Vocabulary Score** (0-100): Avalia a riqueza do vocabulário e sugere alternativas mais avançadas
+- **Fluency Score** (0-100): Mede coerência, fluidez e estrutura do texto
+- **Top 3 erros**: Cada um com a versão original, corrigida e uma explicação clara
+- **Frase-modelo**: Uma sentença exemplar para você praticar seu ponto fraco
+- **Desafio para amanhã**: Uma tarefa concreta para seu próximo journal
+
+### 🎯 Behavioral Coach — O Analista de Padrões
+
+Ativado para todos os hábitos não-linguísticos (fitness, leitura, meditação, etc.). Lê seu journal e analisa padrões comportamentais:
+
+- **Detecção de humor**: Identifica positividade, fadiga, frustração ou neutralidade em sua escrita
+- **Nível de energia**: Classifica a energia percebida (alta, média, baixa)
+- **Score de alinhamento com hábito**: Mede quão bem seu journal está alinhado com o hábito rastreado
+- **Insights comportamentais**: Identifica padrões recorrentes (ex: "Energia mais baixa nos dias de aula")
+- **Micro-ações**: Sugestões específicas e executáveis para amanhã
+
+---
+
+## Visão Geral
+
+`imm-api` é o backend da plataforma **Inside My Mind**. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Gerencia autenticação de usuários, rastreamento de hábitos, journaling e orquestra três agentes de IA para gerar insights personalizados.
+
+> Decisões de arquitetura, schema do banco de dados e estratégia de agentes de IA estão documentados em [docs/architecture.pdf](./docs/architecture.pdf).
+
+---
+
+## Arquitetura
 
 ```
 imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
-                                       └──► Anthropic API (AI agents)
+                                      └──► Anthropic API (Agentes de IA)
 ```
 
-Modular monolith organized around domain features. Each module under `src/modules/` owns its routes, controller, service, and repository. The API is fully documented via Swagger UI at `/docs`.
+Monolito modular organizado em torno de features por domínio. Cada módulo sob `src/modules/` possui suas routes, controller, service e repository. A API é totalmente documentada via Swagger UI em `/docs`.
 
 ---
 
-## Tech Stack
+## Stack de Tecnologias
 
-| Layer             | Technology                                              |
-| ----------------- | ------------------------------------------------------- |
-| Runtime           | Node.js (ESM)                                           |
-| Framework         | Fastify 5                                               |
-| Language          | TypeScript 5                                            |
-| Database          | PostgreSQL 16                                           |
-| ORM               | Drizzle ORM                                             |
-| Validation        | Zod 4                                                   |
-| Authentication    | JWT — access + refresh tokens (`@fastify/jwt`)          |
-| API Documentation | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`) |
-| AI Integration    | Anthropic API                                           |
-| Logging           | Pino + pino-pretty                                      |
-| Containerization  | Docker + Docker Compose                                 |
-| Deployment        | Render                                                  |
+| Camada              | Tecnologia                                              |
+| ------------------- | ------------------------------------------------------- |
+| Runtime             | Node.js (ESM)                                           |
+| Framework           | Fastify 5                                               |
+| Linguagem           | TypeScript 5                                            |
+| Banco de Dados      | PostgreSQL 16                                           |
+| ORM                 | Drizzle ORM                                             |
+| Validação           | Zod 4                                                   |
+| Autenticação        | JWT — access + refresh tokens (`@fastify/jwt`)          |
+| Documentação da API | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`) |
+| Integração com IA   | Anthropic API                                           |
+| Logging             | Pino + pino-pretty                                      |
+| Containerização     | Docker + Docker Compose                                 |
+| Deployment          | Render                                                  |
 
 ---
 
-## Project Structure
+## Estrutura do Projeto
 
 ```
 imm-api/
 ├── src/
-│   ├── modules/                  # Feature modules (one folder per domain)
-│   │   ├── auth/                 # Authentication (login, register, refresh token)
+│   ├── modules/                  # Feature modules (uma pasta por domínio)
+│   │   ├── auth/                 # Autenticação (login, register, refresh token)
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── auth.routes.ts
 │   │   │   ├── auth.service.ts
 │   │   │   └── auth.types.ts
-│   │   ├── users/                # User management
+│   │   ├── users/                # Gerenciamento de usuários
 │   │   │   └── users.repository.ts
-│   │   ├── habits/               # Habit tracking (planned)
-│   │   ├── journal/              # Journaling system (planned)
-│   │   ├── ai-agents/            # AI agent orchestration (planned)
+│   │   ├── habits/               # Rastreamento de hábitos (planejado)
+│   │   ├── journal/              # Sistema de journaling (planejado)
+│   │   ├── ai-agents/            # Orquestração de agentes de IA (planejado)
 │   │   └── health/               # Health check endpoint
 │   │       └── health.routes.ts
 │   ├── core/
-│   │   ├── config/               # Environment config & logger setup
+│   │   ├── config/               # Config de ambiente & setup de logger
 │   │   │   ├── env.ts
 │   │   │   └── logger.ts
 │   │   ├── database/             # Drizzle connection & schema definitions
@@ -105,23 +145,23 @@ imm-api/
 │   │   │   └── schema/
 │   │   │       ├── index.ts
 │   │   │       └── users.schema.ts
-│   │   └── plugins/              # Fastify plugins (cors, jwt, swagger)
+│   │   └── plugins/              # Plugins Fastify (cors, jwt, swagger)
 │   ├── shared/
 │   │   └── utils/
-│   │       └── password.ts       # bcrypt helpers
+│   │       └── password.ts       # Helpers bcrypt
 │   ├── migrations/               # Auto-generated Drizzle SQL migrations
 │   └── index.ts                  # Application entry point
 ├── tests/
 │   ├── __setup__/                # Global setup (env vars, mocks)
-│   ├── unit/                     # Pure unit tests — no I/O
-│   ├── integration/              # DB integration tests (TestContainers)
-│   └── e2e/                      # Full HTTP request tests
+│   ├── unit/                     # Testes unitários puros — sem I/O
+│   ├── integration/              # Testes de integração com DB (TestContainers)
+│   └── e2e/                      # Testes HTTP end-to-end
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml                # Code quality + tests pipeline
-│       └── cd.yml                # Deploy to Render on CI success
+│       ├── ci.yml                # Pipeline de code quality + testes
+│       └── cd.yml                # Deploy para Render após CI bem-sucedido
 ├── .env.example
-├── docker-compose.yml            # Local PostgreSQL
+├── docker-compose.yml            # PostgreSQL local
 ├── drizzle.config.ts
 ├── jest.config.cjs
 ├── render.yaml                   # Render IaC (homolog + production)
@@ -130,36 +170,36 @@ imm-api/
 
 ---
 
-## Prerequisites
+## Pré-requisitos
 
 - **Node.js** >= 20
 - **npm** >= 10
-- **Docker** + **Docker Compose** (for local PostgreSQL)
+- **Docker** + **Docker Compose** (para PostgreSQL local)
 - **Git**
 
 ---
 
-## Getting Started
+## Como Começar
 
 ```bash
-# 1. Clone the repository
+# 1. Clone o repositório
 git clone git@github.com:pedrolucazx/imm-api.git
 cd imm-api
 
-# 2. Install dependencies
+# 2. Instale as dependências
 npm install
 
-# 3. Set up environment variables
+# 3. Configure as variáveis de ambiente
 cp .env.example .env
-# Fill in the values — see Environment Variables section below
+# Preencha os valores — veja a seção Variáveis de Ambiente abaixo
 
-# 4. Start PostgreSQL via Docker
+# 4. Inicie o PostgreSQL via Docker
 docker compose up -d postgres
 
-# 5. Run database migrations
+# 5. Execute as migrations do banco de dados
 npm run db:migrate
 
-# 6. Start the development server
+# 6. Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
@@ -168,109 +208,109 @@ npm run dev
 
 ---
 
-## Environment Variables
+## Variáveis de Ambiente
 
-Copy `.env.example` to `.env` and configure the values:
+Copie `.env.example` para `.env` e configure os valores:
 
 ```env
-# Application
+# Aplicação
 NODE_ENV=development
 PORT=3001
 API_HOST=localhost:3001
 LOG_LEVEL=info
 
-# CORS — frontend origin(s) allowed to call this API
+# CORS — origem(ns) do frontend permitida(s) para chamar esta API
 CORS_ORIGIN=http://localhost:3000
 
 # PostgreSQL
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/inside_my_mind_dev
 
 # JWT
-JWT_SECRET=your-super-secret-key-min-32-chars
+JWT_SECRET=sua-super-chave-secreta-min-32-chars
 JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
 
-# AI Integration
-ANTHROPIC_API_KEY=your-anthropic-api-key
+# Integração com IA
+ANTHROPIC_API_KEY=sua-chave-api-anthropic
 
-# Rate Limiting (optional)
+# Rate Limiting (opcional)
 RATE_LIMIT_MAX=100
 RATE_LIMIT_TIMEWINDOW=60000
 ```
 
-| Variable                | Required | Description                                |
-| ----------------------- | -------- | ------------------------------------------ |
-| `DATABASE_URL`          | Yes      | Full PostgreSQL connection string          |
-| `JWT_SECRET`            | Yes      | Secret for signing JWTs (min 32 chars)     |
-| `JWT_ACCESS_EXPIRES`    | Yes      | Access token TTL (e.g. `15m`)              |
-| `JWT_REFRESH_EXPIRES`   | Yes      | Refresh token TTL (e.g. `7d`)              |
-| `CORS_ORIGIN`           | Yes      | Allowed frontend origin(s)                 |
-| `ANTHROPIC_API_KEY`     | No\*     | Required for AI agent features             |
-| `LOG_LEVEL`             | No       | Pino log level (default: `info`)           |
-| `RATE_LIMIT_MAX`        | No       | Max requests per window (default: `100`)   |
-| `RATE_LIMIT_TIMEWINDOW` | No       | Rate limit window in ms (default: `60000`) |
+| Variável                | Obrigatória | Descrição                                    |
+| ----------------------- | ----------- | -------------------------------------------- |
+| `DATABASE_URL`          | Sim         | String completa de conexão PostgreSQL        |
+| `JWT_SECRET`            | Sim         | Segredo para assinar JWTs (mín 32 chars)     |
+| `JWT_ACCESS_EXPIRES`    | Sim         | TTL do access token (ex: `15m`)              |
+| `JWT_REFRESH_EXPIRES`   | Sim         | TTL do refresh token (ex: `7d`)              |
+| `CORS_ORIGIN`           | Sim         | Origem(ns) do frontend permitida(s)          |
+| `ANTHROPIC_API_KEY`     | Não\*       | Obrigatória para features de agentes de IA   |
+| `LOG_LEVEL`             | Não         | Nível de log Pino (padrão: `info`)           |
+| `RATE_LIMIT_MAX`        | Não         | Máx requisições por janela (padrão: `100`)   |
+| `RATE_LIMIT_TIMEWINDOW` | Não         | Janela de rate limit em ms (padrão: `60000`) |
 
 ---
 
-## Database
+## Banco de Dados
 
-Drizzle ORM manages the schema and migrations. **Never edit migration files manually** — always regenerate them from schema changes.
+Drizzle ORM gerencia o schema e as migrations. **Nunca edite arquivos de migration manualmente** — sempre regenere-os a partir de mudanças no schema.
 
 ```bash
-# Generate a new migration from schema changes
+# Gere uma nova migration a partir de mudanças no schema
 npm run db:generate
 
-# Apply all pending migrations
+# Aplique todas as pending migrations
 npm run db:migrate
 
-# Push schema directly to DB (dev only, no migration file created)
+# Push do schema diretamente para o DB (dev only, sem arquivo de migration)
 npm run db:push
 
-# Open Drizzle Studio — visual DB browser
+# Abra o Drizzle Studio — visual DB browser
 npm run db:studio
 ```
 
-- Schema files: `src/core/database/schema/`
-- Migration output: `src/migrations/`
+- Arquivos de schema: `src/core/database/schema/`
+- Output de migrations: `src/migrations/`
 
 ---
 
-## Available Scripts
+## Scripts Disponíveis
 
-| Script                     | Description                                    |
+| Script                     | Descrição                                      |
 | -------------------------- | ---------------------------------------------- |
-| `npm run dev`              | Start dev server with hot reload (`tsx watch`) |
-| `npm run build`            | Compile TypeScript to `dist/`                  |
-| `npm start`                | Run compiled server (production)               |
-| `npm run lint`             | Run ESLint on `src/`                           |
-| `npm run lint:fix`         | Run ESLint with auto-fix                       |
-| `npm run format`           | Format all source files with Prettier          |
-| `npm run format:check`     | Check formatting without writing               |
-| `npm test`                 | Run all test suites                            |
-| `npm run test:unit`        | Run unit tests only                            |
-| `npm run test:integration` | Run integration tests only                     |
-| `npm run test:e2e`         | Run e2e tests only                             |
-| `npm run test:watch`       | Run tests in watch mode                        |
-| `npm run test:coverage`    | Run tests and generate coverage report         |
-| `npm run db:generate`      | Generate Drizzle migration from schema diff    |
-| `npm run db:migrate`       | Apply pending migrations                       |
-| `npm run db:push`          | Push schema directly (no migration file)       |
-| `npm run db:studio`        | Open Drizzle Studio GUI                        |
-| `npm run commit`           | Interactive conventional commit via Commitizen |
+| `npm run dev`              | Inicie dev server com hot reload (`tsx watch`) |
+| `npm run build`            | Compile TypeScript para `dist/`                |
+| `npm start`                | Execute servidor compilado (production)        |
+| `npm run lint`             | Execute ESLint em `src/`                       |
+| `npm run lint:fix`         | Execute ESLint com auto-fix                    |
+| `npm run format`           | Formate todos os arquivos com Prettier         |
+| `npm run format:check`     | Verifique formatação sem escrever              |
+| `npm test`                 | Execute todas as test suites                   |
+| `npm run test:unit`        | Execute apenas testes unitários                |
+| `npm run test:integration` | Execute apenas testes de integração            |
+| `npm run test:e2e`         | Execute apenas testes e2e                      |
+| `npm run test:watch`       | Execute testes em watch mode                   |
+| `npm run test:coverage`    | Execute testes e gere relatório de coverage    |
+| `npm run db:generate`      | Gere Drizzle migration a partir do schema diff |
+| `npm run db:migrate`       | Aplique pending migrations                     |
+| `npm run db:push`          | Push do schema direto (sem arquivo migration)  |
+| `npm run db:studio`        | Abra Drizzle Studio GUI                        |
+| `npm run commit`           | Conventional commit interativo via Commitizen  |
 
 ---
 
-## Testing
+## Testes
 
-Three isolated Jest projects, each with its own timeout and environment:
+Três projetos Jest isolados, cada um com seu próprio timeout e ambiente:
 
-| Suite         | Location             | Timeout | Description                                |
-| ------------- | -------------------- | ------- | ------------------------------------------ |
-| `unit`        | `tests/unit/`        | 10s     | Pure logic — no external I/O               |
-| `integration` | `tests/integration/` | 60s     | Real PostgreSQL via TestContainers         |
-| `e2e`         | `tests/e2e/`         | 60s     | Full HTTP requests against the running app |
+| Suite         | Localização          | Timeout | Descrição                          |
+| ------------- | -------------------- | ------- | ---------------------------------- |
+| `unit`        | `tests/unit/`        | 10s     | Lógica pura — sem I/O externo      |
+| `integration` | `tests/integration/` | 60s     | PostgreSQL real via TestContainers |
+| `e2e`         | `tests/e2e/`         | 60s     | Requisições HTTP completas         |
 
-Integration tests spin up a real PostgreSQL 16 container automatically via `@testcontainers/postgresql` — Docker must be running.
+Testes de integração disparam um container real de PostgreSQL 16 automaticamente via `@testcontainers/postgresql` — Docker deve estar rodando.
 
 ```bash
 npm run test:unit
@@ -281,9 +321,9 @@ npm run test:coverage
 
 ---
 
-## CI/CD Pipeline
+## Pipeline CI/CD
 
-Every push and pull request to `develop` or `main` triggers the pipeline defined in `.github/workflows/ci.yml`:
+Todo push e pull request para `develop` ou `main` dispara o pipeline definido em `.github/workflows/ci.yml`:
 
 ```
 code_quality ──► tests ──► ai_review ──► quality_gate
@@ -293,25 +333,25 @@ code_quality ──► tests ──► ai_review ──► quality_gate
   tsc           e2e         non-blocking)  for branch merge
 ```
 
-| Stage          | Blocks pipeline                | Trigger   |
-| -------------- | ------------------------------ | --------- |
-| `code_quality` | Yes                            | push + PR |
-| `tests`        | Yes                            | push + PR |
-| `ai_review`    | No (`continue-on-error: true`) | PR only   |
-| `quality_gate` | Yes                            | push + PR |
+| Estágio        | Bloqueia pipeline               | Trigger   |
+| -------------- | ------------------------------- | --------- |
+| `code_quality` | Sim                             | push + PR |
+| `tests`        | Sim                             | push + PR |
+| `ai_review`    | Não (`continue-on-error: true`) | PR only   |
+| `quality_gate` | Sim                             | push + PR |
 
-`quality_gate` is the required status check in branch protection. It depends only on `code_quality` and `tests` — the AI review never blocks a merge.
+`quality_gate` é o status check obrigatório na branch protection. Depende apenas de `code_quality` e `tests` — a review de IA nunca bloqueia um merge.
 
 ---
 
 ## Deployment
 
-Managed via [`render.yaml`](render.yaml) (Infrastructure as Code). The CD pipeline (`.github/workflows/cd.yml`) triggers Render deployments after CI passes — `autoDeploy: false` is set on both services so Render never deploys on direct pushes.
+Gerenciado via [`render.yaml`](render.yaml) (Infrastructure as Code). O pipeline CD (`.github/workflows/cd.yml`) dispara deployments no Render após CI passar — `autoDeploy: false` está configurado em ambos os serviços para que Render nunca faça deploy em pushes diretos.
 
-| Environment  | Branch    | Render Service   |
-| ------------ | --------- | ---------------- |
-| Homologation | `develop` | `imm-homolog`    |
-| Production   | `main`    | `imm-production` |
+| Ambiente    | Branch    | Render Service   |
+| ----------- | --------- | ---------------- |
+| Homologação | `develop` | `imm-homolog`    |
+| Produção    | `main`    | `imm-production` |
 
 **Build command:**
 
@@ -327,40 +367,54 @@ npm start
 
 ---
 
-## Branch Strategy
+## Estratégia de Branches
 
 ```
 feature/* ──► develop (homolog) ──► main (production)
-                   │                       │
+                  │                       │
              auto-deploys to         admin-only merge
              imm-homolog             to imm-production
 ```
 
-- All work goes to `develop` via pull requests
-- `main` is protected — only the admin can merge `develop → main`
-- Branch protection requires the **Quality Gate** check to pass before any merge
+- Todo trabalho vai para `develop` via pull requests
+- `main` é protegida — apenas o admin pode fazer merge `develop → main`
+- Branch protection exige que o check **Quality Gate** passe antes de qualquer merge
 
 ---
 
-## Contributing
+## Contribuindo
 
-1. Create a branch from `develop`: `git checkout -b feat/your-feature develop`
-2. Implement your changes, following the module pattern in `src/modules/`
-3. Write tests — unit for logic, integration for DB interactions
-4. Verify everything passes locally: `npm test && npm run lint && npm run format:check`
-5. Commit with [Conventional Commits](https://www.conventionalcommits.org/):
+1. Crie uma branch a partir de `develop`: `git checkout -b feat/sua-feature develop`
+2. Implemente suas mudanças, seguindo o padrão de módulos em `src/modules/`
+3. Escreva testes — unitários para lógica, integração para interações com DB
+4. Verifique se tudo passa localmente: `npm test && npm run lint && npm run format:check`
+5. Faça commit com [Conventional Commits](https://www.conventionalcommits.org/):
    ```bash
    npm run commit
-   # or manually: git commit -m "feat(habits): add streak calculation"
+   # ou manualmente: git commit -m "feat(habits): adicionar cálculo de streak"
    ```
-6. Open a pull request targeting `develop`
+6. Abra um pull request direcionado para `develop`
 
-**Accepted commit types:** `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `ci`
+**Tipos de commit aceitos:** `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `ci`
 
-Pre-commit hooks (Husky + lint-staged) run lint and format checks automatically before each commit.
+Pre-commit hooks (Husky + lint-staged) executam checagens de lint e format automaticamente antes de cada commit.
 
 ---
 
-## License
+## Por Que Este Projeto Importa para Seu Portfólio
 
-This project is public and open for learning purposes.
+Este backend mostra várias práticas de engenharia de nível production e padrões modernos:
+
+- **Arquitetura Modular**: Domain-driven design com clara separação de responsabilidades. Cada feature tem suas routes, controller, service e repository.
+- **Type Safety**: TypeScript end-to-end garante correção em compile-time em toda a stack.
+- **Integração com IA**: Integração real da API Anthropic com prompt engineering para três agentes distintos (Planner, Language Teacher, Coach).
+- **Testes Abrangentes**: Test suites de unit, integração (com TestContainers) e E2E com automação CI/CD.
+- **IA sem Custo**: Todas as features de IA rodam dentro de quotas gratuitas do modelo — demonstra otimização com restrições e design eficiente de prompts.
+- **DevOps Production**: Containerização Docker, deployments gerenciados no Render, infrastructure as code (IaC) e estratégia dual-environment (homolog + production).
+- **Developer Experience**: Pre-commit hooks, automação com lint-staged, documentação de API via Swagger e Drizzle Studio para gerenciamento visual de banco de dados.
+
+---
+
+## Licença
+
+Este projeto é público e aberto para fins de aprendizado.
