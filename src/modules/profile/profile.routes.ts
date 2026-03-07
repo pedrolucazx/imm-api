@@ -88,6 +88,7 @@ export async function profileRoutes(fastify: FastifyInstance) {
         200: { description: "Profile updated successfully", ...profileResponse },
         401: errorResponse("Unauthorized - invalid or missing token"),
         422: errorResponse("Validation failed"),
+        404: errorResponse("Profile not found"),
       },
     },
     preHandler: authenticate,

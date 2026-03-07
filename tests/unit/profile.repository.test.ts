@@ -230,29 +230,32 @@ describe("ProfileRepository.updateProfileAtomic", () => {
     expect(result.profile).toEqual(updatedProfile);
   });
 
-  it("returns user: undefined when userId does not exist in the database", async () => {
-    const updatedProfile = { ...mockProfile, bio: "No user bio" };
+  it("returns user: undefined and default profile when userId does not exist in the database", async () => {
+    const nonExistentId = "non-existent-id";
 
-    // Select returns empty array — userId not found
+    // Select returns empty array — userId not found, early return before profile upsert
     const userWhere = jest.fn().mockResolvedValue([]);
     const userFrom = jest.fn().mockReturnValue({ where: userWhere });
     const txSelect = jest.fn().mockReturnValue({ from: userFrom });
 
-    const insertReturning = jest.fn().mockResolvedValue([updatedProfile]);
-    const onConflictDoUpdate = jest.fn().mockReturnValue({ returning: insertReturning });
-    const values = jest.fn().mockReturnValue({ onConflictDoUpdate });
-    const txInsert = jest.fn().mockReturnValue({ values });
-
-    const tx = { select: txSelect, insert: txInsert } as unknown as DrizzleDb;
+    const tx = { select: txSelect } as unknown as DrizzleDb;
     const transaction = jest
       .fn()
       .mockImplementation((fn: (tx: DrizzleDb) => Promise<unknown>) => fn(tx));
     const db = { transaction } as unknown as DrizzleDb;
     const repo = createProfileRepository(db);
 
-    const result = await repo.updateProfileAtomic("non-existent-id", {}, { bio: "No user bio" });
+    const result = await repo.updateProfileAtomic(nonExistentId, {}, { bio: "No user bio" });
 
     expect(result.user).toBeUndefined();
-    expect(result.profile).toEqual(updatedProfile);
+    // Profile upsert is skipped — default fields are returned
+    expect(result.profile).toMatchObject({
+      id: "",
+      userId: nonExistentId,
+      uiLanguage: "pt-BR",
+      bio: null,
+      timezone: "America/Sao_Paulo",
+      aiRequestsToday: 0,
+    });
   });
 });

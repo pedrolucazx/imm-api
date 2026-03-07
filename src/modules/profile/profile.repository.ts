@@ -104,6 +104,12 @@ export function createProfileRepository(db: DrizzleDb) {
         if (!user) {
           const [existing] = await tx.select().from(users).where(eq(users.id, userId));
           user = existing;
+          if (!user) {
+            return {
+              user: undefined,
+              profile: { id: "", userId, ...DEFAULT_PROFILE_FIELDS },
+            };
+          }
         }
 
         const hasProfileFields = Object.values(profileData).some((v) => v !== undefined);
