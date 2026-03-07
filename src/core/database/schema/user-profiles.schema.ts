@@ -19,3 +19,11 @@ export const userProfiles = pgTable(
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type NewUserProfile = typeof userProfiles.$inferInsert;
+
+export const DEFAULT_PROFILE_FIELDS = {
+  uiLanguage: "pt-BR",
+  bio: null,
+  timezone: "America/Sao_Paulo",
+  aiRequestsToday: 0,
+  lastAiRequest: null,
+} as const satisfies Partial<UserProfile>;
