@@ -56,6 +56,12 @@ const config = {
     "!src/**/*.d.ts",
     "!src/migrations/**",
     "!src/core/config/**",
+    "!src/app.ts",
+    "!src/plugins/**",
+    "!src/core/database/connection.ts",
+    "!src/modules/auth/auth.routes.ts",
+    "!src/modules/auth/auth.module.ts",
+    "!src/modules/health/health.routes.ts",
   ],
 };
 

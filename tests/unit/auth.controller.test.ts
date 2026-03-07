@@ -104,6 +104,18 @@ describe("AuthController.register", () => {
     expect(reply.code).toHaveBeenCalledWith(500);
     expect(reply.send).toHaveBeenCalledWith({ error: "Internal server error" });
   });
+
+  it("returns 422 when body fails Zod validation", async () => {
+    const request = makeRequest({ email: "not-an-email", password: "x", name: "A" });
+    const reply = makeReply();
+
+    await controller.register(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(422);
+    expect(reply.send).toHaveBeenCalledWith(
+      expect.objectContaining({ error: "Validation failed" })
+    );
+  });
 });
 
 describe("AuthController.login", () => {
@@ -194,6 +206,19 @@ describe("AuthController.refresh", () => {
     expect(reply.code).toHaveBeenCalledWith(401);
     expect(reply.send).toHaveBeenCalledWith({ error: "Refresh token not provided" });
   });
+
+  it("clears cookie and returns 401 when service throws UnauthorizedError", async () => {
+    mockService.refresh.mockRejectedValue(
+      new UnauthorizedError("Invalid or expired refresh token")
+    );
+    const request = makeRequest({}, { refreshToken: "bad-token" });
+    const reply = makeReply();
+
+    await controller.refresh(request as never, reply as never);
+
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+    expect(reply.code).toHaveBeenCalledWith(401);
+  });
 });
 
 describe("AuthController.logout", () => {
@@ -215,5 +240,27 @@ describe("AuthController.logout", () => {
 
     expect(reply.code).toHaveBeenCalledWith(204);
     expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+  });
+
+  it("returns 204 without calling service when no refresh token in cookie", async () => {
+    const request = makeRequest({}, {});
+    const reply = makeReply();
+
+    await controller.logout(request as never, reply as never);
+
+    expect(mockService.logout).not.toHaveBeenCalled();
+    expect(reply.code).toHaveBeenCalledWith(204);
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+  });
+
+  it("clears cookie and handles error when service throws", async () => {
+    mockService.logout.mockRejectedValue(new Error("DB error"));
+    const request = makeRequest({}, { refreshToken: "some-token" });
+    const reply = makeReply();
+
+    await controller.logout(request as never, reply as never);
+
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+    expect(reply.code).toHaveBeenCalledWith(500);
   });
 });
