@@ -29,9 +29,10 @@ describe("handleControllerError", () => {
     handleControllerError(zodError, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(422);
-    expect(reply.send).toHaveBeenCalledWith(
-      expect.objectContaining({ error: "Validation failed", details: expect.any(Array) })
-    );
+    expect(reply.send).toHaveBeenCalledWith({
+      error: "Validation failed",
+      details: zodError.issues,
+    });
   });
 
   it("returns 500 for unknown errors", () => {

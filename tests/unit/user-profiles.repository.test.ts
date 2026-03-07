@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { createUserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
+import { userProfiles } from "@/core/database/schema/user-profiles.schema.js";
 import type { DrizzleDb } from "@/core/database/connection.js";
 
 const mockProfile = {
@@ -88,7 +90,7 @@ describe("UserProfilesRepository.update", () => {
 
     expect(result).toEqual(updated);
     expect(mocks.set).toHaveBeenCalledWith({ uiLanguage: "en-US" });
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(eq(userProfiles.userId, mockProfile.userId));
   });
 
   it("returns undefined when no row matched", async () => {
@@ -99,6 +101,6 @@ describe("UserProfilesRepository.update", () => {
 
     expect(result).toBeUndefined();
     expect(mocks.set).toHaveBeenCalledWith({ uiLanguage: "en-US" });
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(eq(userProfiles.userId, "non-existent"));
   });
 });

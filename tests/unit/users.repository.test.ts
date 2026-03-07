@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import { createUsersRepository } from "@/modules/users/users.repository.js";
+import { users } from "@/core/database/schema/users.schema.js";
 import type { DrizzleDb } from "@/core/database/connection.js";
 
 const mockUser = {
@@ -57,7 +59,7 @@ describe("UsersRepository.findByEmail", () => {
     expect(result).toEqual(mockUser);
     expect(mocks.select).toHaveBeenCalled();
     expect(mocks.from).toHaveBeenCalled();
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(eq(users.email, "test@example.com"));
   });
 
   it("returns undefined when not found", async () => {
@@ -80,7 +82,7 @@ describe("UsersRepository.findById", () => {
     expect(result).toEqual(mockUser);
     expect(mocks.select).toHaveBeenCalled();
     expect(mocks.from).toHaveBeenCalled();
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(eq(users.id, mockUser.id));
   });
 
   it("returns undefined when not found", async () => {

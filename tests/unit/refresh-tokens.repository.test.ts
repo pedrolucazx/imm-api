@@ -1,4 +1,6 @@
+import { and, eq, isNull, lt } from "drizzle-orm";
 import { createRefreshTokensRepository } from "@/modules/auth/refresh-tokens.repository.js";
+import { refreshTokens } from "@/core/database/schema/refresh-tokens.schema.js";
 import type { DrizzleDb } from "@/core/database/connection.js";
 
 const mockToken = {
@@ -80,7 +82,9 @@ describe("RefreshTokensRepository.findByHash", () => {
     const result = await repo.findByHash(mockToken.tokenHash);
 
     expect(result).toEqual(mockToken);
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(
+      and(eq(refreshTokens.tokenHash, mockToken.tokenHash), isNull(refreshTokens.revokedAt))
+    );
     expect(mocks.limit).toHaveBeenCalledWith(1);
   });
 
@@ -103,7 +107,9 @@ describe("RefreshTokensRepository.consumeActiveByHash", () => {
 
     expect(result).toEqual(mockToken);
     expect(mocks.set).toHaveBeenCalledWith({ revokedAt: expect.any(Date) });
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(
+      and(eq(refreshTokens.tokenHash, mockToken.tokenHash), isNull(refreshTokens.revokedAt))
+    );
   });
 
   it("returns undefined when token not found or already consumed", async () => {
@@ -117,24 +123,32 @@ describe("RefreshTokensRepository.consumeActiveByHash", () => {
 });
 
 describe("RefreshTokensRepository.revoke", () => {
-  it("updates revokedAt with the correct filter", async () => {
+  it("updates revokedAt filtering by tokenHash and null revokedAt", async () => {
     const { db, mocks } = makeRevokeDb();
     const repo = createRefreshTokensRepository(db);
 
     await expect(repo.revoke(mockToken.tokenHash)).resolves.toBeUndefined();
 
     expect(mocks.set).toHaveBeenCalledWith({ revokedAt: expect.any(Date) });
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(
+      and(eq(refreshTokens.tokenHash, mockToken.tokenHash), isNull(refreshTokens.revokedAt))
+    );
   });
 });
 
 describe("RefreshTokensRepository.deleteExpired", () => {
-  it("deletes expired tokens using a where predicate", async () => {
+  it("deletes tokens filtering by expiresAt less than now", async () => {
+    const fixedNow = new Date("2026-01-01T00:00:00.000Z");
+    jest.useFakeTimers();
+    jest.setSystemTime(fixedNow);
+
     const { db, mocks } = makeDeleteDb();
     const repo = createRefreshTokensRepository(db);
 
     await expect(repo.deleteExpired()).resolves.toBeUndefined();
 
-    expect(mocks.where).toHaveBeenCalled();
+    expect(mocks.where).toHaveBeenCalledWith(lt(refreshTokens.expiresAt, fixedNow));
+
+    jest.useRealTimers();
   });
 });
