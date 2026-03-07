@@ -12,26 +12,19 @@ import {
   ACCESS_TOKEN_EXPIRES,
   REFRESH_TOKEN_EXPIRES,
   REFRESH_TOKEN_EXPIRES_MS,
+  DEFAULT_UI_LANGUAGE,
+  PG_DUPLICATE_KEY_CODE,
 } from "../../shared/constants.js";
 import type { RegisterInput, LoginInput, AuthResponse } from "./auth.types.js";
 
 type JwtSignFn = (payload: object, options?: { expiresIn?: string | number }) => string;
 
-/**
- * Hashes a token using SHA256.
- * @param token - The token to hash
- * @returns The hashed token
- */
+// SHA256 para lookup rápido — não para armazenamento de senha
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-/**
- * Generates access and refresh tokens for a user.
- * @param jwt - The JWT signing function
- * @param user - The user data (id, email)
- * @returns Object containing accessToken and refreshToken
- */
+// nonce garante unicidade do refresh token entre sessões do mesmo usuário
 function generateTokens(
   jwt: JwtSignFn,
   user: { id: string; email: string }
@@ -46,16 +39,7 @@ function generateTokens(
   return { accessToken, refreshToken };
 }
 
-/**
- * Service for handling authentication operations.
- */
 export class AuthService {
-  /**
-   * Registers a new user in the system.
-   * @param input - Registration input (email, password, name, ui_lang)
-   * @param jwt - The JWT signing function
-   * @returns Authentication response with tokens and user data
-   */
   async register(input: RegisterInput, jwt: JwtSignFn): Promise<AuthResponse> {
     const passwordHash = await hashPassword(input.password);
     const db = getDb();
@@ -85,14 +69,14 @@ export class AuthService {
           .insert(userProfilesSchema.userProfiles)
           .values({
             userId: user.id,
-            uiLanguage: input.ui_lang || "pt-BR",
+            uiLanguage: input.ui_lang || DEFAULT_UI_LANGUAGE,
           })
           .returning();
 
         return { user, profile };
       } catch (error: unknown) {
         const dbError = error as { code?: string; message?: string };
-        if (dbError.code === "23505" || dbError.message?.includes("duplicate key")) {
+        if (dbError.code === PG_DUPLICATE_KEY_CODE || dbError.message?.includes("duplicate key")) {
           throw new ConflictError("User with this email already exists");
         }
         throw error;
@@ -122,12 +106,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Authenticates a user with email and password.
-   * @param input - Login input (email, password, ui_lang)
-   * @param jwt - The JWT signing function
-   * @returns Authentication response with tokens and user data
-   */
   async login(input: LoginInput, jwt: JwtSignFn): Promise<AuthResponse> {
     const user = await usersRepository.findByEmail(input.email);
     if (!user) {
@@ -139,7 +117,7 @@ export class AuthService {
       throw new UnauthorizedError("Invalid email or password");
     }
 
-    let uiLang = "pt-BR";
+    let uiLang = DEFAULT_UI_LANGUAGE;
     if (input.ui_lang !== undefined) {
       let profile = await userProfilesRepository.update(user.id, { uiLanguage: input.ui_lang });
       if (!profile) {
@@ -148,16 +126,16 @@ export class AuthService {
           uiLanguage: input.ui_lang,
         });
       }
-      uiLang = profile.uiLanguage ?? "pt-BR";
+      uiLang = profile.uiLanguage ?? DEFAULT_UI_LANGUAGE;
     } else {
       let profile = await userProfilesRepository.findByUserId(user.id);
       if (!profile) {
         profile = await userProfilesRepository.create({
           userId: user.id,
-          uiLanguage: "pt-BR",
+          uiLanguage: DEFAULT_UI_LANGUAGE,
         });
       }
-      uiLang = profile.uiLanguage ?? "pt-BR";
+      uiLang = profile.uiLanguage ?? DEFAULT_UI_LANGUAGE;
     }
 
     const { accessToken, refreshToken } = generateTokens(jwt, {
@@ -183,13 +161,7 @@ export class AuthService {
     };
   }
 
-  /**
-   * Refreshes the access token using a valid refresh token.
-   * Implements token rotation - generates new tokens and revokes the old one.
-   * @param refreshToken - The refresh token from cookie
-   * @param jwt - The JWT signing function
-   * @returns New authentication response with fresh tokens
-   */
+  // token rotation: revoga o token atual antes de emitir novos
   async refresh(refreshToken: string, jwt: JwtSignFn): Promise<AuthResponse> {
     const tokenHash = hashToken(refreshToken);
     const token = await refreshTokensRepository.consumeActiveByHash(tokenHash);
@@ -224,15 +196,11 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        ui_lang: profile?.uiLanguage ?? "pt-BR",
+        ui_lang: profile?.uiLanguage ?? DEFAULT_UI_LANGUAGE,
       },
     };
   }
 
-  /**
-   * Logs out a user by revoking their refresh token.
-   * @param refreshToken - The refresh token to revoke
-   */
   async logout(refreshToken: string): Promise<void> {
     const tokenHash = hashToken(refreshToken);
     await refreshTokensRepository.revoke(tokenHash);

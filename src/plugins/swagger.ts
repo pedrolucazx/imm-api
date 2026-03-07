@@ -3,7 +3,7 @@ import fp from "fastify-plugin";
 import swagger from "@fastify/swagger";
 import swaggerUI from "@fastify/swagger-ui";
 import { env } from "../core/config/env.js";
-import { API_VERSION } from "@/shared/utils/constants.js";
+import { API_VERSION } from "@/shared/constants.js";
 
 export const swaggerPlugin = fp(
   async (fastify: FastifyInstance) => {

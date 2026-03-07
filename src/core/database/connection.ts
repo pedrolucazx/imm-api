@@ -2,13 +2,14 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
 import { logger } from "../config/logger.js";
+import { env } from "../config/env.js";
 
 let cachedUrl: string | undefined;
 let cachedClient: ReturnType<typeof postgres> | undefined;
 let cachedDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
-  const url = process.env.DATABASE_URL!;
+  const url = env.DATABASE_URL;
 
   if (cachedDb && cachedUrl === url) return cachedDb;
 
@@ -19,7 +20,7 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   }
 
   cachedUrl = url;
-  const isTest = process.env.NODE_ENV === "test";
+  const isTest = env.NODE_ENV === "test";
   cachedClient = postgres(url, {
     onnotice: isTest ? () => {} : undefined,
   });
