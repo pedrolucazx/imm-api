@@ -219,8 +219,8 @@ describe("AuthController.refresh", () => {
 
     expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       path: "/",
     });
     expect(reply.code).toHaveBeenCalledWith(401);
@@ -247,8 +247,8 @@ describe("AuthController.logout", () => {
     expect(reply.code).toHaveBeenCalledWith(204);
     expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       path: "/",
     });
   });
@@ -263,8 +263,8 @@ describe("AuthController.logout", () => {
     expect(reply.code).toHaveBeenCalledWith(204);
     expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       path: "/",
     });
   });
@@ -278,8 +278,8 @@ describe("AuthController.logout", () => {
 
     expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: false,
+      sameSite: "lax",
       path: "/",
     });
     expect(reply.code).toHaveBeenCalledWith(500);

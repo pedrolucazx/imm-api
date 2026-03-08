@@ -4,25 +4,29 @@ import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from
 import { AppError } from "../../shared/errors/index.js";
 import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
 import { handleControllerError } from "../../shared/utils/http.js";
+import { env } from "../../core/config/env.js";
 
 export function createAuthController(service: AuthService) {
+  const isProduction = env.NODE_ENV === "production";
+
+  // Production (HTTPS, cross-origin): SameSite=None + Secure required
+  // Development (HTTP, same-origin via Next.js proxy): SameSite=Lax + no Secure
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+    path: "/",
+  };
+
   function setRefreshTokenCookie(reply: FastifyReply, token: string) {
     reply.setCookie("refreshToken", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      ...cookieOptions,
       maxAge: Math.floor(REFRESH_TOKEN_EXPIRES_MS / 1000),
-      path: "/",
     });
   }
 
   function clearRefreshTokenCookie(reply: FastifyReply) {
-    reply.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      path: "/",
-    });
+    reply.clearCookie("refreshToken", cookieOptions);
   }
 
   return {
