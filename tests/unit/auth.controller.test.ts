@@ -66,11 +66,13 @@ describe("AuthController.register", () => {
 
     expect(reply.code).toHaveBeenCalledWith(201);
     expect(reply.send).toHaveBeenCalledWith({ token: "access-token", user: mockUser });
-    expect(reply.setCookie).toHaveBeenCalledWith(
-      "refreshToken",
-      "refresh-token",
-      expect.any(Object)
-    );
+    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "refresh-token", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: expect.any(Number),
+    });
   });
 
   it("returns 409 when authService throws ConflictError", async () => {
@@ -142,11 +144,13 @@ describe("AuthController.login", () => {
 
     expect(reply.code).toHaveBeenCalledWith(200);
     expect(reply.send).toHaveBeenCalledWith({ token: "access-token", user: mockUser });
-    expect(reply.setCookie).toHaveBeenCalledWith(
-      "refreshToken",
-      "refresh-token",
-      expect.any(Object)
-    );
+    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "refresh-token", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: expect.any(Number),
+    });
   });
 
   it("returns 401 when authService throws an Error", async () => {
@@ -195,7 +199,13 @@ describe("AuthController.refresh", () => {
 
     expect(reply.code).toHaveBeenCalledWith(200);
     expect(reply.send).toHaveBeenCalledWith({ token: "new-access", user: mockUser });
-    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "new-refresh", expect.any(Object));
+    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "new-refresh", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: expect.any(Number),
+    });
   });
 
   it("returns 401 when refresh token not provided", async () => {
