@@ -4,21 +4,25 @@ import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from
 import { AppError } from "../../shared/errors/index.js";
 import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
 import { handleControllerError } from "../../shared/utils/http.js";
-import { env } from "../../core/config/env.js";
 
 export function createAuthController(service: AuthService) {
   function setRefreshTokenCookie(reply: FastifyReply, token: string) {
     reply.setCookie("refreshToken", token, {
       httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: true,
+      sameSite: "none",
       maxAge: Math.floor(REFRESH_TOKEN_EXPIRES_MS / 1000),
       path: "/",
     });
   }
 
   function clearRefreshTokenCookie(reply: FastifyReply) {
-    reply.clearCookie("refreshToken", { path: "/" });
+    reply.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
   }
 
   return {
@@ -29,7 +33,7 @@ export function createAuthController(service: AuthService) {
         const result = await service.register(data, jwt);
 
         setRefreshTokenCookie(reply, result.refreshToken);
-        return reply.code(201).send({ accessToken: result.accessToken, user: result.user });
+        return reply.code(201).send({ token: result.accessToken, user: result.user });
       } catch (error) {
         return handleControllerError(error, reply);
       }
@@ -42,7 +46,7 @@ export function createAuthController(service: AuthService) {
         const result = await service.login(data, jwt);
 
         setRefreshTokenCookie(reply, result.refreshToken);
-        return reply.code(200).send({ accessToken: result.accessToken, user: result.user });
+        return reply.code(200).send({ token: result.accessToken, user: result.user });
       } catch (error) {
         return handleControllerError(error, reply);
       }
@@ -59,7 +63,7 @@ export function createAuthController(service: AuthService) {
         const result = await service.refresh(refreshToken, jwt);
 
         setRefreshTokenCookie(reply, result.refreshToken);
-        return reply.code(200).send({ accessToken: result.accessToken, user: result.user });
+        return reply.code(200).send({ token: result.accessToken, user: result.user });
       } catch (error) {
         if (error instanceof AppError && error.statusCode === 401) {
           clearRefreshTokenCookie(reply);

@@ -15,7 +15,7 @@ const userResponse = {
 const authResponse = {
   type: "object",
   properties: {
-    accessToken: { type: "string", examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."] },
+    token: { type: "string", examples: ["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."] },
     user: userResponse,
   },
 };

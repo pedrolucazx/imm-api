@@ -24,7 +24,7 @@ describe("GET /profile + PUT /profile", () => {
       .post("/auth/register")
       .send({ email: uniqueEmail, password: "password123", name: "Profile User" });
 
-    accessToken = registerRes.body.accessToken;
+    accessToken = registerRes.body.token;
     userId = registerRes.body.user.id;
   }, 120000);
 

@@ -37,7 +37,7 @@ describe("POST /auth/register + /auth/login", () => {
       .send({ email: uniqueEmail, password: "password123", name: "E2E User" })
       .expect(201);
 
-    expect(response.body.accessToken).toBeDefined();
+    expect(response.body.token).toBeDefined();
     expect(response.body.user.email).toBe(uniqueEmail);
   });
 
@@ -62,7 +62,7 @@ describe("POST /auth/register + /auth/login", () => {
       .send({ email: uniqueEmail, password: "password123" })
       .expect(200);
 
-    expect(response.body.accessToken).toBeDefined();
+    expect(response.body.token).toBeDefined();
   });
 
   it("returns 401 for wrong password", async () => {

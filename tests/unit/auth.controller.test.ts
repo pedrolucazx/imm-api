@@ -49,7 +49,7 @@ describe("AuthController.register", () => {
     controller = createAuthController(mockService);
   });
 
-  it("returns 201 with accessToken and user on success", async () => {
+  it("returns 201 with token and user on success", async () => {
     mockService.register.mockResolvedValue({
       accessToken: "access-token",
       refreshToken: "refresh-token",
@@ -65,7 +65,7 @@ describe("AuthController.register", () => {
     await controller.register(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(201);
-    expect(reply.send).toHaveBeenCalledWith({ accessToken: "access-token", user: mockUser });
+    expect(reply.send).toHaveBeenCalledWith({ token: "access-token", user: mockUser });
     expect(reply.setCookie).toHaveBeenCalledWith(
       "refreshToken",
       "refresh-token",
@@ -129,7 +129,7 @@ describe("AuthController.login", () => {
     controller = createAuthController(mockService);
   });
 
-  it("returns 200 with accessToken and user on success", async () => {
+  it("returns 200 with token and user on success", async () => {
     mockService.login.mockResolvedValue({
       accessToken: "access-token",
       refreshToken: "refresh-token",
@@ -141,7 +141,7 @@ describe("AuthController.login", () => {
     await controller.login(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(200);
-    expect(reply.send).toHaveBeenCalledWith({ accessToken: "access-token", user: mockUser });
+    expect(reply.send).toHaveBeenCalledWith({ token: "access-token", user: mockUser });
     expect(reply.setCookie).toHaveBeenCalledWith(
       "refreshToken",
       "refresh-token",
@@ -194,7 +194,7 @@ describe("AuthController.refresh", () => {
     await controller.refresh(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(200);
-    expect(reply.send).toHaveBeenCalledWith({ accessToken: "new-access", user: mockUser });
+    expect(reply.send).toHaveBeenCalledWith({ token: "new-access", user: mockUser });
     expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "new-refresh", expect.any(Object));
   });
 
@@ -217,7 +217,12 @@ describe("AuthController.refresh", () => {
 
     await controller.refresh(request as never, reply as never);
 
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
     expect(reply.code).toHaveBeenCalledWith(401);
   });
 });
@@ -240,7 +245,12 @@ describe("AuthController.logout", () => {
     await controller.logout(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(204);
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
   });
 
   it("returns 204 without calling service when no refresh token in cookie", async () => {
@@ -251,7 +261,12 @@ describe("AuthController.logout", () => {
 
     expect(mockService.logout).not.toHaveBeenCalled();
     expect(reply.code).toHaveBeenCalledWith(204);
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
   });
 
   it("clears cookie and handles error when service throws", async () => {
@@ -261,7 +276,12 @@ describe("AuthController.logout", () => {
 
     await controller.logout(request as never, reply as never);
 
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", { path: "/" });
+    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
     expect(reply.code).toHaveBeenCalledWith(500);
   });
 });
