@@ -4,7 +4,7 @@ import { env } from "./core/config/env.js";
 import { prettyTransport } from "./core/config/logger.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
-import { profileRoutes } from "./modules/profile/profile.routes.js";
+import { usersRoutes } from "./modules/users/users.routes.js";
 import {
   cookiePlugin,
   corsPlugin,
@@ -25,7 +25,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   await fastify.register(healthRoutes);
   await fastify.register(authRoutes);
-  await fastify.register(profileRoutes);
+  await fastify.register(usersRoutes);
 
   return fastify;
 }
