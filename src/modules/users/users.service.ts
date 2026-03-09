@@ -50,16 +50,23 @@ export function createUsersService({ usersRepo, userProfilesRepo, db }: UsersSer
 
     async updateProfile(userId: string, input: UpdateProfileInput): Promise<ProfileResponse> {
       const { name, avatarUrl, uiLanguage, bio, timezone } = input;
+      const hasUserFields = name !== undefined || avatarUrl !== undefined;
+      const hasProfileFields =
+        uiLanguage !== undefined || bio !== undefined || timezone !== undefined;
 
       return db.transaction(async (tx) => {
-        let user = await usersRepo.update(userId, { name, avatarUrl }, tx);
-        if (!user) user = await usersRepo.findById(userId, tx);
+        let user = hasUserFields
+          ? ((await usersRepo.update(userId, { name, avatarUrl }, tx)) ??
+            (await usersRepo.findById(userId, tx)))
+          : await usersRepo.findById(userId, tx);
         if (!user) throw new NotFoundError("Profile not found");
 
-        const profile =
-          (await userProfilesRepo.upsert(userId, { uiLanguage, bio, timezone }, tx)) ??
-          (await userProfilesRepo.findByUserId(userId, tx)) ??
-          ({ userId, ...DEFAULT_PROFILE_FIELDS } as const);
+        const profile = hasProfileFields
+          ? ((await userProfilesRepo.upsert(userId, { uiLanguage, bio, timezone }, tx)) ??
+            (await userProfilesRepo.findByUserId(userId, tx)) ??
+            ({ userId, ...DEFAULT_PROFILE_FIELDS } as const))
+          : ((await userProfilesRepo.findByUserId(userId, tx)) ??
+            ({ userId, ...DEFAULT_PROFILE_FIELDS } as const));
 
         return toProfileResponse(user, profile);
       });

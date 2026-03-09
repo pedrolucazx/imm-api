@@ -111,7 +111,10 @@ describe("UsersService.getProfile", () => {
 describe("UsersService.updateProfile", () => {
   let usersRepo: jest.Mocked<UsersRepository>;
   let userProfilesRepo: jest.Mocked<UserProfilesRepository>;
+  let db: jest.Mocked<DrizzleDb>;
   let service: ReturnType<typeof createUsersService>;
+
+  const txSentinel = {};
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -120,9 +123,11 @@ describe("UsersService.updateProfile", () => {
   });
 
   function makeService() {
-    const db = {
-      transaction: jest.fn().mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn({})),
-    } as unknown as DrizzleDb;
+    db = {
+      transaction: jest
+        .fn()
+        .mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txSentinel)),
+    } as unknown as jest.Mocked<DrizzleDb>;
     return createUsersService({ usersRepo, userProfilesRepo, db });
   }
 
@@ -135,15 +140,15 @@ describe("UsersService.updateProfile", () => {
     const result = await service.updateProfile(mockUser.id, { name: "New Name" });
 
     expect(result.name).toBe("New Name");
+    expect(db.transaction).toHaveBeenCalled();
     expect(usersRepo.update).toHaveBeenCalledWith(
       mockUser.id,
       { name: "New Name", avatarUrl: undefined },
-      expect.anything()
+      txSentinel
     );
   });
 
-  it("fetches existing user when no user fields are provided", async () => {
-    usersRepo.update.mockResolvedValue(undefined);
+  it("fetches existing user directly when no user fields are provided", async () => {
     usersRepo.findById.mockResolvedValue(mockUser);
     const updatedProfile = { ...mockProfile, uiLanguage: "en-US" };
     userProfilesRepo.upsert.mockResolvedValue(updatedProfile);
@@ -151,7 +156,8 @@ describe("UsersService.updateProfile", () => {
 
     const result = await service.updateProfile(mockUser.id, { uiLanguage: "en-US" });
 
-    expect(usersRepo.findById).toHaveBeenCalled();
+    expect(usersRepo.update).not.toHaveBeenCalled();
+    expect(usersRepo.findById).toHaveBeenCalledWith(mockUser.id, txSentinel);
     expect(result.profile.uiLanguage).toBe("en-US");
   });
 

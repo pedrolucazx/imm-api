@@ -41,7 +41,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
   fastify.get("/users/me", {
     schema: {
       description: "Get the authenticated user's profile",
-      tags: ["Profile"],
+      tags: ["Users"],
       summary: "Get profile",
       security: [{ bearerAuth: [] }],
       response: {
@@ -57,7 +57,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
   fastify.put("/users/me", {
     schema: {
       description: "Update the authenticated user's profile",
-      tags: ["Profile"],
+      tags: ["Users"],
       summary: "Update profile",
       security: [{ bearerAuth: [] }],
       body: {
