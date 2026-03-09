@@ -63,7 +63,6 @@ export function createUsersService({ usersRepo, userProfilesRepo, db }: UsersSer
 
         const profile = hasProfileFields
           ? ((await userProfilesRepo.upsert(userId, { uiLanguage, bio, timezone }, tx)) ??
-            (await userProfilesRepo.findByUserId(userId, tx)) ??
             ({ userId, ...DEFAULT_PROFILE_FIELDS } as const))
           : ((await userProfilesRepo.findByUserId(userId, tx)) ??
             ({ userId, ...DEFAULT_PROFILE_FIELDS } as const));

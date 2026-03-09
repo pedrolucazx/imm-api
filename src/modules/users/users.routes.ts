@@ -4,7 +4,7 @@ import { authenticate } from "../../core/hooks/authenticate.js";
 import { createUsersModule } from "./users.module.js";
 import { ALLOWED_UI_LANGUAGES } from "./users.types.js";
 
-const profileResponse = {
+const userMeResponse = {
   type: "object",
   additionalProperties: false,
   required: ["id", "email", "name", "avatarUrl", "profile"],
@@ -45,7 +45,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
       summary: "Get profile",
       security: [{ bearerAuth: [] }],
       response: {
-        200: { description: "Profile retrieved successfully", ...profileResponse },
+        200: { description: "Profile retrieved successfully", ...userMeResponse },
         401: errorResponse("Unauthorized - invalid or missing token"),
         404: errorResponse("Profile not found"),
       },
@@ -86,7 +86,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        200: { description: "Profile updated successfully", ...profileResponse },
+        200: { description: "Profile updated successfully", ...userMeResponse },
         401: errorResponse("Unauthorized - invalid or missing token"),
         422: errorResponse("Validation failed"),
         404: errorResponse("Profile not found"),

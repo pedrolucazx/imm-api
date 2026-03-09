@@ -146,6 +146,7 @@ describe("UsersService.updateProfile", () => {
       { name: "New Name", avatarUrl: undefined },
       txSentinel
     );
+    expect(userProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id, txSentinel);
   });
 
   it("fetches existing user directly when no user fields are provided", async () => {
