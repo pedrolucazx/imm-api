@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
-import { createProfileModule } from "./profile.module.js";
-import { ALLOWED_UI_LANGUAGES } from "./profile.types.js";
+import { createUsersModule } from "./users.module.js";
+import { ALLOWED_UI_LANGUAGES } from "./users.types.js";
 
-const profileResponse = {
+const userMeResponse = {
   type: "object",
   additionalProperties: false,
   required: ["id", "email", "name", "avatarUrl", "profile"],
@@ -35,17 +35,17 @@ const errorResponse = (description: string) => ({
   },
 });
 
-export async function profileRoutes(fastify: FastifyInstance) {
-  const { controller } = createProfileModule(getDb());
+export async function usersRoutes(fastify: FastifyInstance) {
+  const { controller } = createUsersModule(getDb());
 
-  fastify.get("/profile", {
+  fastify.get("/users/me", {
     schema: {
       description: "Get the authenticated user's profile",
-      tags: ["Profile"],
+      tags: ["Users"],
       summary: "Get profile",
       security: [{ bearerAuth: [] }],
       response: {
-        200: { description: "Profile retrieved successfully", ...profileResponse },
+        200: { description: "Profile retrieved successfully", ...userMeResponse },
         401: errorResponse("Unauthorized - invalid or missing token"),
         404: errorResponse("Profile not found"),
       },
@@ -54,10 +54,10 @@ export async function profileRoutes(fastify: FastifyInstance) {
     handler: controller.get,
   });
 
-  fastify.put("/profile", {
+  fastify.put("/users/me", {
     schema: {
       description: "Update the authenticated user's profile",
-      tags: ["Profile"],
+      tags: ["Users"],
       summary: "Update profile",
       security: [{ bearerAuth: [] }],
       body: {
@@ -86,7 +86,7 @@ export async function profileRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        200: { description: "Profile updated successfully", ...profileResponse },
+        200: { description: "Profile updated successfully", ...userMeResponse },
         401: errorResponse("Unauthorized - invalid or missing token"),
         422: errorResponse("Validation failed"),
         404: errorResponse("Profile not found"),

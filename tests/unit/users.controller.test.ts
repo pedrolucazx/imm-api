@@ -1,6 +1,6 @@
-import { createProfileController } from "@/modules/profile/profile.controller.js";
+import { createUsersController } from "@/modules/users/users.controller.js";
 import { NotFoundError, UnauthorizedError } from "@/shared/errors/index.js";
-import type { ProfileService } from "@/modules/profile/profile.service.js";
+import type { UsersService } from "@/modules/users/users.service.js";
 
 const mockProfileResponse = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -15,7 +15,7 @@ const mockProfileResponse = {
   },
 };
 
-function makeMockService(): jest.Mocked<ProfileService> {
+function makeMockService(): jest.Mocked<UsersService> {
   return {
     getProfile: jest.fn(),
     updateProfile: jest.fn(),
@@ -36,14 +36,14 @@ function makeRequest(
   return { body, user };
 }
 
-describe("ProfileController.get", () => {
-  let mockService: jest.Mocked<ProfileService>;
-  let controller: ReturnType<typeof createProfileController>;
+describe("UsersController.get", () => {
+  let mockService: jest.Mocked<UsersService>;
+  let controller: ReturnType<typeof createUsersController>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockService = makeMockService();
-    controller = createProfileController(mockService);
+    controller = createUsersController(mockService);
   });
 
   it("returns 200 with profile on success", async () => {
@@ -81,14 +81,14 @@ describe("ProfileController.get", () => {
   });
 });
 
-describe("ProfileController.update", () => {
-  let mockService: jest.Mocked<ProfileService>;
-  let controller: ReturnType<typeof createProfileController>;
+describe("UsersController.update", () => {
+  let mockService: jest.Mocked<UsersService>;
+  let controller: ReturnType<typeof createUsersController>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockService = makeMockService();
-    controller = createProfileController(mockService);
+    controller = createUsersController(mockService);
   });
 
   it("returns 200 with updated profile on success", async () => {

@@ -7,7 +7,7 @@ import { users } from "@/core/database/schema/users.schema.js";
 import { userProfiles } from "@/core/database/schema/user-profiles.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
 
-describe("GET /profile + PUT /profile", () => {
+describe("GET /users/me + PUT /users/me", () => {
   let app: FastifyInstance | undefined;
   let testDb: TestDatabase | undefined;
   let accessToken: string;
@@ -40,16 +40,16 @@ describe("GET /profile + PUT /profile", () => {
     }
   });
 
-  describe("GET /profile", () => {
+  describe("GET /users/me", () => {
     it("returns 401 when no token provided", async () => {
-      const response = await request(app!.server).get("/profile").expect(401);
+      const response = await request(app!.server).get("/users/me").expect(401);
 
       expect(response.body.error).toBeDefined();
     });
 
     it("returns 401 when token is invalid", async () => {
       const response = await request(app!.server)
-        .get("/profile")
+        .get("/users/me")
         .set("Authorization", "Bearer invalid-token")
         .expect(401);
 
@@ -58,7 +58,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("returns 200 with profile when authenticated", async () => {
       const response = await request(app!.server)
-        .get("/profile")
+        .get("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
@@ -80,7 +80,7 @@ describe("GET /profile + PUT /profile", () => {
       await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
 
       const response = await request(app!.server)
-        .get("/profile")
+        .get("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .expect(200);
 
@@ -94,10 +94,10 @@ describe("GET /profile + PUT /profile", () => {
     });
   });
 
-  describe("PUT /profile", () => {
+  describe("PUT /users/me", () => {
     it("returns 401 when no token provided", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .send({ name: "New Name" })
         .expect(401);
 
@@ -106,7 +106,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("returns 401 when token is invalid", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", "Bearer invalid-token")
         .send({ name: "New Name" })
         .expect(401);
@@ -116,7 +116,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("updates name and returns updated profile", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ name: "Updated Name" })
         .expect(200);
@@ -127,7 +127,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("updates uiLanguage and returns updated profile", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ uiLanguage: "en-US" })
         .expect(200);
@@ -137,7 +137,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("updates multiple fields at once", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({
           name: "Full Update",
@@ -155,7 +155,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("returns 400 for invalid uiLanguage", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ uiLanguage: "xx-XX" })
         .expect(400);
@@ -165,7 +165,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("returns 400 for invalid avatarUrl", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ avatarUrl: "not-a-url" })
         .expect(400);
@@ -175,7 +175,7 @@ describe("GET /profile + PUT /profile", () => {
 
     it("accepts empty body and returns current profile", async () => {
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({})
         .expect(200);
@@ -186,14 +186,14 @@ describe("GET /profile + PUT /profile", () => {
     it("clears bio with null", async () => {
       // First set a bio
       await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ bio: "Some bio" })
         .expect(200);
 
       // Then clear it with null
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ bio: null })
         .expect(200);
@@ -204,14 +204,14 @@ describe("GET /profile + PUT /profile", () => {
     it("clears avatarUrl with null", async () => {
       // First set an avatarUrl
       await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ avatarUrl: "https://example.com/avatar.png" })
         .expect(200);
 
       // Then clear it with null
       const response = await request(app!.server)
-        .put("/profile")
+        .put("/users/me")
         .set("Authorization", `Bearer ${accessToken}`)
         .send({ avatarUrl: null })
         .expect(200);

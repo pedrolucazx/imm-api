@@ -1,9 +1,9 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { ProfileService } from "./profile.service.js";
-import { updateProfileSchema, type UpdateProfileInput } from "./profile.types.js";
+import type { UsersService } from "./users.service.js";
+import { updateProfileSchema, type UpdateProfileInput } from "./users.types.js";
 import { handleControllerError } from "../../shared/utils/http.js";
 
-export function createProfileController(service: ProfileService) {
+export function createUsersController(service: UsersService) {
   return {
     async get(request: FastifyRequest, reply: FastifyReply) {
       try {
@@ -28,4 +28,4 @@ export function createProfileController(service: ProfileService) {
   };
 }
 
-export type ProfileController = ReturnType<typeof createProfileController>;
+export type UsersController = ReturnType<typeof createUsersController>;

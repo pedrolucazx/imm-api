@@ -8,6 +8,8 @@ let cachedClient: ReturnType<typeof postgres> | undefined;
 let cachedDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
 export type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
+export type DbTransaction = Parameters<Parameters<DrizzleDb["transaction"]>[0]>[0];
+export type DbClient = DrizzleDb | DbTransaction;
 
 export function getDb(): DrizzleDb {
   const url = process.env.DATABASE_URL!;

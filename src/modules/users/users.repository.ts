@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import type { DrizzleDb } from "../../core/database/connection.js";
+import type { DrizzleDb, DbClient } from "../../core/database/connection.js";
 import { users, type NewUser, type User } from "../../core/database/schema/index.js";
 
 export function createUsersRepository(db: DrizzleDb) {
@@ -14,8 +14,28 @@ export function createUsersRepository(db: DrizzleDb) {
       return user;
     },
 
-    async findById(id: string): Promise<User | undefined> {
-      const [user] = await db.select().from(users).where(eq(users.id, id));
+    async findById(id: string, tx?: DbClient): Promise<User | undefined> {
+      const client = tx ?? db;
+      const [user] = await client.select().from(users).where(eq(users.id, id));
+      return user;
+    },
+
+    async update(
+      userId: string,
+      data: { name?: string; avatarUrl?: string | null },
+      tx?: DbClient
+    ): Promise<User | undefined> {
+      const client = tx ?? db;
+      const fields = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v !== undefined)
+      ) as Partial<typeof data>;
+      if (Object.keys(fields).length === 0) return undefined;
+
+      const [user] = await client
+        .update(users)
+        .set({ ...fields, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
       return user;
     },
   };

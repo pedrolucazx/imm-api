@@ -71,12 +71,14 @@ function makeMocks() {
     findByEmail: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
   };
 
   const mockProfilesRepo: jest.Mocked<UserProfilesRepository> = {
     create: jest.fn(),
     findByUserId: jest.fn(),
     update: jest.fn(),
+    upsert: jest.fn(),
   };
 
   const mockRefreshTokensRepo: jest.Mocked<RefreshTokensRepository> = {

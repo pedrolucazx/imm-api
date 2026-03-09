@@ -12,7 +12,6 @@ export const updateProfileSchema = z.object({
   avatarUrl: z
     .union([
       z
-        .string()
         .url({ error: "Avatar URL must be a valid URL" })
         .max(500, { error: "Avatar URL must be less than 500 characters" }),
       z.null(),
