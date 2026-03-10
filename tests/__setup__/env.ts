@@ -12,3 +12,6 @@ process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/inside_my_mind_dev";
 }
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || "https://fake.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "fake-service-role-key";
