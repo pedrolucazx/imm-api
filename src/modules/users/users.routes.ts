@@ -86,6 +86,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
         },
         401: errorResponse("Unauthorized - invalid or missing token"),
         422: errorResponse("Invalid content type"),
+        500: errorResponse("Internal server error - Supabase Storage failure"),
       },
     },
     preHandler: authenticate,

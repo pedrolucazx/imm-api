@@ -10,10 +10,15 @@ const EXT_MAP: Record<AvatarContentType, string> = {
   "image/webp": "webp",
 };
 
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+
 function getSupabaseClient() {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+  if (!supabaseClient) {
+    supabaseClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+  }
+  return supabaseClient;
 }
 
 export function isAllowedContentType(contentType: string): contentType is AvatarContentType {
