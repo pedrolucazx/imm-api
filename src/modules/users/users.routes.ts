@@ -54,6 +54,44 @@ export async function usersRoutes(fastify: FastifyInstance) {
     handler: controller.get,
   });
 
+  fastify.post("/users/me/avatar-upload-url", {
+    schema: {
+      description: "Generate a signed URL to upload an avatar directly to Supabase Storage",
+      tags: ["Users"],
+      summary: "Get avatar upload URL",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["contentType"],
+        additionalProperties: false,
+        properties: {
+          contentType: {
+            type: "string",
+            enum: ["image/jpeg", "image/png", "image/webp"],
+            examples: ["image/jpeg"],
+          },
+        },
+      },
+      response: {
+        200: {
+          description: "Signed upload URL generated",
+          type: "object",
+          additionalProperties: false,
+          required: ["signedUrl", "publicUrl", "path"],
+          properties: {
+            signedUrl: { type: "string" },
+            publicUrl: { type: "string" },
+            path: { type: "string" },
+          },
+        },
+        401: errorResponse("Unauthorized - invalid or missing token"),
+        422: errorResponse("Invalid content type"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.getAvatarUploadUrl,
+  });
+
   fastify.put("/users/me", {
     schema: {
       description: "Update the authenticated user's profile",
