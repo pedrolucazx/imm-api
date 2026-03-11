@@ -20,13 +20,16 @@ CREATE TABLE "habits" (
   "updated_at" timestamptz NOT NULL DEFAULT now()
 );
 
--- Step 2: Create index on user_id for active habits
+-- Step 2: Create index on user_id for all habits
+CREATE INDEX "idx_habits_user_id" ON "habits"("user_id");
+
+-- Step 3: Create partial index on user_id for active habits
 CREATE INDEX "idx_habits_user_active" ON "habits"("user_id") WHERE "is_active" = TRUE;
 
--- Step 3: Create GIN index for habit_plan JSONB
+-- Step 4: Create GIN index for habit_plan JSONB
 CREATE INDEX "idx_habit_plan_gin" ON "habits" USING GIN("habit_plan");
 
--- Step 4: Create habit_logs table
+-- Step 5: Create habit_logs table
 CREATE TABLE "habit_logs" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "habit_id" uuid NOT NULL REFERENCES "habits"("id") ON DELETE CASCADE,
@@ -36,8 +39,17 @@ CREATE TABLE "habit_logs" (
   "completed_at" timestamptz
 );
 
--- Step 5: Create unique index on habit_id + log_date
+-- Step 6: Create unique index on habit_id + log_date
 CREATE UNIQUE INDEX "uq_habit_log" ON "habit_logs"("habit_id", "log_date");
 
--- Step 6: Add index on user_id for habit_logs
+-- Step 7: Add index on user_id for habit_logs
 CREATE INDEX "idx_habit_logs_user" ON "habit_logs"("user_id");
+
+-- Rollback section (run in reverse order if needed)
+-- DROP INDEX IF EXISTS "idx_habit_logs_user";
+-- DROP INDEX IF EXISTS "uq_habit_log";
+-- DROP TABLE IF EXISTS "habit_logs";
+-- DROP INDEX IF EXISTS "idx_habit_plan_gin";
+-- DROP INDEX IF EXISTS "idx_habits_user_active";
+-- DROP INDEX IF EXISTS "idx_habits_user_id";
+-- DROP TABLE IF EXISTS "habits";
