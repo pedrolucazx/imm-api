@@ -39,13 +39,11 @@ CREATE TABLE "habit_logs" (
 );
 
 -- Step 6: Create unique index on habit_id + log_date
+-- Note: uq_habit_log also covers queries by habit_id alone (leftmost prefix),
+-- so a separate idx_habit_logs_habit index is redundant
 CREATE UNIQUE INDEX "uq_habit_log" ON "habit_logs"("habit_id", "log_date");
 
--- Step 7: Add index on habit_id for habit_logs queries
-CREATE INDEX "idx_habit_logs_habit" ON "habit_logs"("habit_id");
-
 -- Rollback section (run in reverse order if needed)
--- DROP INDEX IF EXISTS "idx_habit_logs_habit";
 -- DROP INDEX IF EXISTS "uq_habit_log";
 -- DROP TABLE IF EXISTS "habit_logs";
 -- DROP INDEX IF EXISTS "idx_habit_plan_gin";
