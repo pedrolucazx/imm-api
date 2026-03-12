@@ -98,7 +98,7 @@ describe("Habits API — E2E", () => {
       expect(res.body.name).toBe("Meditar");
     });
 
-    it("returns 403 when accessing another user's habit", async () => {
+    it("returns 404 when accessing another user's habit", async () => {
       const { token: token1 } = await registerAndLogin(app!, "forbidden-owner");
       const { token: token2 } = await registerAndLogin(app!, "forbidden-other");
 
@@ -111,7 +111,7 @@ describe("Habits API — E2E", () => {
       await request(app!.server)
         .get(`/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token2}`)
-        .expect(403);
+        .expect(404);
     });
 
     it("returns 404 for unknown id", async () => {
@@ -176,7 +176,7 @@ describe("Habits API — E2E", () => {
       expect(res.body.name).toBe("Meditação diária");
     });
 
-    it("returns 403 when updating another user's habit", async () => {
+    it("returns 404 when updating another user's habit", async () => {
       const { token: token1 } = await registerAndLogin(app!, "patch-owner");
       const { token: token2 } = await registerAndLogin(app!, "patch-other");
 
@@ -190,7 +190,7 @@ describe("Habits API — E2E", () => {
         .patch(`/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token2}`)
         .send({ name: "Hacked" })
-        .expect(403);
+        .expect(404);
     });
   });
 
@@ -304,7 +304,7 @@ describe("Habits API — E2E", () => {
         .expect(422);
     });
 
-    it("returns 403 for another user's habit", async () => {
+    it("returns 404 for another user's habit", async () => {
       const { token: token1 } = await registerAndLogin(app!, "checkin-owner");
       const { token: token2 } = await registerAndLogin(app!, "checkin-other");
 
@@ -318,7 +318,7 @@ describe("Habits API — E2E", () => {
         .post(`/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token2}`)
         .send({ logDate: "2026-03-12", completed: true })
-        .expect(403);
+        .expect(404);
     });
   });
 });
