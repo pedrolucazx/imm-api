@@ -140,7 +140,7 @@ describe("Habits API — E2E", () => {
     it("returns 422 when the active habits limit is reached", async () => {
       const { token } = await registerAndLogin(app!, "limit");
 
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 5; i++) {
         await request(app!.server)
           .post("/habits")
           .set("Authorization", `Bearer ${token}`)
@@ -151,7 +151,7 @@ describe("Habits API — E2E", () => {
       const res = await request(app!.server)
         .post("/habits")
         .set("Authorization", `Bearer ${token}`)
-        .send({ ...BASE_HABIT, name: "11th habit" })
+        .send({ ...BASE_HABIT, name: "6th habit" })
         .expect(422);
 
       expect(res.body.error).toMatch(/limit/i);
