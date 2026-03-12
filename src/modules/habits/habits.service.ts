@@ -1,7 +1,7 @@
 import type { HabitsRepository } from "./habits.repository.js";
 import type { HabitLogsRepository } from "./habit-logs.repository.js";
 import type { Habit, HabitLog } from "../../core/database/schema/index.js";
-import { NotFoundError, ForbiddenError, UnprocessableError } from "../../shared/errors/index.js";
+import { NotFoundError, UnprocessableError } from "../../shared/errors/index.js";
 import { deriveHabitMode } from "../../shared/schemas/habit-mode.js";
 import type { CreateHabitInput, UpdateHabitInput, CheckInInput } from "./habits.types.js";
 
@@ -19,9 +19,8 @@ export function createHabitsService({ habitsRepo, habitLogsRepo }: HabitsService
     },
 
     async getById(userId: string, habitId: string): Promise<Habit> {
-      const habit = await habitsRepo.findById(habitId);
+      const habit = await habitsRepo.findById(habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
-      if (habit.userId !== userId) throw new ForbiddenError("Access denied");
       return habit;
     },
 
@@ -43,25 +42,22 @@ export function createHabitsService({ habitsRepo, habitLogsRepo }: HabitsService
     },
 
     async update(userId: string, habitId: string, input: UpdateHabitInput): Promise<Habit> {
-      const habit = await habitsRepo.findById(habitId);
+      const habit = await habitsRepo.findById(habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
-      if (habit.userId !== userId) throw new ForbiddenError("Access denied");
 
-      const updated = await habitsRepo.update(habitId, input);
+      const updated = await habitsRepo.update(habitId, userId, input);
       return updated ?? habit;
     },
 
     async remove(userId: string, habitId: string): Promise<void> {
-      const habit = await habitsRepo.findById(habitId);
+      const habit = await habitsRepo.findById(habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
-      if (habit.userId !== userId) throw new ForbiddenError("Access denied");
-      await habitsRepo.softDelete(habitId);
+      await habitsRepo.softDelete(habitId, userId);
     },
 
     async checkIn(userId: string, habitId: string, input: CheckInInput): Promise<HabitLog> {
-      const habit = await habitsRepo.findById(habitId);
+      const habit = await habitsRepo.findById(habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
-      if (habit.userId !== userId) throw new ForbiddenError("Access denied");
       if (!habit.isActive) throw new UnprocessableError("Habit is not active");
 
       return habitLogsRepo.upsert({
