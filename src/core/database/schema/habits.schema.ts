@@ -12,6 +12,8 @@ import {
 import { sql } from "drizzle-orm";
 import { users } from "./users.schema.js";
 
+export type HabitPlan = Record<string, unknown>;
+
 export const habits = pgTable(
   "habits",
   {
@@ -28,7 +30,7 @@ export const habits = pgTable(
     isActive: boolean("is_active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
     startDate: date("start_date"),
-    habitPlan: jsonb("habit_plan").notNull().default({}),
+    habitPlan: jsonb("habit_plan").$type<HabitPlan>().notNull().default({}),
     planStatus: varchar("plan_status", { length: 20 }).notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
