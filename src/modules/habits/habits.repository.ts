@@ -3,6 +3,7 @@ import type { DrizzleDb, DbClient } from "../../core/database/connection.js";
 import { habits, type Habit, type NewHabit } from "../../core/database/schema/index.js";
 
 type MutableHabitFields = Partial<Omit<NewHabit, "id" | "userId" | "createdAt">>;
+type HabitFilter = "active" | "inactive" | "all";
 
 export function createHabitsRepository(db: DrizzleDb) {
   return {
@@ -11,14 +12,23 @@ export function createHabitsRepository(db: DrizzleDb) {
       return habit;
     },
 
-    async findById(id: string, tx?: DbClient): Promise<Habit | undefined> {
+    async findById(id: string, userId: string, tx?: DbClient): Promise<Habit | null> {
       const client = tx ?? db;
-      const [habit] = await client.select().from(habits).where(eq(habits.id, id));
-      return habit;
+      const [habit] = await client
+        .select()
+        .from(habits)
+        .where(and(eq(habits.id, id), eq(habits.userId, userId)));
+      return habit ?? null;
     },
 
-    async findAllByUserId(userId: string): Promise<Habit[]> {
-      return db.select().from(habits).where(eq(habits.userId, userId));
+    async findAllByUserId(userId: string, filter: HabitFilter = "all"): Promise<Habit[]> {
+      const conditions = [eq(habits.userId, userId)];
+      if (filter === "active") conditions.push(eq(habits.isActive, true));
+      if (filter === "inactive") conditions.push(eq(habits.isActive, false));
+      return db
+        .select()
+        .from(habits)
+        .where(and(...conditions));
     },
 
     async countActiveByUserId(userId: string): Promise<number> {
@@ -29,7 +39,12 @@ export function createHabitsRepository(db: DrizzleDb) {
       return result?.count ?? 0;
     },
 
-    async update(id: string, data: MutableHabitFields, tx?: DbClient): Promise<Habit | undefined> {
+    async update(
+      id: string,
+      userId: string,
+      data: MutableHabitFields,
+      tx?: DbClient
+    ): Promise<Habit | undefined> {
       const client = tx ?? db;
       const fields = Object.fromEntries(
         Object.entries(data).filter(([, v]) => v !== undefined)
@@ -39,17 +54,17 @@ export function createHabitsRepository(db: DrizzleDb) {
       const [habit] = await client
         .update(habits)
         .set({ ...fields, updatedAt: new Date() })
-        .where(eq(habits.id, id))
+        .where(and(eq(habits.id, id), eq(habits.userId, userId)))
         .returning();
       return habit;
     },
 
-    async softDelete(id: string, tx?: DbClient): Promise<Habit | undefined> {
+    async softDelete(id: string, userId: string, tx?: DbClient): Promise<Habit | undefined> {
       const client = tx ?? db;
       const [habit] = await client
         .update(habits)
         .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(habits.id, id))
+        .where(and(eq(habits.id, id), eq(habits.userId, userId)))
         .returning();
       return habit;
     },
