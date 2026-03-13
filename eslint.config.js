@@ -55,6 +55,9 @@ export default [
         jest: "readonly",
         console: "readonly",
         process: "readonly",
+        global: "readonly",
+        fetch: "readonly",
+        RequestInit: "readonly",
       },
     },
     rules: {
