@@ -158,6 +158,53 @@ export async function habitsRoutes(fastify: FastifyInstance) {
     handler: controller.update,
   });
 
+  fastify.post("/habits/:id/log", {
+    schema: {
+      description: "Check-in on a habit for a given date (idempotent upsert)",
+      tags: ["Habits"],
+      summary: "Check-in habit",
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: "object",
+        properties: { id: { type: "string", format: "uuid" } },
+        required: ["id"],
+      },
+      body: {
+        type: "object",
+        required: ["logDate", "completed"],
+        additionalProperties: false,
+        properties: {
+          logDate: {
+            type: "string",
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+            examples: ["2026-03-12"],
+          },
+          completed: { type: "boolean", examples: [true] },
+        },
+      },
+      response: {
+        200: {
+          description: "Check-in recorded",
+          type: "object",
+          additionalProperties: false,
+          required: ["id", "habitId", "logDate", "completed"],
+          properties: {
+            id: { type: "string", format: "uuid" },
+            habitId: { type: "string", format: "uuid" },
+            logDate: { type: "string" },
+            completed: { type: "boolean" },
+            completedAt: { anyOf: [{ type: "string" }, { type: "null" }] },
+          },
+        },
+        401: errorResponse("Unauthorized"),
+        404: errorResponse("Habit not found"),
+        422: errorResponse("Habit is not active"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.checkIn,
+  });
+
   fastify.delete("/habits/:id", {
     schema: {
       description: "Soft-delete a habit (sets isActive = false)",

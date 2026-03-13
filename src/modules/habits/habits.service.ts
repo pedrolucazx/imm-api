@@ -5,7 +5,7 @@ import { NotFoundError, UnprocessableError } from "../../shared/errors/index.js"
 import { deriveHabitMode } from "../../shared/schemas/habit-mode.js";
 import type { CreateHabitInput, UpdateHabitInput, CheckInInput } from "./habits.types.js";
 
-export const MAX_ACTIVE_HABITS = 10;
+export const MAX_ACTIVE_HABITS = 5;
 
 type HabitsServiceDeps = {
   habitsRepo: HabitsRepository;
