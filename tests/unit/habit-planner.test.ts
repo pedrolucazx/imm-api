@@ -76,7 +76,8 @@ describe("generateHabitPlan — skill-building (full)", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("gemini-2.5-flash");
-    expect(url).toContain("test-gemini-key");
+    expect(url).not.toContain("test-gemini-key");
+    expect((init.headers as Record<string, string>)["x-goog-api-key"]).toBe("test-gemini-key");
     const body = JSON.parse(init.body as string) as {
       generationConfig: { maxOutputTokens: number };
     };
