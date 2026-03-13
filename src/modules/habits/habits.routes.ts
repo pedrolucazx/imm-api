@@ -205,6 +205,87 @@ export async function habitsRoutes(fastify: FastifyInstance) {
     handler: controller.checkIn,
   });
 
+  fastify.post("/habits/create-with-plan", {
+    schema: {
+      description: "Create a habit and generate a 66-day AI plan via Gemini",
+      tags: ["Habits"],
+      summary: "Create habit with AI plan",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["name", "icon", "color", "painPoints", "availableMinutes", "level"],
+        additionalProperties: false,
+        properties: {
+          name: {
+            type: "string",
+            minLength: 1,
+            maxLength: 255,
+            examples: ["Praticar Inglês 30m/dia"],
+          },
+          targetSkill: { type: "string", maxLength: 100, examples: ["en-US"] },
+          icon: { type: "string", minLength: 1, maxLength: 50, examples: ["🌍"] },
+          color: { type: "string", minLength: 1, maxLength: 20, examples: ["#4299e1"] },
+          frequency: { type: "string", enum: [...ALLOWED_FREQUENCIES], examples: ["daily"] },
+          targetDays: { type: "integer", minimum: 1, maximum: 7, examples: [7] },
+          sortOrder: { type: "integer", examples: [0] },
+          startDate: { type: "string", examples: ["2026-03-12"] },
+          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          availableMinutes: { type: "integer", minimum: 1, examples: [30] },
+          level: {
+            type: "string",
+            enum: ["beginner", "intermediate", "advanced"],
+            examples: ["beginner"],
+          },
+        },
+      },
+      response: {
+        201: { description: "Habit created with AI plan", ...habitSchema },
+        401: errorResponse("Unauthorized"),
+        422: errorResponse("Validation failed or active habits limit reached"),
+        429: errorResponse("AI rate limit exceeded"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.createWithPlan,
+  });
+
+  fastify.post("/habits/:id/regenerate-plan", {
+    schema: {
+      description: "Regenerate the AI plan for an existing habit",
+      tags: ["Habits"],
+      summary: "Regenerate habit plan",
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: "object",
+        properties: { id: { type: "string", format: "uuid" } },
+        required: ["id"],
+      },
+      body: {
+        type: "object",
+        required: ["painPoints", "availableMinutes", "level"],
+        additionalProperties: false,
+        properties: {
+          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          availableMinutes: { type: "integer", minimum: 1, examples: [30] },
+          level: {
+            type: "string",
+            enum: ["beginner", "intermediate", "advanced"],
+            examples: ["beginner"],
+          },
+        },
+      },
+      response: {
+        200: { description: "Plan regenerated", ...habitSchema },
+        401: errorResponse("Unauthorized"),
+        404: errorResponse("Habit not found"),
+        422: errorResponse("Plan already generating"),
+        429: errorResponse("AI rate limit exceeded"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.regeneratePlan,
+  });
+
   fastify.delete("/habits/:id", {
     schema: {
       description: "Soft-delete a habit (sets isActive = false)",

@@ -30,6 +30,18 @@ export const checkInSchema = z.object({
   completed: z.boolean(),
 });
 
+export const plannerWizardSchema = z.object({
+  painPoints: z.array(z.string().min(1)).min(1),
+  availableMinutes: z.number().int().positive(),
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+});
+
+export const createWithPlanSchema = createHabitSchema.merge(plannerWizardSchema);
+
+export const regeneratePlanSchema = plannerWizardSchema;
+
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type UpdateHabitInput = z.infer<typeof updateHabitSchema>;
 export type CheckInInput = z.infer<typeof checkInSchema>;
+export type CreateWithPlanInput = z.infer<typeof createWithPlanSchema>;
+export type RegeneratePlanInput = z.infer<typeof regeneratePlanSchema>;
