@@ -197,7 +197,6 @@ export async function habitsRoutes(fastify: FastifyInstance) {
           },
         },
         401: errorResponse("Unauthorized"),
-        403: errorResponse("Access denied"),
         404: errorResponse("Habit not found"),
         422: errorResponse("Habit is not active"),
       },
