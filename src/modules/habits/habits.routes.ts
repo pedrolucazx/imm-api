@@ -83,7 +83,6 @@ export async function habitsRoutes(fastify: FastifyInstance) {
       response: {
         200: { description: "Habit retrieved successfully", ...habitSchema },
         401: errorResponse("Unauthorized"),
-        403: errorResponse("Access denied"),
         404: errorResponse("Habit not found"),
       },
     },
@@ -108,6 +107,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
           color: { type: "string", minLength: 1, maxLength: 20, examples: ["#6366f1"] },
           frequency: { type: "string", enum: [...ALLOWED_FREQUENCIES], examples: ["daily"] },
           targetDays: { type: "integer", minimum: 1, maximum: 7, examples: [7] },
+          isActive: { type: "boolean", examples: [true] },
           sortOrder: { type: "integer", examples: [0] },
           startDate: { type: "string", examples: ["2026-03-12"] },
         },
@@ -150,7 +150,6 @@ export async function habitsRoutes(fastify: FastifyInstance) {
       response: {
         200: { description: "Habit updated", ...habitSchema },
         401: errorResponse("Unauthorized"),
-        403: errorResponse("Access denied"),
         404: errorResponse("Habit not found"),
         422: errorResponse("Validation failed"),
       },
@@ -173,7 +172,6 @@ export async function habitsRoutes(fastify: FastifyInstance) {
       response: {
         204: { description: "Habit deleted", type: "null" },
         401: errorResponse("Unauthorized"),
-        403: errorResponse("Access denied"),
         404: errorResponse("Habit not found"),
       },
     },
