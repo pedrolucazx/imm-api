@@ -4,8 +4,8 @@ const fullPhaseSchema = z.object({
   phase: z.number().int().positive(),
   days: z.string().min(1),
   theme: z.string().min(1),
-  daily_tasks: z.array(z.string()).min(1),
-  techniques: z.array(z.string()).min(1),
+  daily_tasks: z.array(z.string().trim().min(1)).min(1),
+  techniques: z.array(z.string().trim().min(1)).min(1),
 });
 
 const lightPhaseSchema = z.object({
@@ -30,7 +30,7 @@ export const lightHabitPlanSchema = z.object({
   plan_type: z.literal("light"),
   strategy: z.string().min(1),
   phases: z.array(lightPhaseSchema).min(1),
-  success_metrics: z.string().min(1),
+  success_metrics: z.literal("66 dias consecutivos"),
 });
 
 export const habitPlanSchema = z.discriminatedUnion("plan_type", [
