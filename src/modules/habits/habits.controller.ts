@@ -4,9 +4,13 @@ import {
   createHabitSchema,
   updateHabitSchema,
   checkInSchema,
+  createWithPlanSchema,
+  regeneratePlanSchema,
   type CreateHabitInput,
   type UpdateHabitInput,
   type CheckInInput,
+  type CreateWithPlanInput,
+  type RegeneratePlanInput,
 } from "./habits.types.js";
 import { handleControllerError } from "../../shared/utils/http.js";
 
@@ -76,6 +80,34 @@ export function createHabitsController(service: HabitsService) {
         const data = checkInSchema.parse(request.body);
         const log = await service.checkIn(userId, request.params.id, data);
         return reply.code(200).send(log);
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async createWithPlan(
+      request: FastifyRequest<{ Body: CreateWithPlanInput }>,
+      reply: FastifyReply
+    ) {
+      try {
+        const { id: userId } = request.user;
+        const data = createWithPlanSchema.parse(request.body);
+        const habit = await service.createWithPlan(userId, data);
+        return reply.code(201).send(habit);
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async regeneratePlan(
+      request: FastifyRequest<{ Params: { id: string }; Body: RegeneratePlanInput }>,
+      reply: FastifyReply
+    ) {
+      try {
+        const { id: userId } = request.user;
+        const data = regeneratePlanSchema.parse(request.body);
+        const habit = await service.regeneratePlan(userId, request.params.id, data);
+        return reply.code(200).send(habit);
       } catch (error) {
         return handleControllerError(error, reply);
       }

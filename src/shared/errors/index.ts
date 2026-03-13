@@ -40,3 +40,9 @@ export class UnprocessableError extends AppError {
     super(422, "UNPROCESSABLE", message);
   }
 }
+
+export class TooManyRequestsError extends AppError {
+  constructor(message: string) {
+    super(429, "TOO_MANY_REQUESTS", message);
+  }
+}
