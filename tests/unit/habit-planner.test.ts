@@ -29,18 +29,6 @@ const FULL_PLAN = JSON.stringify({
       theme: "Foundation",
       daily_tasks: ["Listen 15min", "Repeat phrases"],
     },
-    {
-      phase: 2,
-      days: "23-44",
-      theme: "Expansion",
-      daily_tasks: ["Read 20min", "Write sentences"],
-    },
-    {
-      phase: 3,
-      days: "45-66",
-      theme: "Consolidation",
-      daily_tasks: ["Conversation 30min", "Review vocab"],
-    },
   ],
   total_time_per_day_minutes: 30,
   success_metrics: "Reach B1 level in 66 days",
@@ -57,20 +45,6 @@ const LIGHT_PLAN = JSON.stringify({
       theme: "Habit Formation",
       weekly_focus: "Daily 30-minute sessions",
       tip: "Attach to existing routine",
-    },
-    {
-      phase: 2,
-      days: "23-44",
-      theme: "Deepening",
-      weekly_focus: "Increase difficulty",
-      tip: "Track your progress",
-    },
-    {
-      phase: 3,
-      days: "45-66",
-      theme: "Mastery",
-      weekly_focus: "Maintain consistency",
-      tip: "Celebrate milestones",
     },
   ],
   total_time_per_day_minutes: 15,
@@ -92,14 +66,13 @@ describe("generateHabitPlan — skill-building (full)", () => {
         painPoints: ["pronuncia"],
         availableMinutes: 30,
         level: "beginner",
-        uiLanguage: "pt-BR",
       },
       "skill-building"
     );
 
     expect(plan.plan_type).toBe("full");
     expect(plan.schema_version).toBe(2);
-    expect(plan.phases).toHaveLength(3);
+    expect(plan.phases).toHaveLength(1);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("gemini-flash-latest");
@@ -117,13 +90,7 @@ describe("generateHabitPlan — tracking-coached (light)", () => {
     mockFetch.mockResolvedValue(makeGeminiResponse(LIGHT_PLAN));
 
     const plan = await generateHabitPlan(
-      {
-        name: "Meditação",
-        painPoints: ["foco"],
-        availableMinutes: 15,
-        level: "beginner",
-        uiLanguage: "pt-BR",
-      },
+      { name: "Meditação", painPoints: ["foco"], availableMinutes: 15, level: "beginner" },
       "tracking-coached"
     );
 
@@ -142,13 +109,7 @@ describe("generateHabitPlan — failures", () => {
 
     await expect(
       generateHabitPlan(
-        {
-          name: "Inglês",
-          painPoints: ["pronuncia"],
-          availableMinutes: 30,
-          level: "beginner",
-          uiLanguage: "pt-BR",
-        },
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
         "skill-building"
       )
     ).rejects.toThrow("Gemini API error: 503");
@@ -160,13 +121,7 @@ describe("generateHabitPlan — failures", () => {
 
     await expect(
       generateHabitPlan(
-        {
-          name: "Inglês",
-          painPoints: ["pronuncia"],
-          availableMinutes: 30,
-          level: "beginner",
-          uiLanguage: "pt-BR",
-        },
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
         "skill-building"
       )
     ).rejects.toThrow();
@@ -180,13 +135,7 @@ describe("generateHabitPlan — failures", () => {
 
     await expect(
       generateHabitPlan(
-        {
-          name: "Inglês",
-          painPoints: ["pronuncia"],
-          availableMinutes: 30,
-          level: "beginner",
-          uiLanguage: "pt-BR",
-        },
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
         "skill-building"
       )
     ).rejects.toThrow("Gemini returned empty response");
@@ -201,13 +150,7 @@ describe("generateHabitPlan — failures", () => {
 
     await expect(
       generateWithoutKey(
-        {
-          name: "Inglês",
-          painPoints: ["pronuncia"],
-          availableMinutes: 30,
-          level: "beginner",
-          uiLanguage: "pt-BR",
-        },
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
         "skill-building"
       )
     ).rejects.toThrow("GEMINI_API_KEY is not configured");
