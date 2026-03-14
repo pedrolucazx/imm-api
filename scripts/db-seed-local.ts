@@ -143,6 +143,14 @@ async function main(): Promise<void> {
     throw new Error("DATABASE_URL is not set. Check .env.local / .env configuration.");
   }
 
+  const hostname = new URL(databaseUrl).hostname;
+  const localHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+  if (!localHosts.has(hostname) && process.env.ALLOW_NON_LOCAL_SEED !== "true") {
+    throw new Error(
+      `Refusing to seed non-local database (${hostname}). Set ALLOW_NON_LOCAL_SEED=true to override.`
+    );
+  }
+
   const sql = postgres(databaseUrl, { max: 1 });
   const db = drizzle(sql, { schema });
 

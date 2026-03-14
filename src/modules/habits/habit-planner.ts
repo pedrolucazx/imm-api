@@ -214,27 +214,24 @@ async function callGemini(
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
 
-  let lastError: unknown;
   for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt++) {
     try {
       return await callGeminiOnce(apiKey, prompt, maxOutputTokens, isFull);
     } catch (error) {
-      if (error instanceof GeminiRateLimitError) {
-        lastError = error;
-        if (attempt < GEMINI_MAX_RETRIES) {
-          const delay = GEMINI_RETRY_BASE_MS * 2 ** attempt;
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[habit-planner] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES})`
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
+      if (error instanceof GeminiRateLimitError && attempt < GEMINI_MAX_RETRIES) {
+        const delay = GEMINI_RETRY_BASE_MS * 2 ** attempt;
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[habit-planner] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
       }
       throw error;
     }
   }
-  throw lastError;
+  /* istanbul ignore next */
+  throw new Error("Unreachable: loop always exits via return or throw");
 }
 
 function sanitizeJsonString(text: string): string {
