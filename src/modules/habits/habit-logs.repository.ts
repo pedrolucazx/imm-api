@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DrizzleDb } from "../../core/database/connection.js";
 import { habitLogs, type HabitLog, type NewHabitLog } from "../../core/database/schema/index.js";
 
@@ -21,6 +21,11 @@ export function createHabitLogsRepository(db: DrizzleDb) {
 
     async findByHabitId(habitId: string): Promise<HabitLog[]> {
       return db.select().from(habitLogs).where(eq(habitLogs.habitId, habitId));
+    },
+
+    async findAllByHabitIds(habitIds: string[]): Promise<HabitLog[]> {
+      if (habitIds.length === 0) return [];
+      return db.select().from(habitLogs).where(inArray(habitLogs.habitId, habitIds));
     },
 
     async findByHabitAndDate(habitId: string, logDate: string): Promise<HabitLog | undefined> {
