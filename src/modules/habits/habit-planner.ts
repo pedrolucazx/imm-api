@@ -1,6 +1,7 @@
 import { env } from "../../core/config/env.js";
 import { habitPlanSchema, type HabitPlan } from "./habit-plan.schema.js";
 import type { HabitMode } from "../../shared/schemas/habit-mode.js";
+import { TooManyRequestsError } from "../../shared/errors/index.js";
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
@@ -75,7 +76,7 @@ const GEMINI_TIMEOUT_MS = 30_000;
 const GEMINI_MAX_RETRIES = 3;
 const GEMINI_RETRY_BASE_MS = 5_000;
 
-export class GeminiRateLimitError extends Error {
+export class GeminiRateLimitError extends TooManyRequestsError {
   constructor(message: string) {
     super(message);
     this.name = "GeminiRateLimitError";
@@ -240,7 +241,7 @@ function sanitizeJsonString(text: string): string {
   let cleaned = text.replace(/^```json\n?|\n?```$/g, "").trim();
   cleaned = cleaned.replace(/^```\n?|\n?```$/g, "").trim();
 
-  cleaned = cleaned.replace(/: '([^']*?)'/g, ': "$1"');
+  cleaned = cleaned.replace(/: '([\s\S]*?)'(?=[,}\]])/g, ': "$1"');
 
   cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
 

@@ -19,7 +19,7 @@ export const fullHabitPlanSchema = z.object({
   schema_version: z.literal(2),
   plan_type: z.literal("full"),
   strategy: z.string().min(1),
-  phases: z.array(fullPhaseSchema).min(1),
+  phases: z.array(fullPhaseSchema).length(3),
   total_time_per_day_minutes: z.number().int().positive(),
   success_metrics: z.string().min(1),
 });
@@ -28,7 +28,7 @@ export const lightHabitPlanSchema = z.object({
   schema_version: z.literal(2),
   plan_type: z.literal("light"),
   strategy: z.string().min(1),
-  phases: z.array(lightPhaseSchema).min(1),
+  phases: z.array(lightPhaseSchema).length(3),
   total_time_per_day_minutes: z.number().int().positive(),
   success_metrics: z.string().min(1),
 });

@@ -8,6 +8,8 @@ import * as schema from "../src/core/database/schema/index.js";
 import { hashPassword } from "../src/shared/utils/password.js";
 import { logger } from "../src/core/config/logger.js";
 
+// Loads DRIZZLE_ENV_FILE (default: .env.local) with override:true so it takes
+// precedence over the fallback .env, which fills in any missing variables.
 function loadEnvFiles(): void {
   const selectedEnvFile = process.env.DRIZZLE_ENV_FILE ?? ".env.local";
   const fallbackEnvFile = ".env";
@@ -30,6 +32,8 @@ function loadEnvFiles(): void {
   }
 }
 
+// Static demo date — intentionally fixed so streak calculations are reproducible.
+// Update this value when refreshing demo data after long periods of inactivity.
 // startDate = 2026-03-07 → currentDay = 7 on 2026-03-13
 const START_DATE = "2026-03-07";
 
@@ -268,7 +272,7 @@ async function main(): Promise<void> {
     });
 
     logger.info(
-      { ...seeded, localLogin: { email: demoEmail, password: demoPassword } },
+      { ...seeded, localLogin: { email: demoEmail, password: "(see scripts/db-seed-local.ts)" } },
       "Local demo seed completed"
     );
   } finally {

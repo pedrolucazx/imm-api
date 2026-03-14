@@ -29,6 +29,13 @@ const FULL_PLAN = JSON.stringify({
       theme: "Foundation",
       daily_tasks: ["Listen 15min", "Repeat phrases"],
     },
+    {
+      phase: 2,
+      days: "23-44",
+      theme: "Consolidation",
+      daily_tasks: ["Shadow 20min", "Write sentences"],
+    },
+    { phase: 3, days: "45-66", theme: "Fluency", daily_tasks: ["Converse 30min", "Review vocab"] },
   ],
   total_time_per_day_minutes: 30,
   success_metrics: "Reach B1 level in 66 days",
@@ -43,8 +50,22 @@ const LIGHT_PLAN = JSON.stringify({
       phase: 1,
       days: "1-22",
       theme: "Habit Formation",
-      weekly_focus: "Daily 30-minute sessions",
+      weekly_focus: "Daily 15-min sessions",
       tip: "Attach to existing routine",
+    },
+    {
+      phase: 2,
+      days: "23-44",
+      theme: "Momentum",
+      weekly_focus: "Increase intensity gradually",
+      tip: "Track streaks visually",
+    },
+    {
+      phase: 3,
+      days: "45-66",
+      theme: "Automaticity",
+      weekly_focus: "Make it non-negotiable",
+      tip: "Reward yourself weekly",
     },
   ],
   total_time_per_day_minutes: 15,
@@ -72,7 +93,7 @@ describe("generateHabitPlan — skill-building (full)", () => {
 
     expect(plan.plan_type).toBe("full");
     expect(plan.schema_version).toBe(2);
-    expect(plan.phases).toHaveLength(1);
+    expect(plan.phases).toHaveLength(3);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("gemini-flash-latest");
