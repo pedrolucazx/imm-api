@@ -8,10 +8,11 @@ export type HabitWithStats = Habit & { streak: number; currentDay: number };
 function computeCurrentDay(startDate: string | Date | null): number {
   if (!startDate) return 1;
   const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return 1;
   const now = new Date();
   const startUTC = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
   const nowUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const diff = Math.round((nowUTC - startUTC) / (1000 * 60 * 60 * 24));
+  const diff = Math.floor((nowUTC - startUTC) / (1000 * 60 * 60 * 24));
   return Math.max(1, Math.min(diff + 1, 66));
 }
 
@@ -210,6 +211,7 @@ export function createHabitsService({
           habit;
         return enrichHabit(updated, []);
       } catch (err) {
+        if (err instanceof TooManyRequestsError) throw err;
         // eslint-disable-next-line no-console
         console.error("[habit-planner] generateHabitPlan failed:", err);
         const updated =
@@ -257,7 +259,8 @@ export function createHabitsService({
           (await habitsRepo.update(habitId, userId, { habitPlan: plan, planStatus: "ready" })) ??
           habit;
         return enrichHabit(updated, logs);
-      } catch {
+      } catch (err) {
+        if (err instanceof TooManyRequestsError) throw err;
         const updated =
           (await habitsRepo.update(habitId, userId, { planStatus: "failed" })) ?? habit;
         return enrichHabit(updated, logs);

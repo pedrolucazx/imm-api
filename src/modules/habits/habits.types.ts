@@ -41,13 +41,12 @@ export const createWithPlanSchema = createHabitSchema.extend(plannerWizardSchema
 
 export const regeneratePlanSchema = plannerWizardSchema;
 
-export const previewPlanSchema = z.object({
-  name: z.string().min(1).max(255),
-  targetSkill: z.string().max(100).optional(),
-  painPoints: z.array(z.string().min(1)).min(1),
-  availableMinutes: z.number().int().positive(),
-  level: z.enum(["beginner", "intermediate", "advanced"]),
-});
+export const previewPlanSchema = z
+  .object({
+    name: z.string().min(1).max(255),
+    targetSkill: z.string().max(100).optional(),
+  })
+  .extend(plannerWizardSchema.shape);
 
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type UpdateHabitInput = z.infer<typeof updateHabitSchema>;

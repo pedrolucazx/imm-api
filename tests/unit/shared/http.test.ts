@@ -1,7 +1,6 @@
 import { z, ZodError } from "zod";
 import { handleControllerError } from "@/shared/utils/http.js";
-import { UnauthorizedError } from "@/shared/errors/index.js";
-import { GeminiRateLimitError } from "@/modules/habits/habit-planner.js";
+import { UnauthorizedError, TooManyRequestsError } from "@/shared/errors/index.js";
 
 function makeReply() {
   return {
@@ -36,14 +35,14 @@ describe("handleControllerError", () => {
     });
   });
 
-  it("returns 429 for GeminiRateLimitError", () => {
+  it("returns 429 for TooManyRequestsError", () => {
     const reply = makeReply();
-    const error = new GeminiRateLimitError("Gemini API rate limit: 429");
+    const error = new TooManyRequestsError("rate limit exceeded");
 
     handleControllerError(error, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(429);
-    expect(reply.send).toHaveBeenCalledWith({ error: "Gemini API rate limit: 429" });
+    expect(reply.send).toHaveBeenCalledWith({ error: "rate limit exceeded" });
   });
 
   it("returns 500 for unknown errors", () => {

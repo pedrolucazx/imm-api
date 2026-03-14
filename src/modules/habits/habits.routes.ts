@@ -223,7 +223,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
         properties: {
           name: { type: "string", minLength: 1, maxLength: 255, examples: ["Praticar Inglês"] },
           targetSkill: { type: "string", maxLength: 100, examples: ["en-US"] },
-          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
           availableMinutes: { type: "integer", minimum: 1, examples: [30] },
           level: {
             type: "string",
@@ -270,7 +270,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
           targetDays: { type: "integer", minimum: 1, maximum: 7, examples: [7] },
           sortOrder: { type: "integer", examples: [0] },
           startDate: { type: "string", examples: ["2026-03-12"] },
-          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
           availableMinutes: { type: "integer", minimum: 1, examples: [30] },
           level: {
             type: "string",
@@ -306,7 +306,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
         required: ["painPoints", "availableMinutes", "level"],
         additionalProperties: false,
         properties: {
-          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
           availableMinutes: { type: "integer", minimum: 1, examples: [30] },
           level: {
             type: "string",
