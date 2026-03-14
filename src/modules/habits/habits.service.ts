@@ -211,11 +211,11 @@ export function createHabitsService({
           habit;
         return enrichHabit(updated, []);
       } catch (err) {
+        const updated =
+          (await habitsRepo.update(habit.id, userId, { planStatus: "failed" })) ?? habit;
         if (err instanceof TooManyRequestsError) throw err;
         // eslint-disable-next-line no-console
         console.error("[habit-planner] generateHabitPlan failed:", err);
-        const updated =
-          (await habitsRepo.update(habit.id, userId, { planStatus: "failed" })) ?? habit;
         return enrichHabit(updated, []);
       }
     },
@@ -260,9 +260,9 @@ export function createHabitsService({
           habit;
         return enrichHabit(updated, logs);
       } catch (err) {
-        if (err instanceof TooManyRequestsError) throw err;
         const updated =
           (await habitsRepo.update(habitId, userId, { planStatus: "failed" })) ?? habit;
+        if (err instanceof TooManyRequestsError) throw err;
         return enrichHabit(updated, logs);
       }
     },
