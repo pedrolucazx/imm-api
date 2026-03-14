@@ -157,16 +157,15 @@ cd imm-api
 npm install
 
 # 3. Configure as variáveis de ambiente
-cp .env.example .env
+cp .env.example .env.local
+# .env = remoto (ex.: Supabase)
+# .env.local = local (Docker)
 # Preencha os valores — veja a seção Variáveis de Ambiente abaixo
 
-# 4. Inicie o PostgreSQL via Docker
-docker compose up -d postgres
+# 4. Suba banco local + migrations + seed de dados de exemplo
+npm run db:start
 
-# 5. Execute as migrations do banco de dados
-npm run db:migrate
-
-# 6. Inicie o servidor de desenvolvimento
+# 5. Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
@@ -177,7 +176,12 @@ npm run dev
 
 ## Variáveis de Ambiente
 
-Copie `.env.example` para `.env` e configure os valores:
+Use dois arquivos para separar ambientes:
+
+- `.env`: remoto (Supabase/produção)
+- `.env.local`: local (Docker)
+
+Copie `.env.example` para `.env.local` e configure os valores:
 
 ```env
 # Aplicação
@@ -230,6 +234,12 @@ npm run db:generate
 # Aplique todas as pending migrations
 npm run db:migrate
 
+# Aplique as migrations no banco local (Docker)
+npm run db:migrate:local
+
+# Popule o banco local com usuário e hábitos de exemplo
+npm run db:seed:local
+
 # Push do schema diretamente para o DB (dev only, sem arquivo de migration)
 npm run db:push
 
@@ -260,9 +270,12 @@ npm run db:studio
 | `npm run test:watch`       | Executa testes em watch mode                   |
 | `npm run test:coverage`    | Executa testes e gera relatório de coverage    |
 | `npm run db:generate`      | Gera Drizzle migration a partir do schema diff |
-| `npm run db:migrate`       | Aplica pending migrations                      |
+| `npm run db:migrate`       | Aplica pending migrations via `.env`           |
+| `npm run db:migrate:local` | Aplica pending migrations via `.env.local`     |
 | `npm run db:push`          | Push do schema direto (sem arquivo migration)  |
 | `npm run db:studio`        | Abre Drizzle Studio GUI                        |
+| `npm run db:seed:local`    | Seed local com usuário e hábitos de exemplo    |
+| `npm run db:start`         | Docker local + migrate local + seed local      |
 | `npm run commit`           | Conventional commit interativo via Commitizen  |
 
 ---

@@ -25,9 +25,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(swaggerPlugin);
 
   await fastify.register(healthRoutes);
-  await fastify.register(authRoutes);
-  await fastify.register(usersRoutes);
-  await fastify.register(habitsRoutes);
+  await fastify.register(authRoutes, { prefix: "/api" });
+  await fastify.register(usersRoutes, { prefix: "/api" });
+  await fastify.register(habitsRoutes, { prefix: "/api" });
 
   return fastify;
 }

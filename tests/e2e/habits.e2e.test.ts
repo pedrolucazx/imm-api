@@ -20,7 +20,7 @@ async function registerAndLogin(
 ): Promise<{ token: string; userId: string }> {
   const email = `habits-e2e-${suffix}-${Date.now()}@example.com`;
   const res = await request(app.server)
-    .post("/auth/register")
+    .post("/api/auth/register")
     .send({ email, password: "password123", name: "Habits User" });
   return { token: res.body.token, userId: res.body.user.id };
 }
@@ -54,7 +54,7 @@ describe("Habits API — E2E", () => {
     it("returns empty array when user has no habits", async () => {
       const { token } = await registerAndLogin(app!, "list-empty");
       const res = await request(app!.server)
-        .get("/habits")
+        .get("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
       expect(res.body).toEqual([]);
@@ -65,19 +65,19 @@ describe("Habits API — E2E", () => {
       const { token: token2 } = await registerAndLogin(app!, "list-owner2");
 
       await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token1}`)
         .send(BASE_HABIT);
 
       const res = await request(app!.server)
-        .get("/habits")
+        .get("/api/habits")
         .set("Authorization", `Bearer ${token2}`)
         .expect(200);
       expect(res.body).toEqual([]);
     });
 
     it("returns 401 without token", async () => {
-      await request(app!.server).get("/habits").expect(401);
+      await request(app!.server).get("/api/habits").expect(401);
     });
   });
 
@@ -85,13 +85,13 @@ describe("Habits API — E2E", () => {
     it("returns the habit for its owner", async () => {
       const { token } = await registerAndLogin(app!, "getbyid");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       const res = await request(app!.server)
-        .get(`/habits/${created.body.id}`)
+        .get(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
       expect(res.body.id).toBe(created.body.id);
@@ -103,13 +103,13 @@ describe("Habits API — E2E", () => {
       const { token: token2 } = await registerAndLogin(app!, "forbidden-other");
 
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token1}`)
         .send(BASE_HABIT)
         .expect(201);
 
       await request(app!.server)
-        .get(`/habits/${created.body.id}`)
+        .get(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token2}`)
         .expect(404);
     });
@@ -117,7 +117,7 @@ describe("Habits API — E2E", () => {
     it("returns 404 for unknown id", async () => {
       const { token } = await registerAndLogin(app!, "getbyid-notfound");
       await request(app!.server)
-        .get("/habits/00000000-0000-0000-0000-000000000000")
+        .get("/api/habits/00000000-0000-0000-0000-000000000000")
         .set("Authorization", `Bearer ${token}`)
         .expect(404);
     });
@@ -127,7 +127,7 @@ describe("Habits API — E2E", () => {
     it("creates a habit and returns 201", async () => {
       const { token } = await registerAndLogin(app!, "create");
       const res = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
@@ -142,14 +142,14 @@ describe("Habits API — E2E", () => {
 
       for (let i = 0; i < 5; i++) {
         await request(app!.server)
-          .post("/habits")
+          .post("/api/habits")
           .set("Authorization", `Bearer ${token}`)
           .send({ ...BASE_HABIT, name: `Hábito ${i}` })
           .expect(201);
       }
 
       const res = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send({ ...BASE_HABIT, name: "6th habit" })
         .expect(422);
@@ -162,13 +162,13 @@ describe("Habits API — E2E", () => {
     it("updates a habit and returns 200", async () => {
       const { token } = await registerAndLogin(app!, "update");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       const res = await request(app!.server)
-        .patch(`/habits/${created.body.id}`)
+        .patch(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token}`)
         .send({ name: "Meditação diária" })
         .expect(200);
@@ -181,13 +181,13 @@ describe("Habits API — E2E", () => {
       const { token: token2 } = await registerAndLogin(app!, "patch-other");
 
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token1}`)
         .send(BASE_HABIT)
         .expect(201);
 
       await request(app!.server)
-        .patch(`/habits/${created.body.id}`)
+        .patch(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token2}`)
         .send({ name: "Hacked" })
         .expect(404);
@@ -198,18 +198,18 @@ describe("Habits API — E2E", () => {
     it("soft-deletes a habit and returns 204", async () => {
       const { token } = await registerAndLogin(app!, "delete");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       await request(app!.server)
-        .delete(`/habits/${created.body.id}`)
+        .delete(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token}`)
         .expect(204);
 
       const res = await request(app!.server)
-        .get(`/habits/${created.body.id}`)
+        .get(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token}`)
         .expect(200);
       expect(res.body.isActive).toBe(false);
@@ -220,13 +220,13 @@ describe("Habits API — E2E", () => {
     it("records a check-in and returns 200", async () => {
       const { token } = await registerAndLogin(app!, "checkin");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       const res = await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token}`)
         .send({ logDate: "2026-03-12", completed: true })
         .expect(200);
@@ -239,20 +239,20 @@ describe("Habits API — E2E", () => {
     it("is idempotent — calling twice returns same result", async () => {
       const { token } = await registerAndLogin(app!, "checkin-idem");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       const payload = { logDate: "2026-03-12", completed: true };
       const first = await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token}`)
         .send(payload)
         .expect(200);
 
       const second = await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token}`)
         .send(payload)
         .expect(200);
@@ -263,19 +263,19 @@ describe("Habits API — E2E", () => {
     it("can update completed to false (undo check-in)", async () => {
       const { token } = await registerAndLogin(app!, "checkin-undo");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token}`)
         .send({ logDate: "2026-03-12", completed: true })
         .expect(200);
 
       const res = await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token}`)
         .send({ logDate: "2026-03-12", completed: false })
         .expect(200);
@@ -287,18 +287,18 @@ describe("Habits API — E2E", () => {
     it("returns 422 when habit is inactive", async () => {
       const { token } = await registerAndLogin(app!, "checkin-inactive");
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token}`)
         .send(BASE_HABIT)
         .expect(201);
 
       await request(app!.server)
-        .delete(`/habits/${created.body.id}`)
+        .delete(`/api/habits/${created.body.id}`)
         .set("Authorization", `Bearer ${token}`)
         .expect(204);
 
       await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token}`)
         .send({ logDate: "2026-03-12", completed: true })
         .expect(422);
@@ -309,13 +309,13 @@ describe("Habits API — E2E", () => {
       const { token: token2 } = await registerAndLogin(app!, "checkin-other");
 
       const created = await request(app!.server)
-        .post("/habits")
+        .post("/api/habits")
         .set("Authorization", `Bearer ${token1}`)
         .send(BASE_HABIT)
         .expect(201);
 
       await request(app!.server)
-        .post(`/habits/${created.body.id}/log`)
+        .post(`/api/habits/${created.body.id}/log`)
         .set("Authorization", `Bearer ${token2}`)
         .send({ logDate: "2026-03-12", completed: true })
         .expect(404);

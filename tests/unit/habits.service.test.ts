@@ -53,7 +53,12 @@ function makeRepos() {
     softDelete: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<HabitsRepository>;
 
-  const habitLogsRepo = {} as unknown as HabitLogsRepository;
+  const habitLogsRepo = {
+    findAllByHabitIds: jest.fn().mockResolvedValue([]),
+    findByHabitId: jest.fn().mockResolvedValue([]),
+    upsert: jest.fn().mockResolvedValue(undefined),
+    findByHabitAndDate: jest.fn().mockResolvedValue(undefined),
+  } as unknown as jest.Mocked<HabitLogsRepository>;
 
   const userProfilesRepo = {
     findByUserId: jest.fn().mockResolvedValue({ aiRequestsToday: 0, lastAiRequest: null }),

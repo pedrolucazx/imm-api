@@ -21,6 +21,7 @@ export default [
         Response: "readonly",
         setTimeout: "readonly",
         clearTimeout: "readonly",
+        URL: "readonly",
       },
     },
     plugins: {

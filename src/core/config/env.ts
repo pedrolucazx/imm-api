@@ -4,11 +4,12 @@ import { logger } from "./logger.js";
 import { existsSync } from "fs";
 import { resolve } from "path";
 
-const envFiles = [".env.local", ".env"];
-for (const file of envFiles) {
+const envFiles = [".env", ".env.local"];
+for (let index = 0; index < envFiles.length; index += 1) {
+  const file = envFiles[index];
   const path = resolve(process.cwd(), file);
   if (existsSync(path)) {
-    config({ path, quiet: true });
+    config({ path, quiet: true, override: index > 0 });
   }
 }
 

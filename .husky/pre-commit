@@ -1,2 +1,2 @@
 npx lint-staged
-yarn test
+npm run test:unit && npm run test:integration && npm run test:e2e -- --runInBand
