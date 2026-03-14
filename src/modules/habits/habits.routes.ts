@@ -19,6 +19,8 @@ const habitSchema = {
     "sortOrder",
     "habitPlan",
     "planStatus",
+    "streak",
+    "currentDay",
     "createdAt",
     "updatedAt",
   ],
@@ -34,8 +36,10 @@ const habitSchema = {
     isActive: { type: "boolean" },
     sortOrder: { type: "integer" },
     startDate: { anyOf: [{ type: "string" }, { type: "null" }] },
-    habitPlan: { type: "object" },
+    habitPlan: { type: "object", additionalProperties: true },
     planStatus: { type: "string" },
+    streak: { type: "integer" },
+    currentDay: { type: "integer" },
     createdAt: { type: "string" },
     updatedAt: { type: "string" },
   },
@@ -110,6 +114,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
           isActive: { type: "boolean", examples: [true] },
           sortOrder: { type: "integer", examples: [0] },
           startDate: { type: "string", examples: ["2026-03-12"] },
+          habitPlan: { type: "object", additionalProperties: true },
         },
       },
       response: {
@@ -205,6 +210,42 @@ export async function habitsRoutes(fastify: FastifyInstance) {
     handler: controller.checkIn,
   });
 
+  fastify.post("/habits/preview-plan", {
+    schema: {
+      description: "Generate a 66-day AI plan preview without creating a habit",
+      tags: ["Habits"],
+      summary: "Preview habit plan",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["name", "painPoints", "availableMinutes", "level"],
+        additionalProperties: false,
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 255, examples: ["Praticar Inglês"] },
+          targetSkill: { type: "string", maxLength: 100, examples: ["en-US"] },
+          painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+          availableMinutes: { type: "integer", minimum: 1, examples: [30] },
+          level: {
+            type: "string",
+            enum: ["beginner", "intermediate", "advanced"],
+            examples: ["beginner"],
+          },
+        },
+      },
+      response: {
+        200: {
+          description: "Plan preview generated",
+          type: "object",
+          additionalProperties: true,
+        },
+        401: errorResponse("Unauthorized"),
+        429: errorResponse("AI rate limit exceeded"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.previewPlan,
+  });
+
   fastify.post("/habits/create-with-plan", {
     schema: {
       description: "Create a habit and generate a 66-day AI plan via Gemini",
@@ -229,7 +270,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
           targetDays: { type: "integer", minimum: 1, maximum: 7, examples: [7] },
           sortOrder: { type: "integer", examples: [0] },
           startDate: { type: "string", examples: ["2026-03-12"] },
-          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
           availableMinutes: { type: "integer", minimum: 1, examples: [30] },
           level: {
             type: "string",
@@ -265,7 +306,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
         required: ["painPoints", "availableMinutes", "level"],
         additionalProperties: false,
         properties: {
-          painPoints: { type: "array", items: { type: "string" }, minItems: 1 },
+          painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
           availableMinutes: { type: "integer", minimum: 1, examples: [30] },
           level: {
             type: "string",

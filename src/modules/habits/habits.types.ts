@@ -12,6 +12,7 @@ export const createHabitSchema = z.object({
   targetDays: z.number().int().min(1).max(7).default(7),
   sortOrder: z.number().int().optional(),
   startDate: z.string().optional(),
+  habitPlan: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const updateHabitSchema = z.object({
@@ -36,12 +37,20 @@ export const plannerWizardSchema = z.object({
   level: z.enum(["beginner", "intermediate", "advanced"]),
 });
 
-export const createWithPlanSchema = createHabitSchema.merge(plannerWizardSchema);
+export const createWithPlanSchema = createHabitSchema.extend(plannerWizardSchema.shape);
 
 export const regeneratePlanSchema = plannerWizardSchema;
+
+export const previewPlanSchema = z
+  .object({
+    name: z.string().min(1).max(255),
+    targetSkill: z.string().max(100).optional(),
+  })
+  .extend(plannerWizardSchema.shape);
 
 export type CreateHabitInput = z.infer<typeof createHabitSchema>;
 export type UpdateHabitInput = z.infer<typeof updateHabitSchema>;
 export type CheckInInput = z.infer<typeof checkInSchema>;
 export type CreateWithPlanInput = z.infer<typeof createWithPlanSchema>;
 export type RegeneratePlanInput = z.infer<typeof regeneratePlanSchema>;
+export type PreviewPlanInput = z.infer<typeof previewPlanSchema>;
