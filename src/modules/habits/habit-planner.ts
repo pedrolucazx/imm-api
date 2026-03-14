@@ -16,7 +16,8 @@ type PlannerInput = {
 };
 
 function langInstruction(uiLanguage: string): string {
-  return `IMPORTANT: Write ALL text fields in the language with code "${uiLanguage}" (e.g. pt-BR = Brazilian Portuguese, en-US = English, es-ES = Spanish).`;
+  const safeLanguage = uiLanguage.replace(/[\r\n"]/g, "").trim() || "pt-BR";
+  return `IMPORTANT: Write ALL text fields in the language with code "${safeLanguage}" (e.g. pt-BR = Brazilian Portuguese, en-US = English, es-ES = Spanish).`;
 }
 
 function buildFullTemplate(input: PlannerInput): string {
@@ -259,12 +260,7 @@ export async function generateHabitPlan(input: PlannerInput, mode: HabitMode): P
     parsed = JSON.parse(sanitized);
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error(
-      "[habit-planner] JSON.parse failed. rawText length:",
-      rawText.length,
-      "tail:",
-      rawText.slice(-200)
-    );
+    console.error("[habit-planner] JSON.parse failed. rawText length:", rawText.length);
     throw e;
   }
   return habitPlanSchema.parse(parsed);
