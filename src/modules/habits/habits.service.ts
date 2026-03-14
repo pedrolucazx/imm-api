@@ -192,9 +192,8 @@ export function createHabitsService({
         planStatus: "generating",
       });
 
-      await incrementAiUsage(userId, profile);
-
       try {
+        await incrementAiUsage(userId, profile);
         const plan = await generateHabitPlan(
           {
             name: habit.name,
@@ -239,11 +238,11 @@ export function createHabitsService({
       const uiLanguage = profile?.uiLanguage ?? "pt-BR";
 
       await habitsRepo.update(habitId, userId, { planStatus: "generating" });
-      await incrementAiUsage(userId, profile);
 
       const { painPoints, availableMinutes, level } = input;
       const logs = await habitLogsRepo.findAllByHabitIds([habitId]);
       try {
+        await incrementAiUsage(userId, profile);
         const plan = await generateHabitPlan(
           {
             name: habit.name,
