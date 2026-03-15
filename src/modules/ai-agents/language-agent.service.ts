@@ -115,7 +115,7 @@ export async function analyzeWithLanguageAgent(
 
   const result = languageAgentResponseSchema.safeParse(parsed);
   if (!result.success) {
-    logger.error({ errors: result.error.format() }, "[language-agent] Invalid response schema");
+    logger.error({ errors: result.error.issues }, "[language-agent] Invalid response schema");
     throw new Error("Invalid response schema from Language Agent");
   }
 

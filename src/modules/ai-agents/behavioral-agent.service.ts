@@ -115,7 +115,7 @@ export async function analyzeWithBehavioralAgent(
 
   const result = behavioralAgentResponseSchema.safeParse(parsed);
   if (!result.success) {
-    logger.error({ errors: result.error.format() }, "[behavioral-agent] Invalid response schema");
+    logger.error({ errors: result.error.issues }, "[behavioral-agent] Invalid response schema");
     throw new Error("Invalid response schema from Behavioral Agent");
   }
 
