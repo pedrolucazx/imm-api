@@ -44,6 +44,7 @@ export async function aiRoutes(fastify: FastifyInstance) {
         200: {
           description: "AI analysis completed",
           type: "object",
+          required: ["aiFeedback", "aiAgentType"],
           properties: {
             aiFeedback: aiFeedbackSchema,
             aiAgentType: { type: "string", enum: ["language-teacher", "behavioral-coach"] },

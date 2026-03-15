@@ -1,15 +1,6 @@
 import { z } from "zod";
 
 /**
- * Schema for error details in language learning feedback.
- */
-export const behavioralAgentErrorSchema = z.object({
-  original: z.string(),
-  corrected: z.string(),
-  explanation: z.string(),
-});
-
-/**
  * Schema for behavioral analysis (mood and energy detection).
  */
 export const behavioralAgentBehavioralSchema = z.object({
@@ -83,7 +74,7 @@ Analyze the journal entry and provide behavioral feedback. Return ONLY valid JSO
     "moodDetected": "motivated|fatigued|neutral|stressed|relaxed|anxious",
     "energyLevel": "high|medium|low"
   },
-  "habitAlignmentScore": 0-100,
+  "habitAlignmentScore": 85,
   "insights": ["insight 1", "insight 2", "insight 3"],
   "actionSuggestion": "personalized action suggestion for the user"
 }

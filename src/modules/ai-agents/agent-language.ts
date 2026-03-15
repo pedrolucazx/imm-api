@@ -80,9 +80,9 @@ Analyze the journal entry and provide feedback. Return ONLY valid JSON:
   "agentType": "language-teacher",
   "targetSkill": "${input.targetSkill}",
   "linguistic": {
-    "grammarScore": 0-100,
-    "vocabularyScore": 0-100,
-    "fluencyScore": 0-100
+    "grammarScore": 85,
+    "vocabularyScore": 90,
+    "fluencyScore": 80
   },
   "errors": [
     { "original": "incorrect phrase", "corrected": "correct phrase", "explanation": "brief explanation" }

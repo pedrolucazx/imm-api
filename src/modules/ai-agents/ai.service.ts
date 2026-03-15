@@ -57,7 +57,11 @@ export function createAiService(deps: AiServiceDeps) {
     return { entry, habit, profile };
   }
 
-  async function checkRateLimit(profile: { aiRequestsToday: number; lastAiRequest: Date | null }) {
+  async function checkAndIncrementRateLimit(profile: {
+    userId: string;
+    aiRequestsToday: number;
+    lastAiRequest: Date | null;
+  }) {
     const now = new Date();
     const lastRequest = profile.lastAiRequest;
 
@@ -73,11 +77,7 @@ export function createAiService(deps: AiServiceDeps) {
       throw new ForbiddenError(`AI request limit of ${MAX_AI_REQUESTS_PER_DAY} per day exceeded`);
     }
 
-    return currentCount;
-  }
-
-  async function incrementRateLimit(userId: string, currentCount: number) {
-    await userProfilesRepo.upsert(userId, {
+    await userProfilesRepo.upsert(profile.userId, {
       aiRequestsToday: currentCount + 1,
       lastAiRequest: new Date(),
     });
@@ -98,7 +98,7 @@ export function createAiService(deps: AiServiceDeps) {
   async function analyze(input: AiAnalyzeInput, userId: string): Promise<AiAnalyzeOutput> {
     const { entry, habit, profile } = await validateAndGetData(userId, input);
 
-    const currentCount = await checkRateLimit(profile);
+    await checkAndIncrementRateLimit(profile);
 
     const targetSkill = habit.targetSkill ?? "general";
     const agent = orchestrator.route(targetSkill);
@@ -120,7 +120,6 @@ export function createAiService(deps: AiServiceDeps) {
     }
 
     await saveAiFeedback(entry.id, userId, result, agent.type);
-    await incrementRateLimit(userId, currentCount);
 
     return {
       aiFeedback: result,
