@@ -3,6 +3,9 @@ import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
 import { createJournalModule } from "./journal.module.js";
 
+/**
+ * Schema for journal entry response.
+ */
 const journalEntrySchema = {
   type: "object",
   additionalProperties: false,
@@ -25,12 +28,21 @@ const journalEntrySchema = {
   },
 };
 
+/**
+ * Creates an error response schema for OpenAPI documentation.
+ * @param description - The error description
+ * @returns OpenAPI schema for error response
+ */
 const errorResponse = (description: string) => ({
   description,
   type: "object",
   properties: { error: { type: "string" } },
 });
 
+/**
+ * Registers journal-related routes in the Fastify application.
+ * @param fastify - The Fastify instance
+ */
 export async function journalRoutes(fastify: FastifyInstance) {
   const { controller } = createJournalModule(getDb());
 
