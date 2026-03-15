@@ -2,6 +2,7 @@ import type { HabitsRepository } from "./habits.repository.js";
 import type { HabitLogsRepository } from "./habit-logs.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
 import type { Habit, HabitLog } from "../../core/database/schema/index.js";
+import { logger } from "../../core/config/logger.js";
 
 export type HabitWithStats = Habit & { streak: number; currentDay: number };
 
@@ -213,8 +214,7 @@ export function createHabitsService({
         const updated =
           (await habitsRepo.update(habit.id, userId, { planStatus: "failed" })) ?? habit;
         if (err instanceof TooManyRequestsError) throw err;
-        // eslint-disable-next-line no-console
-        console.error("[habit-planner] generateHabitPlan failed:", err);
+        logger.error({ err }, "[habit-planner] generateHabitPlan failed");
         return enrichHabit(updated, []);
       }
     },
