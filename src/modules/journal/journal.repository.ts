@@ -75,6 +75,19 @@ export function createJournalRepository(db: DrizzleDb) {
     },
 
     /**
+     * Finds all journal entries for a user on a specific date.
+     * @param userId - The user ID
+     * @param entryDate - The entry date in ISO format (YYYY-MM-DD)
+     * @returns Array of journal entries for that date
+     */
+    async findAllByDate(userId: string, entryDate: string): Promise<JournalEntry[]> {
+      return db
+        .select()
+        .from(journalEntries)
+        .where(and(eq(journalEntries.userId, userId), eq(journalEntries.entryDate, entryDate)));
+    },
+
+    /**
      * Creates a new journal entry.
      * @param data - The journal entry data to create
      * @returns The created journal entry

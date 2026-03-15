@@ -42,14 +42,26 @@ export function createJournalController(service: JournalService) {
      * @returns HTTP response with entries array or error
      */
     async listEntries(
-      request: FastifyRequest<{ Querystring: { habit_id: string; limit?: string } }>,
+      request: FastifyRequest<{
+        Querystring: { habit_id?: string; limit?: string; date?: string };
+      }>,
       reply: FastifyReply
     ) {
       try {
         const { id: userId } = request.user;
-        const habitId = request.query.habit_id;
+        const { habit_id: habitId, date } = request.query;
+
+        if (!habitId && !date) {
+          return reply.code(400).send({ error: "habit_id or date is required" });
+        }
+
+        if (date && !habitId) {
+          const entries = await service.listEntriesByDate(userId, date);
+          return reply.code(200).send(entries);
+        }
+
         const limit = request.query.limit ? parseInt(request.query.limit, 10) : 30;
-        const entries = await service.listEntries(userId, habitId, limit);
+        const entries = await service.listEntries(userId, habitId!, limit);
         return reply.code(200).send(entries);
       } catch (error) {
         return handleControllerError(error, reply);

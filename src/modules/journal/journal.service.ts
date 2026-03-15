@@ -82,6 +82,16 @@ export function createJournalService({
     },
 
     /**
+     * Lists all journal entries for a user on a specific date (across all habits).
+     * @param userId - The user ID
+     * @param date - The entry date (YYYY-MM-DD)
+     * @returns Array of journal entries for that date
+     */
+    async listEntriesByDate(userId: string, date: string): Promise<JournalEntry[]> {
+      return journalRepo.findAllByDate(userId, date);
+    },
+
+    /**
      * Gets a journal entry by date.
      * @param userId - The user ID
      * @param habitId - The habit ID
