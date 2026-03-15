@@ -9,8 +9,6 @@ import { env } from "../../core/config/env.js";
 export function createAuthController(service: AuthService) {
   const isProduction = env.NODE_ENV === "production";
 
-  // Production (HTTPS, cross-origin): SameSite=None + Secure required
-  // Development (HTTP, local): SameSite=Lax is fine since all on localhost
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,

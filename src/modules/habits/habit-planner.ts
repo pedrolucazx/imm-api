@@ -2,6 +2,7 @@ import { env } from "../../core/config/env.js";
 import { habitPlanSchema, type HabitPlan } from "./habit-plan.schema.js";
 import type { HabitMode } from "../../shared/schemas/habit-mode.js";
 import { TooManyRequestsError } from "../../shared/errors/index.js";
+import { logger } from "../../core/config/logger.js";
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
@@ -221,8 +222,7 @@ async function callGemini(
     } catch (error) {
       if (error instanceof GeminiRateLimitError && attempt < GEMINI_MAX_RETRIES) {
         const delay = GEMINI_RETRY_BASE_MS * 2 ** attempt;
-        // eslint-disable-next-line no-console
-        console.warn(
+        logger.warn(
           `[habit-planner] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES})`
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -231,7 +231,6 @@ async function callGemini(
       throw error;
     }
   }
-  /* istanbul ignore next */
   throw new Error("Unreachable: loop always exits via return or throw");
 }
 
@@ -259,8 +258,7 @@ export async function generateHabitPlan(input: PlannerInput, mode: HabitMode): P
     const sanitized = sanitizeJsonString(rawText);
     parsed = JSON.parse(sanitized);
   } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error("[habit-planner] JSON.parse failed. rawText length:", rawText.length);
+    logger.error({ rawTextLength: rawText.length }, "[habit-planner] JSON.parse failed");
     throw e;
   }
   return habitPlanSchema.parse(parsed);
