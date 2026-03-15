@@ -23,13 +23,17 @@ jobs:
         run: |
           echo "Triggering Render deploy for production"
 
-          RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" \
+          BODY=$(curl -sS -w "\n%{http_code}" \
             --max-time 30 \
             -X POST "${{ secrets.RENDER_DEPLOY_HOOK_PROD }}")
+
+          RESPONSE=$(echo "$BODY" | tail -1)
+          CONTENT=$(echo "$BODY" | head -n -1)
 
           if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
             echo "Deploy triggered successfully (HTTP $RESPONSE)"
           else
             echo "Failed to trigger deploy (HTTP $RESPONSE)"
+            echo "Response body: $CONTENT"
             exit 1
           fi
