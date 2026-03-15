@@ -1,11 +1,11 @@
 import { env } from "../../core/config/env.js";
 import { logger } from "../../core/config/logger.js";
 import {
-  languageAgentResponseSchema,
-  buildLanguageAgentPrompt,
-  type LanguageAgentInput,
-  type LanguageAgentResponse,
-} from "./agent-language.js";
+  behavioralAgentResponseSchema,
+  buildBehavioralAgentPrompt,
+  type BehavioralAgentInput,
+  type BehavioralAgentResponse,
+} from "./agent-behavioral.js";
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
@@ -75,7 +75,7 @@ async function callGemini(prompt: string, maxOutputTokens: number): Promise<stri
       if (error instanceof GeminiRateLimitError && attempt < GEMINI_MAX_RETRIES) {
         const delay = GEMINI_RETRY_BASE_MS * 2 ** attempt;
         logger.warn(
-          `[language-agent] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES})`
+          `[behavioral-agent] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES})`
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
         continue;
@@ -95,10 +95,10 @@ function sanitizeJsonString(text: string): string {
   return cleaned;
 }
 
-export async function analyzeWithLanguageAgent(
-  input: LanguageAgentInput
-): Promise<LanguageAgentResponse> {
-  const prompt = buildLanguageAgentPrompt(input);
+export async function analyzeWithBehavioralAgent(
+  input: BehavioralAgentInput
+): Promise<BehavioralAgentResponse> {
+  const prompt = buildBehavioralAgentPrompt(input);
   const rawText = await callGemini(prompt, 4096);
 
   let parsed: unknown;
@@ -108,15 +108,15 @@ export async function analyzeWithLanguageAgent(
   } catch {
     logger.error(
       { rawTextLength: rawText.length },
-      "[language-agent] Failed to parse Gemini response"
+      "[behavioral-agent] Failed to parse Gemini response"
     );
     throw new Error("Invalid JSON response from Gemini");
   }
 
-  const result = languageAgentResponseSchema.safeParse(parsed);
+  const result = behavioralAgentResponseSchema.safeParse(parsed);
   if (!result.success) {
-    logger.error({ errors: result.error.issues }, "[language-agent] Invalid response schema");
-    throw new Error("Invalid response schema from Language Agent");
+    logger.error({ errors: result.error.issues }, "[behavioral-agent] Invalid response schema");
+    throw new Error("Invalid response schema from Behavioral Agent");
   }
 
   return result.data;
