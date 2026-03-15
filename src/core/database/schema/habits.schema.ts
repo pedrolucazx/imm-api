@@ -21,7 +21,7 @@ export const habits = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }).notNull(),
+    name: varchar("name", { length: 80 }).notNull(),
     targetSkill: varchar("target_skill", { length: 100 }),
     icon: varchar("icon", { length: 50 }).notNull(),
     color: varchar("color", { length: 20 }).notNull(),

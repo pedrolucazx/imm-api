@@ -105,7 +105,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
         required: ["name", "icon", "color"],
         additionalProperties: false,
         properties: {
-          name: { type: "string", minLength: 1, maxLength: 255, examples: ["Meditar"] },
+          name: { type: "string", minLength: 1, maxLength: 80, examples: ["Meditar"] },
           targetSkill: { type: "string", maxLength: 100, examples: ["mindfulness"] },
           icon: { type: "string", minLength: 1, maxLength: 50, examples: ["🧘"] },
           color: { type: "string", minLength: 1, maxLength: 20, examples: ["#6366f1"] },
@@ -142,7 +142,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
         type: "object",
         additionalProperties: false,
         properties: {
-          name: { type: "string", minLength: 1, maxLength: 255 },
+          name: { type: "string", minLength: 1, maxLength: 80 },
           targetSkill: { type: "string", maxLength: 100 },
           icon: { type: "string", minLength: 1, maxLength: 50 },
           color: { type: "string", minLength: 1, maxLength: 20 },
@@ -221,7 +221,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
         required: ["name", "painPoints", "availableMinutes", "level"],
         additionalProperties: false,
         properties: {
-          name: { type: "string", minLength: 1, maxLength: 255, examples: ["Praticar Inglês"] },
+          name: { type: "string", minLength: 1, maxLength: 80, examples: ["Praticar Inglês"] },
           targetSkill: { type: "string", maxLength: 100, examples: ["en-US"] },
           painPoints: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
           availableMinutes: { type: "integer", minimum: 1, examples: [30] },
@@ -260,7 +260,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
           name: {
             type: "string",
             minLength: 1,
-            maxLength: 255,
+            maxLength: 80,
             examples: ["Praticar Inglês 30m/dia"],
           },
           targetSkill: { type: "string", maxLength: 100, examples: ["en-US"] },
