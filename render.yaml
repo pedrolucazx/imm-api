@@ -7,7 +7,7 @@ services:
     rootDir: .
     branch: main
     autoDeploy: false
-    buildCommand: npm ci && npm run db:migrate && npm run build
+    buildCommand: npm ci --include=dev && npm run db:migrate && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -20,23 +20,7 @@ services:
         sync: false
       - key: CORS_ORIGIN
         sync: false
-
-  - type: web
-    name: imm-homolog
-    runtime: node
-    rootDir: .
-    branch: develop
-    autoDeploy: false
-    buildCommand: npm ci && npm run db:migrate && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: homolog
-      - key: API_HOST
-        value: imm-homolog.onrender.com
-      - key: DATABASE_URL
+      - key: SUPABASE_URL
         sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: CORS_ORIGIN
+      - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
