@@ -25,7 +25,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:local": "DRIZZLE_ENV_FILE=.env.local drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
+    "db:studio": "node -r tsx/cjs node_modules/drizzle-kit/bin.cjs studio",
     "db:wipe": "tsx scripts/db-wipe.ts",
     "db:seed:local": "DRIZZLE_ENV_FILE=.env.local tsx scripts/db-seed-local.ts",
     "db:start": "docker compose up -d --wait && npm run db:migrate:local && npm run db:seed:local"
