@@ -4,7 +4,7 @@ export const ALLOWED_FREQUENCIES = ["daily", "weekly"] as const;
 export type HabitFrequency = (typeof ALLOWED_FREQUENCIES)[number];
 
 export const createHabitSchema = z.object({
-  name: z.string().min(1).max(255),
+  name: z.string().min(1).max(80),
   targetSkill: z.string().max(100).optional(),
   icon: z.string().min(1).max(50),
   color: z.string().min(1).max(20),
@@ -16,7 +16,7 @@ export const createHabitSchema = z.object({
 });
 
 export const updateHabitSchema = z.object({
-  name: z.string().min(1).max(255).optional(),
+  name: z.string().min(1).max(80).optional(),
   targetSkill: z.string().max(100).optional(),
   icon: z.string().min(1).max(50).optional(),
   color: z.string().min(1).max(20).optional(),
@@ -43,7 +43,7 @@ export const regeneratePlanSchema = plannerWizardSchema;
 
 export const previewPlanSchema = z
   .object({
-    name: z.string().min(1).max(255),
+    name: z.string().min(1).max(80),
     targetSkill: z.string().max(100).optional(),
   })
   .extend(plannerWizardSchema.shape);
