@@ -4,35 +4,28 @@ on:
   push:
     branches:
       - main
-      - develop
   workflow_dispatch:
 
 concurrency:
-  group: deploy-api-${{ github.ref_name }}
+  group: deploy-api-production
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: "Deploy to Render (${{ github.ref_name }})"
+    name: "Deploy to Render (production)"
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.ref_name == 'main' && 'production' || 'homolog' }}
-      url: ${{ github.ref_name == 'main' && 'https://imm-production.onrender.com' || 'https://imm-homolog.onrender.com' }}
+      name: production
+      url: https://imm-production.onrender.com
 
     steps:
       - name: "Trigger Render Deploy Hook"
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            HOOK_URL="${{ secrets.RENDER_DEPLOY_HOOK_PROD }}"
-          else
-            HOOK_URL="${{ secrets.RENDER_DEPLOY_HOOK_HOMOLOG }}"
-          fi
-
-          echo "Triggering Render deploy for ${{ github.ref_name }}"
+          echo "Triggering Render deploy for production"
 
           RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" \
             --max-time 30 \
-            -X POST "$HOOK_URL")
+            -X POST "${{ secrets.RENDER_DEPLOY_HOOK_PROD }}")
 
           if [ "$RESPONSE" = "200" ] || [ "$RESPONSE" = "201" ]; then
             echo "Deploy triggered successfully (HTTP $RESPONSE)"
