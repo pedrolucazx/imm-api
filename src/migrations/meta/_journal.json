@@ -36,6 +36,13 @@
       "when": 1742044800000,
       "tag": "0004_habit_name_max_80",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1742131200000,
+      "tag": "0005_journal_entries",
+      "breakpoints": true
     }
   ]
 }
