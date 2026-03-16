@@ -23,6 +23,11 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES: z.string().default("15m"),
   JWT_REFRESH_EXPIRES: z.string().default("7d"),
   GEMINI_API_KEY: z.string().optional(),
+  GEMINI_API_URL: z
+    .url()
+    .default(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+    ),
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   SUPABASE_STORAGE_BUCKET: z.string().default("avatars"),

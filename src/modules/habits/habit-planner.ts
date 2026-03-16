@@ -1,11 +1,15 @@
 import { env } from "../../core/config/env.js";
 import { habitPlanSchema, type HabitPlan } from "./habit-plan.schema.js";
 import type { HabitMode } from "../../shared/schemas/habit-mode.js";
-import { TooManyRequestsError } from "../../shared/errors/index.js";
 import { logger } from "../../core/config/logger.js";
-
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
+import {
+  GEMINI_TIMEOUT_MS,
+  GEMINI_MAX_RETRIES,
+  GEMINI_RETRY_BASE_MS,
+} from "../../shared/constants.js";
+import { sanitizeJsonString } from "../../shared/utils/json.js";
+import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
+import { langInstruction } from "../ai-agents/utils.js";
 
 type PlannerInput = {
   name: string;
@@ -15,11 +19,6 @@ type PlannerInput = {
   level: string;
   uiLanguage?: string;
 };
-
-function langInstruction(uiLanguage: string): string {
-  const safeLanguage = uiLanguage.replace(/[\r\n"]/g, "").trim() || "pt-BR";
-  return `IMPORTANT: Write ALL text fields in the language with code "${safeLanguage}" (e.g. pt-BR = Brazilian Portuguese, en-US = English, es-ES = Spanish).`;
-}
 
 function buildFullTemplate(input: PlannerInput): string {
   return `You are a habit coach creating a 66-day skill-building plan.
@@ -72,17 +71,6 @@ Generate a lightweight 66-day consistency plan with EXACTLY 3 phases. Be extreme
 }
 
 IMPORTANT: Output must be complete, valid JSON only. No markdown.`;
-}
-
-const GEMINI_TIMEOUT_MS = 30_000;
-const GEMINI_MAX_RETRIES = 3;
-const GEMINI_RETRY_BASE_MS = 5_000;
-
-export class GeminiRateLimitError extends TooManyRequestsError {
-  constructor(message: string) {
-    super(message);
-    this.name = "GeminiRateLimitError";
-  }
 }
 
 const FULL_PLAN_RESPONSE_SCHEMA = {
@@ -161,7 +149,7 @@ async function callGeminiOnce(
 
   let response: Response;
   try {
-    response = await fetch(GEMINI_API_URL, {
+    response = await fetch(env.GEMINI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -231,20 +219,7 @@ async function callGemini(
       throw error;
     }
   }
-  throw new Error("Unreachable: loop always exits via return or throw");
-}
-
-function sanitizeJsonString(text: string): string {
-  let cleaned = text.replace(/^```json\n?|\n?```$/g, "").trim();
-  cleaned = cleaned.replace(/^```\n?|\n?```$/g, "").trim();
-
-  cleaned = cleaned.replace(/: '([\s\S]*?)'(?=[,}\]])/g, ': "$1"');
-
-  cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
-
-  cleaned = cleaned.replace(/"\s+/g, '" ').replace(/\s+"/g, ' "');
-
-  return cleaned;
+  throw new Error("callGemini: exhausted retries without result");
 }
 
 export async function generateHabitPlan(input: PlannerInput, mode: HabitMode): Promise<HabitPlan> {
