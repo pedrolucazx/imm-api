@@ -6,6 +6,11 @@ import { logger } from "../../core/config/logger.js";
 
 export type HabitWithStats = Habit & { streak: number; currentDay: number };
 
+/**
+ * Computes the current day number based on the habit start date.
+ * @param startDate - The habit start date
+ * @returns Current day number (1-66)
+ */
 function computeCurrentDay(startDate: string | Date | null): number {
   if (!startDate) return 1;
   const start = new Date(startDate);
@@ -17,6 +22,11 @@ function computeCurrentDay(startDate: string | Date | null): number {
   return Math.max(1, Math.min(diff + 1, 66));
 }
 
+/**
+ * Computes the current streak of completed days for a habit.
+ * @param logs - Array of habit logs
+ * @returns Number of consecutive completed days
+ */
 function computeStreak(logs: HabitLog[]): number {
   const completedDates = new Set(logs.filter((l) => l.completed).map((l) => l.logDate));
   if (completedDates.size === 0) return 0;
@@ -46,6 +56,12 @@ function computeStreak(logs: HabitLog[]): number {
   return streak;
 }
 
+/**
+ * Enriches a habit with computed statistics.
+ * @param habit - The habit entity
+ * @param logs - Array of habit logs
+ * @returns Habit with streak and current day
+ */
 function enrichHabit(habit: Habit, logs: HabitLog[]): HabitWithStats {
   return {
     ...habit,
@@ -80,11 +96,23 @@ type HabitsServiceDeps = {
   userProfilesRepo: UserProfilesRepository;
 };
 
+/**
+ * Factory function to create a HabitsService instance.
+ * @param deps - The service dependencies (repositories)
+ * @returns Service with business logic methods for habits
+ */
 export function createHabitsService({
   habitsRepo,
   habitLogsRepo,
   userProfilesRepo,
 }: HabitsServiceDeps) {
+  /**
+   * Checks and increments AI usage for a user.
+   * Enforces rate limit (5s) and daily limit (10 requests).
+   * Resets daily counter when a new day begins.
+   * @param userId - The user ID
+   * @throws TooManyRequestsError if limits are exceeded
+   */
   async function checkAndIncrementAiUsage(userId: string): Promise<void> {
     const profile = await userProfilesRepo.findByUserId(userId);
 
