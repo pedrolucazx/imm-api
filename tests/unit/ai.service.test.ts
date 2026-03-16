@@ -1,5 +1,5 @@
 import { createAiService, type AiServiceDeps } from "@/modules/ai-agents/ai.service.js";
-import { NotFoundError, ForbiddenError } from "@/shared/errors/index.js";
+import { NotFoundError, TooManyRequestsError } from "@/shared/errors/index.js";
 import type { JournalRepository } from "@/modules/journal/journal.repository.js";
 import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
@@ -7,16 +7,16 @@ import type { JournalEntry } from "@/core/database/schema/index.js";
 import type { Habit } from "@/core/database/schema/index.js";
 import type { UserProfile } from "@/core/database/schema/index.js";
 
-jest.mock("@/modules/ai-agents/language-agent.service.js", () => ({
+jest.mock("@/modules/ai-agents/language-agent.js", () => ({
   analyzeWithLanguageAgent: jest.fn(),
 }));
 
-jest.mock("@/modules/ai-agents/behavioral-agent.service.js", () => ({
+jest.mock("@/modules/ai-agents/behavioral-agent.js", () => ({
   analyzeWithBehavioralAgent: jest.fn(),
 }));
 
-import { analyzeWithLanguageAgent } from "@/modules/ai-agents/language-agent.service.js";
-import { analyzeWithBehavioralAgent } from "@/modules/ai-agents/behavioral-agent.service.js";
+import { analyzeWithLanguageAgent } from "@/modules/ai-agents/language-agent.js";
+import { analyzeWithBehavioralAgent } from "@/modules/ai-agents/behavioral-agent.js";
 
 const mockLanguageAgent = analyzeWithLanguageAgent as jest.MockedFunction<
   typeof analyzeWithLanguageAgent
@@ -67,7 +67,7 @@ const mockProfile: UserProfile = {
   bio: null,
   timezone: "America/Sao_Paulo",
   aiRequestsToday: 2,
-  lastAiRequest: new Date(),
+  lastAiRequest: new Date(Date.now() - 10_000),
 };
 
 function makeService() {
@@ -134,7 +134,7 @@ describe("ai service", () => {
       ).rejects.toThrow(NotFoundError);
     });
 
-    it("throws ForbiddenError when rate limit exceeded", async () => {
+    it("throws TooManyRequestsError when rate limit exceeded", async () => {
       const { service, journalRepo, habitsRepo, userProfilesRepo } = makeService();
       journalRepo.findById.mockResolvedValue(mockJournalEntry);
       habitsRepo.findById.mockResolvedValue(mockHabit);
@@ -145,7 +145,7 @@ describe("ai service", () => {
           { journalEntryId: "journal-entry-id-1", habitId: "habit-id-1" },
           "user-id-1"
         )
-      ).rejects.toThrow(ForbiddenError);
+      ).rejects.toThrow(TooManyRequestsError);
     });
 
     it("calls language agent for skill-building habits", async () => {

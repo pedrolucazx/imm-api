@@ -1,4 +1,4 @@
-import { createOrchestrator, AGENTS } from "@/modules/ai-agents/orchestrator.js";
+import { createOrchestrator } from "@/modules/ai-agents/orchestrator.js";
 
 describe("Orchestrator", () => {
   describe("route", () => {
@@ -10,10 +10,10 @@ describe("Orchestrator", () => {
 
       const orchestrator = createOrchestrator({ deriveHabitMode: mockDeriveHabitMode });
 
-      expect(orchestrator.route("en-US")).toEqual(AGENTS["language-teacher"]);
-      expect(orchestrator.route("es-ES")).toEqual(AGENTS["language-teacher"]);
-      expect(orchestrator.route("fr-FR")).toEqual(AGENTS["language-teacher"]);
-      expect(orchestrator.route("pt-BR")).toEqual(AGENTS["language-teacher"]);
+      expect(orchestrator.route("en-US").type).toBe("language-teacher");
+      expect(orchestrator.route("es-ES").type).toBe("language-teacher");
+      expect(orchestrator.route("fr-FR").type).toBe("language-teacher");
+      expect(orchestrator.route("pt-BR").type).toBe("language-teacher");
       expect(mockDeriveHabitMode).toHaveBeenCalledTimes(4);
     });
 
@@ -25,10 +25,10 @@ describe("Orchestrator", () => {
 
       const orchestrator = createOrchestrator({ deriveHabitMode: mockDeriveHabitMode });
 
-      expect(orchestrator.route("fitness")).toEqual(AGENTS["behavioral-coach"]);
-      expect(orchestrator.route("mindfulness")).toEqual(AGENTS["behavioral-coach"]);
-      expect(orchestrator.route("general")).toEqual(AGENTS["behavioral-coach"]);
-      expect(orchestrator.route("cooking")).toEqual(AGENTS["behavioral-coach"]);
+      expect(orchestrator.route("fitness").type).toBe("behavioral-coach");
+      expect(orchestrator.route("mindfulness").type).toBe("behavioral-coach");
+      expect(orchestrator.route("general").type).toBe("behavioral-coach");
+      expect(orchestrator.route("cooking").type).toBe("behavioral-coach");
       expect(mockDeriveHabitMode).toHaveBeenCalledTimes(4);
     });
 
@@ -43,18 +43,6 @@ describe("Orchestrator", () => {
       expect(agent).toHaveProperty("name");
       expect(agent).toHaveProperty("description");
       expect(agent.type).toBe("language-teacher");
-    });
-  });
-
-  describe("AGENTS constant", () => {
-    it("contains both available agents", () => {
-      expect(AGENTS).toHaveProperty("language-teacher");
-      expect(AGENTS).toHaveProperty("behavioral-coach");
-    });
-
-    it("has correct agent types", () => {
-      expect(AGENTS["language-teacher"].type).toBe("language-teacher");
-      expect(AGENTS["behavioral-coach"].type).toBe("behavioral-coach");
     });
   });
 });

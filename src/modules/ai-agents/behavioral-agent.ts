@@ -1,25 +1,13 @@
 import { z } from "zod";
+import { callGemini, sanitizeJsonString } from "./gemini-client.js";
+import { langInstruction } from "./utils.js";
+import { logger } from "../../core/config/logger.js";
 
-/**
- * Schema for error details in language learning feedback.
- */
-export const behavioralAgentErrorSchema = z.object({
-  original: z.string(),
-  corrected: z.string(),
-  explanation: z.string(),
-});
-
-/**
- * Schema for behavioral analysis (mood and energy detection).
- */
 export const behavioralAgentBehavioralSchema = z.object({
   moodDetected: z.enum(["motivated", "fatigued", "neutral", "stressed", "relaxed", "anxious"]),
   energyLevel: z.enum(["high", "medium", "low"]),
 });
 
-/**
- * Schema for complete Behavioral Coach agent response.
- */
 export const behavioralAgentResponseSchema = z.object({
   agentType: z.literal("behavioral-coach"),
   targetSkill: z.string(),
@@ -29,19 +17,9 @@ export const behavioralAgentResponseSchema = z.object({
   actionSuggestion: z.string(),
 });
 
-/**
- * Type inferred from behavioralAgentResponseSchema
- */
 export type BehavioralAgentResponse = z.infer<typeof behavioralAgentResponseSchema>;
-
-/**
- * Type inferred from behavioralAgentBehavioralSchema
- */
 export type BehavioralAgentBehavioral = z.infer<typeof behavioralAgentBehavioralSchema>;
 
-/**
- * Input required for analyzing a journal entry with Behavioral Coach agent.
- */
 export type BehavioralAgentInput = {
   targetSkill: string;
   uiLanguage: string;
@@ -50,21 +28,7 @@ export type BehavioralAgentInput = {
   targetFrequency?: string;
 };
 
-/**
- * Generates language instruction based on UI language.
- * @param uiLanguage - The UI language code (e.g., "pt-BR", "en-US")
- * @returns Instruction string for the AI
- */
-function langInstruction(uiLanguage: string): string {
-  return `IMPORTANT: Write ALL text fields in the language with code "${uiLanguage}".`;
-}
-
-/**
- * Builds a prompt for the Gemini API to analyze a journal entry with Behavioral Coach.
- * @param input - The input data including target skill, journal content, and optional habit info
- * @returns Formatted prompt string for Gemini
- */
-export function buildBehavioralAgentPrompt(input: BehavioralAgentInput): string {
+function buildPrompt(input: BehavioralAgentInput): string {
   const { targetSkill, uiLanguage, journalContent, habitName, targetFrequency } = input;
 
   return `You are a Behavioral Coach AI agent specialized in behavior change and habit coaching.
@@ -89,4 +53,30 @@ Analyze the journal entry and provide behavioral feedback. Return ONLY valid JSO
 }
 
 IMPORTANT: Output must be complete, valid JSON only. No markdown.`;
+}
+
+export async function analyzeWithBehavioralAgent(
+  input: BehavioralAgentInput
+): Promise<BehavioralAgentResponse> {
+  const rawText = await callGemini(buildPrompt(input), 4096);
+
+  let parsed: unknown;
+  try {
+    const sanitized = sanitizeJsonString(rawText);
+    parsed = JSON.parse(sanitized);
+  } catch {
+    logger.error(
+      { rawTextLength: rawText.length },
+      "[behavioral-agent] Failed to parse Gemini response"
+    );
+    throw new Error("Invalid JSON response from Gemini");
+  }
+
+  const result = behavioralAgentResponseSchema.safeParse(parsed);
+  if (!result.success) {
+    logger.error({ errors: result.error.issues }, "[behavioral-agent] Invalid response schema");
+    throw new Error("Invalid response schema from Behavioral Agent");
+  }
+
+  return result.data;
 }

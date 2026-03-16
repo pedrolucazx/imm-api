@@ -20,7 +20,13 @@ function parseMs(expiresIn: string): number {
 }
 
 export const MAX_ACTIVE_HABITS = 5;
+export const AI_RATE_LIMIT_MS = 5_000;
 export const WARN_ACTIVE_HABITS = 3;
+export const MAX_HABIT_DAYS = 66;
+export const MAX_AI_REQUESTS_PER_DAY = 10;
+export const GEMINI_TIMEOUT_MS = 30_000;
+export const GEMINI_MAX_RETRIES = 3;
+export const GEMINI_RETRY_BASE_MS = 5_000;
 export const BCRYPT_ROUNDS = 12;
 export const ACCESS_TOKEN_EXPIRES = env.JWT_ACCESS_EXPIRES;
 export const REFRESH_TOKEN_EXPIRES = env.JWT_REFRESH_EXPIRES;

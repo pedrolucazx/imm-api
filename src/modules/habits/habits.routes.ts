@@ -40,6 +40,7 @@ const habitSchema = {
     planStatus: { type: "string" },
     streak: { type: "integer" },
     currentDay: { type: "integer" },
+    completedToday: { type: "boolean" },
     createdAt: { type: "string" },
     updatedAt: { type: "string" },
   },

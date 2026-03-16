@@ -1,26 +1,20 @@
 import { z } from "zod";
+import { callGemini, sanitizeJsonString } from "./gemini-client.js";
+import { langInstruction } from "./utils.js";
+import { logger } from "../../core/config/logger.js";
 
-/**
- * Schema for error details in language learning feedback.
- */
 export const languageAgentErrorSchema = z.object({
   original: z.string(),
   corrected: z.string(),
   explanation: z.string(),
 });
 
-/**
- * Schema for linguistic analysis scores.
- */
 export const languageAgentLinguisticSchema = z.object({
   grammarScore: z.number().min(0).max(100),
   vocabularyScore: z.number().min(0).max(100),
   fluencyScore: z.number().min(0).max(100),
 });
 
-/**
- * Schema for complete Language Teacher agent response.
- */
 export const languageAgentResponseSchema = z.object({
   agentType: z.literal("language-teacher"),
   targetSkill: z.string(),
@@ -30,45 +24,17 @@ export const languageAgentResponseSchema = z.object({
   nextChallenge: z.string(),
 });
 
-/**
- * Type inferred from languageAgentResponseSchema
- */
 export type LanguageAgentResponse = z.infer<typeof languageAgentResponseSchema>;
-
-/**
- * Type inferred from languageAgentErrorSchema
- */
 export type LanguageAgentError = z.infer<typeof languageAgentErrorSchema>;
-
-/**
- * Type inferred from languageAgentLinguisticSchema
- */
 export type LanguageAgentLinguistic = z.infer<typeof languageAgentLinguisticSchema>;
 
-/**
- * Input required for analyzing a journal entry with Language Teacher agent.
- */
 export type LanguageAgentInput = {
   targetSkill: string;
   uiLanguage: string;
   journalContent: string;
 };
 
-/**
- * Generates language instruction based on UI language.
- * @param uiLanguage - The UI language code (e.g., "pt-BR", "en-US")
- * @returns Instruction string for the AI
- */
-function langInstruction(uiLanguage: string): string {
-  return `IMPORTANT: Write ALL text fields in the language with code "${uiLanguage}".`;
-}
-
-/**
- * Builds a prompt for the Gemini API to analyze a journal entry with Language Teacher.
- * @param input - The input data including target language and journal content
- * @returns Formatted prompt string for Gemini
- */
-export function buildLanguageAgentPrompt(input: LanguageAgentInput): string {
+function buildPrompt(input: LanguageAgentInput): string {
   return `You are a Language Teacher AI agent specialized in language learning analysis.
 ${langInstruction(input.uiLanguage)}
 
@@ -92,4 +58,30 @@ Analyze the journal entry and provide feedback. Return ONLY valid JSON:
 }
 
 IMPORTANT: Output must be complete, valid JSON only. No markdown.`;
+}
+
+export async function analyzeWithLanguageAgent(
+  input: LanguageAgentInput
+): Promise<LanguageAgentResponse> {
+  const rawText = await callGemini(buildPrompt(input), 4096);
+
+  let parsed: unknown;
+  try {
+    const sanitized = sanitizeJsonString(rawText);
+    parsed = JSON.parse(sanitized);
+  } catch {
+    logger.error(
+      { rawTextLength: rawText.length },
+      "[language-agent] Failed to parse Gemini response"
+    );
+    throw new Error("Invalid JSON response from Gemini");
+  }
+
+  const result = languageAgentResponseSchema.safeParse(parsed);
+  if (!result.success) {
+    logger.error({ errors: result.error.issues }, "[language-agent] Invalid response schema");
+    throw new Error("Invalid response schema from Language Agent");
+  }
+
+  return result.data;
 }

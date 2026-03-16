@@ -1,7 +1,11 @@
 import { generateHabitPlan } from "@/modules/habits/habit-planner.js";
 
 jest.mock("@/core/config/env.js", () => ({
-  env: { GEMINI_API_KEY: "test-gemini-key" },
+  env: {
+    GEMINI_API_KEY: "test-gemini-key",
+    GEMINI_API_URL: "https://gemini.test",
+    JWT_REFRESH_EXPIRES: "7d",
+  },
 }));
 
 const mockFetch = jest.fn();
@@ -96,7 +100,7 @@ describe("generateHabitPlan — skill-building (full)", () => {
     expect(plan.phases).toHaveLength(3);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-    expect(url).toContain("gemini-flash-latest");
+    expect(url).toContain("https://gemini.test");
     expect(url).not.toContain("test-gemini-key");
     expect((init.headers as Record<string, string>)["x-goog-api-key"]).toBe("test-gemini-key");
     const body = JSON.parse(init.body as string) as {
@@ -164,7 +168,13 @@ describe("generateHabitPlan — failures", () => {
 
   it("throws when GEMINI_API_KEY is not configured", async () => {
     jest.resetModules();
-    jest.doMock("@/core/config/env.js", () => ({ env: { GEMINI_API_KEY: undefined } }));
+    jest.doMock("@/core/config/env.js", () => ({
+      env: {
+        GEMINI_API_KEY: undefined,
+        GEMINI_API_URL: "https://gemini.test",
+        JWT_REFRESH_EXPIRES: "7d",
+      },
+    }));
 
     const { generateHabitPlan: generateWithoutKey } =
       await import("@/modules/habits/habit-planner.js");

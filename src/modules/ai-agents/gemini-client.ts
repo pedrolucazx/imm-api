@@ -1,12 +1,11 @@
 import { env } from "../../core/config/env.js";
 import { logger } from "../../core/config/logger.js";
-
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
-
-const GEMINI_TIMEOUT_MS = 30_000;
-const GEMINI_MAX_RETRIES = 3;
-const GEMINI_RETRY_BASE_MS = 5_000;
+import {
+  GEMINI_TIMEOUT_MS,
+  GEMINI_MAX_RETRIES,
+  GEMINI_RETRY_BASE_MS,
+} from "../../shared/constants.js";
+export { sanitizeJsonString } from "../../shared/utils/json.js";
 
 export class GeminiRateLimitError extends Error {
   constructor(message: string) {
@@ -24,7 +23,7 @@ async function callGeminiOnce(
   const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
 
   try {
-    const response = await fetch(`${GEMINI_API_URL}`, {
+    const response = await fetch(env.GEMINI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,17 +82,5 @@ export async function callGemini(prompt: string, maxOutputTokens: number): Promi
       throw error;
     }
   }
-  throw new Error("Unreachable: loop always exits via return or throw");
-}
-
-export function sanitizeJsonString(text: string): string {
-  let cleaned = text.replace(/^```json\n?|\n?```$/g, "").trim();
-  cleaned = cleaned.replace(/^```\n?|\n?```$/g, "").trim();
-  cleaned = cleaned.replace(/: '([\s\S]*?)'(?=[,}\]])/g, (_, content: string) => {
-    const escaped = content.replace(/"/g, '\\"');
-    return `: "${escaped}"`;
-  });
-  cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
-  cleaned = cleaned.replace(/"\s+/g, '" ').replace(/\s+"/g, ' "');
-  return cleaned;
+  throw new Error("callGemini: exhausted retries without result");
 }

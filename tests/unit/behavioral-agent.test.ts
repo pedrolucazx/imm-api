@@ -1,75 +1,9 @@
 import {
-  buildBehavioralAgentPrompt,
   behavioralAgentResponseSchema,
   behavioralAgentBehavioralSchema,
-} from "@/modules/ai-agents/agent-behavioral.js";
+} from "@/modules/ai-agents/behavioral-agent.js";
 
 describe("Behavioral Coach Agent", () => {
-  describe("buildBehavioralAgentPrompt", () => {
-    it("builds prompt with target skill and journal content", () => {
-      const input = {
-        targetSkill: "fitness",
-        uiLanguage: "pt-BR",
-        journalContent: "Today I did a 30 minute workout and felt great!",
-        habitName: "Morning Exercise",
-        targetFrequency: "Daily",
-      };
-
-      const prompt = buildBehavioralAgentPrompt(input);
-
-      expect(prompt).toContain("Behavioral Coach AI agent");
-      expect(prompt).toContain("fitness");
-      expect(prompt).toContain("pt-BR");
-      expect(prompt).toContain("Today I did a 30 minute workout and felt great!");
-      expect(prompt).toContain("Morning Exercise");
-      expect(prompt).toContain("Daily");
-      expect(prompt).toContain("moodDetected");
-      expect(prompt).toContain("energyLevel");
-      expect(prompt).toContain("habitAlignmentScore");
-    });
-
-    it("works without optional habit fields", () => {
-      const prompt = buildBehavioralAgentPrompt({
-        targetSkill: "mindfulness",
-        uiLanguage: "en-US",
-        journalContent: "I meditated for 10 minutes today.",
-      });
-
-      expect(prompt).toContain("mindfulness");
-      expect(prompt).toContain("insights");
-      expect(prompt).toContain("actionSuggestion");
-    });
-
-    it("includes behavioral analysis fields", () => {
-      const prompt = buildBehavioralAgentPrompt({
-        targetSkill: "general",
-        uiLanguage: "es-ES",
-        journalContent: "Today was a good day",
-      });
-
-      expect(prompt).toContain("motivated");
-      expect(prompt).toContain("fatigued");
-      expect(prompt).toContain("neutral");
-      expect(prompt).toContain("stressed");
-      expect(prompt).toContain("relaxed");
-      expect(prompt).toContain("anxious");
-      expect(prompt).toContain("high");
-      expect(prompt).toContain("medium");
-      expect(prompt).toContain("low");
-    });
-
-    it("outputs JSON only instruction", () => {
-      const prompt = buildBehavioralAgentPrompt({
-        targetSkill: "fitness",
-        uiLanguage: "pt-BR",
-        journalContent: "Workout done",
-      });
-
-      expect(prompt).toContain("valid JSON only");
-      expect(prompt).toContain("No markdown");
-    });
-  });
-
   describe("behavioralAgentBehavioralSchema", () => {
     it("validates correct mood and energy", () => {
       const input = {
