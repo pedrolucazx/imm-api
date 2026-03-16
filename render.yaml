@@ -7,8 +7,8 @@ services:
     rootDir: .
     branch: main
     autoDeploy: false
-    buildCommand: npm ci --include=dev && npm run db:migrate && npm run build
-    startCommand: npm start
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run db:migrate && npm start
     envVars:
       - key: NODE_ENV
         value: production
