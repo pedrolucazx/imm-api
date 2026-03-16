@@ -1,63 +1,10 @@
 import {
-  buildLanguageAgentPrompt,
   languageAgentResponseSchema,
   languageAgentLinguisticSchema,
   languageAgentErrorSchema,
-} from "@/modules/ai-agents/agent-language.js";
+} from "@/modules/ai-agents/language-agent.js";
 
 describe("Language Agent", () => {
-  describe("buildLanguageAgentPrompt", () => {
-    it("builds prompt with target skill and journal content", () => {
-      const input = {
-        targetSkill: "en-US",
-        uiLanguage: "pt-BR",
-        journalContent: "Today I went to the market and bought some fruits.",
-      };
-
-      const prompt = buildLanguageAgentPrompt(input);
-
-      expect(prompt).toContain("Language Teacher AI agent");
-      expect(prompt).toContain("en-US");
-      expect(prompt).toContain("pt-BR");
-      expect(prompt).toContain("Today I went to the market and bought some fruits");
-      expect(prompt).toContain("grammarScore");
-      expect(prompt).toContain("vocabularyScore");
-      expect(prompt).toContain("fluencyScore");
-    });
-
-    it("includes model sentence field", () => {
-      const prompt = buildLanguageAgentPrompt({
-        targetSkill: "es-ES",
-        uiLanguage: "en-US",
-        journalContent: "Hola mundo",
-      });
-
-      expect(prompt).toContain("modelSentence");
-      expect(prompt).toContain("es-ES");
-    });
-
-    it("includes next challenge field", () => {
-      const prompt = buildLanguageAgentPrompt({
-        targetSkill: "fr-FR",
-        uiLanguage: "fr-FR",
-        journalContent: "Bonjour",
-      });
-
-      expect(prompt).toContain("nextChallenge");
-    });
-
-    it("outputs JSON only instruction", () => {
-      const prompt = buildLanguageAgentPrompt({
-        targetSkill: "pt-BR",
-        uiLanguage: "pt-BR",
-        journalContent: "Olá mundo",
-      });
-
-      expect(prompt).toContain("valid JSON only");
-      expect(prompt).toContain("No markdown");
-    });
-  });
-
   describe("languageAgentLinguisticSchema", () => {
     it("validates correct linguistic scores", () => {
       const input = {
