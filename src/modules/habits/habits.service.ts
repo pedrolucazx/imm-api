@@ -3,14 +3,32 @@ import type { HabitLogsRepository } from "./habit-logs.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
 import type { Habit, HabitLog } from "../../core/database/schema/index.js";
 import { logger } from "../../core/config/logger.js";
+import {
+  NotFoundError,
+  TooManyRequestsError,
+  UnprocessableError,
+} from "../../shared/errors/index.js";
+import { deriveHabitMode } from "../../shared/schemas/habit-mode.js";
+import type {
+  CheckInInput,
+  CreateHabitInput,
+  CreateWithPlanInput,
+  PreviewPlanInput,
+  RegeneratePlanInput,
+  UpdateHabitInput,
+} from "./habits.types.js";
+import { generateHabitPlan } from "./habit-planner.js";
+import type { HabitPlan } from "./habit-plan.schema.js";
+import { MAX_HABIT_DAYS, MAX_ACTIVE_HABITS } from "../../shared/constants.js";
+import { getTodayUTCString } from "../../shared/utils/date.js";
+import { assertAiRateLimit, nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 
-export type HabitWithStats = Habit & { streak: number; currentDay: number };
+export type HabitWithStats = Habit & {
+  streak: number;
+  currentDay: number;
+  completedToday: boolean;
+};
 
-/**
- * Computes the current day number based on the habit start date.
- * @param startDate - The habit start date
- * @returns Current day number (1-66)
- */
 function computeCurrentDay(startDate: string | Date | null): number {
   if (!startDate) return 1;
   const start = new Date(startDate);
@@ -19,14 +37,9 @@ function computeCurrentDay(startDate: string | Date | null): number {
   const startUTC = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
   const nowUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const diff = Math.floor((nowUTC - startUTC) / (1000 * 60 * 60 * 24));
-  return Math.max(1, Math.min(diff + 1, 66));
+  return Math.max(1, Math.min(diff + 1, MAX_HABIT_DAYS));
 }
 
-/**
- * Computes the current streak of completed days for a habit.
- * @param logs - Array of habit logs
- * @returns Number of consecutive completed days
- */
 function computeStreak(logs: HabitLog[]): number {
   const completedDates = new Set(logs.filter((l) => l.completed).map((l) => l.logDate));
   if (completedDates.size === 0) return 0;
@@ -56,39 +69,15 @@ function computeStreak(logs: HabitLog[]): number {
   return streak;
 }
 
-/**
- * Enriches a habit with computed statistics.
- * @param habit - The habit entity
- * @param logs - Array of habit logs
- * @returns Habit with streak and current day
- */
 function enrichHabit(habit: Habit, logs: HabitLog[]): HabitWithStats {
+  const todayStr = getTodayUTCString();
   return {
     ...habit,
     streak: computeStreak(logs),
     currentDay: computeCurrentDay(habit.startDate),
+    completedToday: logs.some((l) => l.logDate === todayStr && l.completed),
   };
 }
-import {
-  NotFoundError,
-  TooManyRequestsError,
-  UnprocessableError,
-} from "../../shared/errors/index.js";
-import { deriveHabitMode } from "../../shared/schemas/habit-mode.js";
-import type {
-  CheckInInput,
-  CreateHabitInput,
-  CreateWithPlanInput,
-  PreviewPlanInput,
-  RegeneratePlanInput,
-  UpdateHabitInput,
-} from "./habits.types.js";
-import { generateHabitPlan } from "./habit-planner.js";
-import type { HabitPlan } from "./habit-plan.schema.js";
-
-export const MAX_ACTIVE_HABITS = 5;
-const MAX_AI_REQUESTS_PER_DAY = 10;
-const AI_RATE_LIMIT_MS = 5000;
 
 type HabitsServiceDeps = {
   habitsRepo: HabitsRepository;
@@ -96,51 +85,22 @@ type HabitsServiceDeps = {
   userProfilesRepo: UserProfilesRepository;
 };
 
-/**
- * Factory function to create a HabitsService instance.
- * @param deps - The service dependencies (repositories)
- * @returns Service with business logic methods for habits
- */
 export function createHabitsService({
   habitsRepo,
   habitLogsRepo,
   userProfilesRepo,
 }: HabitsServiceDeps) {
-  /**
-   * Checks and increments AI usage for a user.
-   * Enforces rate limit (5s) and daily limit (10 requests).
-   * Resets daily counter when a new day begins.
-   * @param userId - The user ID
-   * @throws TooManyRequestsError if limits are exceeded
-   */
   async function checkAndIncrementAiUsage(userId: string): Promise<void> {
     const profile = await userProfilesRepo.findByUserId(userId);
+    const rateLimitProfile = {
+      aiRequestsToday: profile?.aiRequestsToday ?? 0,
+      lastAiRequest: profile?.lastAiRequest ?? null,
+    };
 
-    if (profile?.lastAiRequest) {
-      const elapsed = Date.now() - profile.lastAiRequest.getTime();
-      if (elapsed < AI_RATE_LIMIT_MS) {
-        throw new TooManyRequestsError("AI rate limit: wait 5 seconds between requests");
-      }
-    }
-
-    const now = new Date();
-    const lastRequest = profile?.lastAiRequest ?? null;
-    const isSameDay =
-      lastRequest &&
-      lastRequest.getFullYear() === now.getFullYear() &&
-      lastRequest.getMonth() === now.getMonth() &&
-      lastRequest.getDate() === now.getDate();
-
-    const currentCount = isSameDay ? (profile?.aiRequestsToday ?? 0) : 0;
-
-    if (currentCount >= MAX_AI_REQUESTS_PER_DAY) {
-      throw new TooManyRequestsError(
-        `AI request limit of ${MAX_AI_REQUESTS_PER_DAY} per day exceeded`
-      );
-    }
+    assertAiRateLimit(rateLimitProfile);
 
     await userProfilesRepo.upsert(userId, {
-      aiRequestsToday: currentCount + 1,
+      aiRequestsToday: nextAiRequestCount(rateLimitProfile),
       lastAiRequest: new Date(),
     });
   }

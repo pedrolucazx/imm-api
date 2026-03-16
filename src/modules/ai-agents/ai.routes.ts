@@ -51,7 +51,7 @@ export async function aiRoutes(fastify: FastifyInstance) {
           },
         },
         401: errorResponse("Unauthorized"),
-        403: errorResponse("Rate limit exceeded"),
+        429: errorResponse("Rate limit exceeded"),
         404: errorResponse("Journal entry or habit not found"),
       },
     },

@@ -6,14 +6,13 @@ import { deriveHabitMode, type TargetSkill } from "../../shared/schemas/habit-mo
 import { createOrchestrator } from "./orchestrator.js";
 import { analyzeWithLanguageAgent } from "./language-agent.js";
 import { analyzeWithBehavioralAgent } from "./behavioral-agent.js";
-import { NotFoundError, ForbiddenError } from "../../shared/errors/index.js";
+import { NotFoundError } from "../../shared/errors/index.js";
 import type { LanguageAgentResponse } from "./language-agent.js";
 import type { BehavioralAgentResponse } from "./behavioral-agent.js";
 import type { JournalRepository } from "../journal/journal.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
-
-const MAX_AI_REQUESTS_PER_DAY = 10;
+import { assertAiRateLimit, nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 
 export type AiAnalyzeInput = {
   journalEntryId: string;
@@ -65,23 +64,15 @@ export function createAiService(deps: AiServiceDeps) {
     aiRequestsToday: number;
     lastAiRequest: Date | null;
   }) {
-    const now = new Date();
-    const lastRequest = profile.lastAiRequest;
+    const rateLimitProfile = {
+      aiRequestsToday: profile.aiRequestsToday,
+      lastAiRequest: profile.lastAiRequest,
+    };
 
-    const isSameDay =
-      lastRequest &&
-      lastRequest.getFullYear() === now.getFullYear() &&
-      lastRequest.getMonth() === now.getMonth() &&
-      lastRequest.getDate() === now.getDate();
-
-    const currentCount = isSameDay ? profile.aiRequestsToday : 0;
-
-    if (currentCount >= MAX_AI_REQUESTS_PER_DAY) {
-      throw new ForbiddenError(`AI request limit of ${MAX_AI_REQUESTS_PER_DAY} per day exceeded`);
-    }
+    assertAiRateLimit(rateLimitProfile);
 
     await userProfilesRepo.upsert(profile.userId, {
-      aiRequestsToday: currentCount + 1,
+      aiRequestsToday: nextAiRequestCount(rateLimitProfile),
       lastAiRequest: new Date(),
     });
   }

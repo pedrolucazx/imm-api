@@ -1,4 +1,5 @@
-import { createHabitsService, MAX_ACTIVE_HABITS } from "@/modules/habits/habits.service.js";
+import { createHabitsService } from "@/modules/habits/habits.service.js";
+import { MAX_ACTIVE_HABITS } from "@/shared/constants.js";
 import { NotFoundError, TooManyRequestsError, UnprocessableError } from "@/shared/errors/index.js";
 import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { HabitLogsRepository } from "@/modules/habits/habit-logs.repository.js";
