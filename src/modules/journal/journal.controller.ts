@@ -8,19 +8,8 @@ import {
 } from "./journal.types.js";
 import { handleControllerError } from "../../shared/utils/http.js";
 
-/**
- * Factory function to create a JournalController instance.
- * @param service - The journal service instance
- * @returns Controller with HTTP handlers for journal endpoints
- */
 export function createJournalController(service: JournalService) {
   return {
-    /**
-     * HTTP handler for creating a journal entry.
-     * @param request - The Fastify request object
-     * @param reply - The Fastify reply object
-     * @returns HTTP response with created entry or error
-     */
     async createEntry(
       request: FastifyRequest<{ Body: CreateJournalEntryInput }>,
       reply: FastifyReply
@@ -35,12 +24,6 @@ export function createJournalController(service: JournalService) {
       }
     },
 
-    /**
-     * HTTP handler for listing journal entries.
-     * @param request - The Fastify request object
-     * @param reply - The Fastify reply object
-     * @returns HTTP response with entries array or error
-     */
     async listEntries(
       request: FastifyRequest<{
         Querystring: { habit_id?: string; limit?: string; date?: string };
@@ -68,12 +51,6 @@ export function createJournalController(service: JournalService) {
       }
     },
 
-    /**
-     * HTTP handler for getting a journal entry by date.
-     * @param request - The Fastify request object
-     * @param reply - The Fastify reply object
-     * @returns HTTP response with entry or error
-     */
     async getEntryByDate(
       request: FastifyRequest<{ Params: { date: string }; Querystring: { habit_id: string } }>,
       reply: FastifyReply
@@ -92,12 +69,6 @@ export function createJournalController(service: JournalService) {
       }
     },
 
-    /**
-     * HTTP handler for updating a journal entry.
-     * @param request - The Fastify request object
-     * @param reply - The Fastify reply object
-     * @returns HTTP response with updated entry or error
-     */
     async updateEntry(
       request: FastifyRequest<{ Params: { id: string }; Body: UpdateJournalEntryInput }>,
       reply: FastifyReply
@@ -114,7 +85,4 @@ export function createJournalController(service: JournalService) {
   };
 }
 
-/**
- * Type representing the JournalController instance.
- */
 export type JournalController = ReturnType<typeof createJournalController>;
