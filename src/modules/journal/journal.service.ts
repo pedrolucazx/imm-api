@@ -11,32 +11,16 @@ type JournalServiceDeps = {
   userProfilesRepo: UserProfilesRepository;
 };
 
-/**
- * Counts the number of words in a text string.
- * @param text - The text to count words in
- * @returns The number of words
- */
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-/**
- * Factory function to create a JournalService instance.
- * @param deps - The service dependencies (repositories)
- * @returns Service with business logic methods for journal entries
- */
 export function createJournalService({
   journalRepo,
   habitsRepo,
   userProfilesRepo,
 }: JournalServiceDeps) {
   return {
-    /**
-     * Creates or updates a journal entry for today (idempotent).
-     * @param userId - The user ID
-     * @param input - The journal entry input data
-     * @returns The created or updated journal entry
-     */
     async createEntry(userId: string, input: CreateJournalEntryInput): Promise<JournalEntry> {
       const habit = await habitsRepo.findById(input.habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
@@ -63,13 +47,6 @@ export function createJournalService({
       });
     },
 
-    /**
-     * Lists all journal entries for a habit.
-     * @param userId - The user ID
-     * @param habitId - The habit ID
-     * @param limit - Maximum number of entries to return
-     * @returns Array of journal entries
-     */
     async listEntries(
       userId: string,
       habitId: string,
@@ -81,23 +58,10 @@ export function createJournalService({
       return journalRepo.findAllByHabitId(habitId, userId, limit);
     },
 
-    /**
-     * Lists all journal entries for a user on a specific date (across all habits).
-     * @param userId - The user ID
-     * @param date - The entry date (YYYY-MM-DD)
-     * @returns Array of journal entries for that date
-     */
     async listEntriesByDate(userId: string, date: string): Promise<JournalEntry[]> {
       return journalRepo.findAllByDate(userId, date);
     },
 
-    /**
-     * Gets a journal entry by date.
-     * @param userId - The user ID
-     * @param habitId - The habit ID
-     * @param date - The entry date (YYYY-MM-DD)
-     * @returns The journal entry or null if not found
-     */
     async getEntryByDate(
       userId: string,
       habitId: string,
@@ -109,13 +73,6 @@ export function createJournalService({
       return journalRepo.findByHabitAndDate(habitId, userId, date);
     },
 
-    /**
-     * Updates a journal entry. Clears AI feedback if content changes.
-     * @param userId - The user ID
-     * @param entryId - The journal entry ID
-     * @param input - The fields to update
-     * @returns The updated journal entry
-     */
     async updateEntry(
       userId: string,
       entryId: string,
@@ -145,7 +102,4 @@ export function createJournalService({
   };
 }
 
-/**
- * Type representing the JournalService instance.
- */
 export type JournalService = ReturnType<typeof createJournalService>;
