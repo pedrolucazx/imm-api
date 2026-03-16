@@ -67,7 +67,7 @@ const mockProfile: UserProfile = {
   bio: null,
   timezone: "America/Sao_Paulo",
   aiRequestsToday: 2,
-  lastAiRequest: new Date("2026-03-15T10:00:00Z"),
+  lastAiRequest: new Date(),
 };
 
 function makeService() {
