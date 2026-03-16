@@ -71,6 +71,7 @@ import { generateHabitPlan } from "./habit-planner.js";
 import type { HabitPlan } from "./habit-plan.schema.js";
 
 export const MAX_ACTIVE_HABITS = 5;
+const MAX_AI_REQUESTS_PER_DAY = 10;
 const AI_RATE_LIMIT_MS = 5000;
 
 type HabitsServiceDeps = {
@@ -84,23 +85,34 @@ export function createHabitsService({
   habitLogsRepo,
   userProfilesRepo,
 }: HabitsServiceDeps) {
-  async function checkAiRateLimit(userId: string) {
+  async function checkAndIncrementAiUsage(userId: string): Promise<void> {
     const profile = await userProfilesRepo.findByUserId(userId);
+
     if (profile?.lastAiRequest) {
       const elapsed = Date.now() - profile.lastAiRequest.getTime();
       if (elapsed < AI_RATE_LIMIT_MS) {
         throw new TooManyRequestsError("AI rate limit: wait 5 seconds between requests");
       }
     }
-    return profile;
-  }
 
-  async function incrementAiUsage(
-    userId: string,
-    profile: Awaited<ReturnType<typeof userProfilesRepo.findByUserId>>
-  ): Promise<void> {
+    const now = new Date();
+    const lastRequest = profile?.lastAiRequest ?? null;
+    const isSameDay =
+      lastRequest &&
+      lastRequest.getFullYear() === now.getFullYear() &&
+      lastRequest.getMonth() === now.getMonth() &&
+      lastRequest.getDate() === now.getDate();
+
+    const currentCount = isSameDay ? (profile?.aiRequestsToday ?? 0) : 0;
+
+    if (currentCount >= MAX_AI_REQUESTS_PER_DAY) {
+      throw new TooManyRequestsError(
+        `AI request limit of ${MAX_AI_REQUESTS_PER_DAY} per day exceeded`
+      );
+    }
+
     await userProfilesRepo.upsert(userId, {
-      aiRequestsToday: (profile?.aiRequestsToday ?? 0) + 1,
+      aiRequestsToday: currentCount + 1,
       lastAiRequest: new Date(),
     });
   }
@@ -127,12 +139,12 @@ export function createHabitsService({
     },
 
     async previewPlan(userId: string, input: PreviewPlanInput): Promise<HabitPlan> {
-      const profile = await checkAiRateLimit(userId);
+      await checkAndIncrementAiUsage(userId);
+      const profile = await userProfilesRepo.findByUserId(userId);
       const mode = deriveHabitMode(
         (input.targetSkill as Parameters<typeof deriveHabitMode>[0]) ?? "general"
       );
       const uiLanguage = profile?.uiLanguage ?? "pt-BR";
-      await incrementAiUsage(userId, profile);
       return generateHabitPlan(
         {
           name: input.name,
@@ -174,7 +186,7 @@ export function createHabitsService({
     },
 
     async createWithPlan(userId: string, input: CreateWithPlanInput): Promise<HabitWithStats> {
-      const profile = await checkAiRateLimit(userId);
+      await checkAndIncrementAiUsage(userId);
 
       const activeCount = await habitsRepo.countActiveByUserId(userId);
       if (activeCount >= MAX_ACTIVE_HABITS) {
@@ -185,6 +197,7 @@ export function createHabitsService({
       const mode = deriveHabitMode(
         (habitInput.targetSkill as Parameters<typeof deriveHabitMode>[0]) ?? "general"
       );
+      const profile = await userProfilesRepo.findByUserId(userId);
       const uiLanguage = profile?.uiLanguage ?? "pt-BR";
 
       const habit = await habitsRepo.create({
@@ -194,7 +207,6 @@ export function createHabitsService({
       });
 
       try {
-        await incrementAiUsage(userId, profile);
         const plan = await generateHabitPlan(
           {
             name: habit.name,
@@ -224,7 +236,7 @@ export function createHabitsService({
       habitId: string,
       input: RegeneratePlanInput
     ): Promise<HabitWithStats> {
-      const profile = await checkAiRateLimit(userId);
+      await checkAndIncrementAiUsage(userId);
 
       const habit = await habitsRepo.findById(habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
@@ -235,6 +247,7 @@ export function createHabitsService({
       const mode = deriveHabitMode(
         (habit.targetSkill as Parameters<typeof deriveHabitMode>[0]) ?? "general"
       );
+      const profile = await userProfilesRepo.findByUserId(userId);
       const uiLanguage = profile?.uiLanguage ?? "pt-BR";
 
       await habitsRepo.update(habitId, userId, { planStatus: "generating" });
@@ -242,7 +255,6 @@ export function createHabitsService({
       const { painPoints, availableMinutes, level } = input;
       const logs = await habitLogsRepo.findAllByHabitIds([habitId]);
       try {
-        await incrementAiUsage(userId, profile);
         const plan = await generateHabitPlan(
           {
             name: habit.name,
