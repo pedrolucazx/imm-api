@@ -45,7 +45,7 @@ export function createJournalService({
       const uiLanguageSnap = profile?.uiLanguage ?? "pt-BR";
       const targetSkillSnap = habit.targetSkill ?? null;
       const wordCount = countWords(input.content);
-      const today = new Date().toISOString().slice(0, 10);
+      const today = input.entryDate ?? new Date().toISOString().slice(0, 10);
 
       const existing = await journalRepo.findByHabitAndDate(input.habitId, userId, today);
 
