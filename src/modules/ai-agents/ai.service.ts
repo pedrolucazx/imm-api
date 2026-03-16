@@ -2,12 +2,13 @@ import type { DrizzleDb } from "../../core/database/connection.js";
 import { createJournalRepository } from "../journal/journal.repository.js";
 import { createHabitsRepository } from "../habits/habits.repository.js";
 import { createUserProfilesRepository } from "../users/user-profiles.repository.js";
-import { createAiAgentsModule } from "./ai-agents.module.js";
-import { analyzeWithLanguageAgent } from "./language-agent.service.js";
-import { analyzeWithBehavioralAgent } from "./behavioral-agent.service.js";
+import { deriveHabitMode, type TargetSkill } from "../../shared/schemas/habit-mode.js";
+import { createOrchestrator } from "./orchestrator.js";
+import { analyzeWithLanguageAgent } from "./language-agent.js";
+import { analyzeWithBehavioralAgent } from "./behavioral-agent.js";
 import { NotFoundError, ForbiddenError } from "../../shared/errors/index.js";
-import type { LanguageAgentResponse } from "./agent-language.js";
-import type { BehavioralAgentResponse } from "./agent-behavioral.js";
+import type { LanguageAgentResponse } from "./language-agent.js";
+import type { BehavioralAgentResponse } from "./behavioral-agent.js";
 import type { JournalRepository } from "../journal/journal.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
@@ -32,7 +33,9 @@ export type AiServiceDeps = {
 
 export function createAiService(deps: AiServiceDeps) {
   const { journalRepo, habitsRepo, userProfilesRepo } = deps;
-  const { orchestrator } = createAiAgentsModule();
+  const orchestrator = createOrchestrator({
+    deriveHabitMode: (targetSkill: string) => deriveHabitMode(targetSkill as TargetSkill),
+  });
 
   async function validateAndGetData(userId: string, input: AiAnalyzeInput) {
     const entry = await journalRepo.findById(input.journalEntryId, userId);

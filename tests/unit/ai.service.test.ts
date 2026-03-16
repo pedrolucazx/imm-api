@@ -7,16 +7,16 @@ import type { JournalEntry } from "@/core/database/schema/index.js";
 import type { Habit } from "@/core/database/schema/index.js";
 import type { UserProfile } from "@/core/database/schema/index.js";
 
-jest.mock("@/modules/ai-agents/language-agent.service.js", () => ({
+jest.mock("@/modules/ai-agents/language-agent.js", () => ({
   analyzeWithLanguageAgent: jest.fn(),
 }));
 
-jest.mock("@/modules/ai-agents/behavioral-agent.service.js", () => ({
+jest.mock("@/modules/ai-agents/behavioral-agent.js", () => ({
   analyzeWithBehavioralAgent: jest.fn(),
 }));
 
-import { analyzeWithLanguageAgent } from "@/modules/ai-agents/language-agent.service.js";
-import { analyzeWithBehavioralAgent } from "@/modules/ai-agents/behavioral-agent.service.js";
+import { analyzeWithLanguageAgent } from "@/modules/ai-agents/language-agent.js";
+import { analyzeWithBehavioralAgent } from "@/modules/ai-agents/behavioral-agent.js";
 
 const mockLanguageAgent = analyzeWithLanguageAgent as jest.MockedFunction<
   typeof analyzeWithLanguageAgent
