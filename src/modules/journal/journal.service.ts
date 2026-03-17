@@ -11,6 +11,9 @@ type JournalServiceDeps = {
   userProfilesRepo: UserProfilesRepository;
 };
 
+const DEFAULT_HISTORY_LIMIT = 100;
+const MAX_HISTORY_LIMIT = 365;
+
 function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
@@ -62,8 +65,14 @@ export function createJournalService({
       return journalRepo.findAllByDate(userId, date);
     },
 
-    async listHistory(userId: string, limit: number = 100): Promise<JournalEntry[]> {
-      return journalRepo.findAllByUserId(userId, limit);
+    async listHistory(
+      userId: string,
+      limit: number = DEFAULT_HISTORY_LIMIT
+    ): Promise<JournalEntry[]> {
+      const safeLimit = Number.isFinite(limit)
+        ? Math.min(MAX_HISTORY_LIMIT, Math.max(1, Math.trunc(limit)))
+        : DEFAULT_HISTORY_LIMIT;
+      return journalRepo.findAllByUserId(userId, safeLimit);
     },
   };
 }

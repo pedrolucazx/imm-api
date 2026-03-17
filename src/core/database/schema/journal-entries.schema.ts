@@ -38,6 +38,7 @@ export const journalEntries = pgTable(
   (table) => [
     uniqueIndex("uq_journal").on(table.userId, table.habitId, table.entryDate),
     index("idx_journal_ai_gin").using("gin", table.aiFeedback),
+    index("idx_journal_user_created_at").on(table.userId, table.createdAt),
   ]
 );
 
