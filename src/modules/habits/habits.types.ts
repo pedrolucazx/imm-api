@@ -38,7 +38,9 @@ export const plannerWizardSchema = z.object({
   feedbackOnPlan: z.string().max(500).optional(),
 });
 
-export const createWithPlanSchema = createHabitSchema.extend(plannerWizardSchema.shape);
+export const createWithPlanSchema = createHabitSchema.extend(
+  plannerWizardSchema.omit({ feedbackOnPlan: true }).shape
+);
 
 export const regeneratePlanSchema = plannerWizardSchema;
 
