@@ -4,6 +4,7 @@ import type { UserProfilesRepository } from "./user-profiles.repository.js";
 import { NotFoundError } from "../../shared/errors/index.js";
 import { DEFAULT_UI_LANGUAGE } from "../../shared/constants.js";
 import { DEFAULT_PROFILE_FIELDS } from "../../core/database/schema/user-profiles.schema.js";
+import { isSameDay } from "../../shared/utils/date.js";
 import type { UpdateProfileInput, ProfileResponse } from "./users.types.js";
 
 type UsersServiceDeps = {
@@ -19,8 +20,14 @@ function toProfileResponse(
     bio: string | null | undefined;
     timezone: string;
     aiRequestsToday: number;
+    lastAiRequest: Date | null | undefined;
   }
 ): ProfileResponse {
+  const aiRequestsToday =
+    profile.lastAiRequest && isSameDay(profile.lastAiRequest, new Date())
+      ? profile.aiRequestsToday
+      : 0;
+
   return {
     id: user.id,
     email: user.email,
@@ -30,7 +37,7 @@ function toProfileResponse(
       uiLanguage: profile.uiLanguage ?? DEFAULT_UI_LANGUAGE,
       bio: profile.bio ?? null,
       timezone: profile.timezone,
-      aiRequestsToday: profile.aiRequestsToday,
+      aiRequestsToday,
     },
   };
 }
