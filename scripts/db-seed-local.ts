@@ -31,7 +31,19 @@ function loadEnvFiles(): void {
   }
 }
 
-const START_DATE = "2026-03-07";
+const DAYS_TO_SEED = 7;
+const toIsoDate = (d: Date) => d.toISOString().slice(0, 10);
+const buildLastNDates = (n: number, now = new Date()): string[] => {
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(end);
+    d.setUTCDate(end.getUTCDate() - (n - 1 - i));
+    return toIsoDate(d);
+  });
+};
+
+const SEEDED_DATES = buildLastNDates(DAYS_TO_SEED);
+const START_DATE = SEEDED_DATES[0]!;
 
 const ENGLISH_HABIT_ID = "4b3a7f15-7f1a-4bf2-a5de-4f5c6f9c0a01";
 const GYM_HABIT_ID = "4b3a7f15-7f1a-4bf2-a5de-4f5c6f9c0a02";
@@ -105,19 +117,10 @@ const readingPlan = {
   ],
 };
 
-function buildLogs(habitId: string, completedDates: string[]): schema.NewHabitLog[] {
-  const allDates = [
-    "2026-03-07",
-    "2026-03-08",
-    "2026-03-09",
-    "2026-03-10",
-    "2026-03-11",
-    "2026-03-12",
-    "2026-03-13",
-  ];
-  const completedSet = new Set(completedDates);
-  return allDates.map((date) => {
-    const completed = completedSet.has(date);
+function buildLogs(habitId: string, completedIndexes: number[]): schema.NewHabitLog[] {
+  const completedSet = new Set(completedIndexes);
+  return SEEDED_DATES.map((date, i) => {
+    const completed = completedSet.has(i);
     return {
       habitId,
       logDate: date,
@@ -240,27 +243,9 @@ async function main(): Promise<void> {
         },
       ]);
 
-      const englishLogs = buildLogs(ENGLISH_HABIT_ID, [
-        "2026-03-09",
-        "2026-03-10",
-        "2026-03-11",
-        "2026-03-12",
-        "2026-03-13",
-      ]);
-      const gymLogs = buildLogs(GYM_HABIT_ID, [
-        "2026-03-10",
-        "2026-03-11",
-        "2026-03-12",
-        "2026-03-13",
-      ]);
-      const readingLogs = buildLogs(READING_HABIT_ID, [
-        "2026-03-08",
-        "2026-03-09",
-        "2026-03-10",
-        "2026-03-11",
-        "2026-03-12",
-        "2026-03-13",
-      ]);
+      const englishLogs = buildLogs(ENGLISH_HABIT_ID, [2, 3, 4, 5, 6]);
+      const gymLogs = buildLogs(GYM_HABIT_ID, [3, 4, 5, 6]);
+      const readingLogs = buildLogs(READING_HABIT_ID, [1, 2, 3, 4, 5, 6]);
 
       await tx.insert(schema.habitLogs).values([...englishLogs, ...gymLogs, ...readingLogs]);
 
@@ -271,7 +256,7 @@ async function main(): Promise<void> {
           id: randomUUID(),
           userId: user.id,
           habitId: ENGLISH_HABIT_ID,
-          entryDate: "2026-03-13",
+          entryDate: SEEDED_DATES[2]!,
           content:
             "Today I practiced shadowing with a TED talk about habits. My pronunciation of 'particularly' is still off but getting better. I noticed I can follow most of the conversation without pausing.",
           wordCount: 33,
@@ -304,14 +289,14 @@ async function main(): Promise<void> {
             nextChallenge:
               "Escolha 3 palavras difíceis do episódio e use cada uma em uma frase diferente amanhã.",
           },
-          createdAt: new Date("2026-03-13T08:15:00.000Z"),
-          updatedAt: new Date("2026-03-13T08:15:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[2]}T08:15:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[2]}T08:15:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: READING_HABIT_ID,
-          entryDate: "2026-03-13",
+          entryDate: SEEDED_DATES[2]!,
           content:
             "Terminei o terceiro capítulo de Atomic Habits. A parte sobre identidade me impactou muito — a ideia de que você não atinge suas metas, você cai ao nível dos seus sistemas.",
           wordCount: 32,
@@ -333,14 +318,14 @@ async function main(): Promise<void> {
             actionSuggestion:
               "Escreva amanhã uma versão própria da frase que mais te impactou. Isso consolida o aprendizado.",
           },
-          createdAt: new Date("2026-03-13T21:30:00.000Z"),
-          updatedAt: new Date("2026-03-13T21:30:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[2]}T21:30:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[2]}T21:30:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: ENGLISH_HABIT_ID,
-          entryDate: "2026-03-14",
+          entryDate: SEEDED_DATES[3]!,
           content:
             "Recorded myself speaking for 2 minutes about my morning routine. The words came out more naturally today. Still hesitate before complex sentences but the flow is improving steadily.",
           wordCount: 30,
@@ -371,14 +356,14 @@ async function main(): Promise<void> {
             nextChallenge:
               "Grave-se novamente amanhã mas desta vez sem roteiro. Fale sobre seus planos para a semana.",
           },
-          createdAt: new Date("2026-03-14T07:50:00.000Z"),
-          updatedAt: new Date("2026-03-14T07:50:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[3]}T07:50:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[3]}T07:50:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: GYM_HABIT_ID,
-          entryDate: "2026-03-14",
+          entryDate: SEEDED_DATES[3]!,
           content:
             "Treino de pernas hoje. Agachamento 4x8 com 60kg, leg press 3x12. Senti um pouco de dor no joelho esquerdo mas passei. Preciso aquecer mais antes de começar.",
           wordCount: 29,
@@ -400,14 +385,14 @@ async function main(): Promise<void> {
             actionSuggestion:
               "Adicione 10 minutos de aquecimento articular antes do agachamento. Se a dor persistir, priorize exercícios sem impacto por 2 dias.",
           },
-          createdAt: new Date("2026-03-14T18:20:00.000Z"),
-          updatedAt: new Date("2026-03-14T18:20:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[3]}T18:20:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[3]}T18:20:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: READING_HABIT_ID,
-          entryDate: "2026-03-14",
+          entryDate: SEEDED_DATES[3]!,
           content:
             "Capítulo 4 — sobre as quatro leis da mudança de comportamento. 'Torne-o óbvio' faz muito sentido com minha experiência. Colocar o livro na cama tem funcionado.",
           wordCount: 27,
@@ -415,14 +400,14 @@ async function main(): Promise<void> {
           targetSkillSnap: "general",
           moodScore: 4,
           energyScore: 3,
-          createdAt: new Date("2026-03-14T22:00:00.000Z"),
-          updatedAt: new Date("2026-03-14T22:00:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[3]}T22:00:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[3]}T22:00:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: ENGLISH_HABIT_ID,
-          entryDate: "2026-03-15",
+          entryDate: SEEDED_DATES[4]!,
           content:
             "Shadowing session with a podcast episode on productivity. I am getting more comfortable with connected speech. Words like 'gonna' and 'wanna' feel natural now when listening.",
           wordCount: 30,
@@ -448,14 +433,14 @@ async function main(): Promise<void> {
             nextChallenge:
               "Tente reproduzir uma sequência de 30 segundos do podcast de memória, focando nas ligações entre palavras.",
           },
-          createdAt: new Date("2026-03-15T07:30:00.000Z"),
-          updatedAt: new Date("2026-03-15T07:30:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[4]}T07:30:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[4]}T07:30:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: GYM_HABIT_ID,
-          entryDate: "2026-03-15",
+          entryDate: SEEDED_DATES[4]!,
           content:
             "Treino de peito e tríceps. Supino plano 4x8 com 70kg, crucifixo 3x10, tríceps corda 3x12. Energia alta, ótima sessão. Bati PR no supino.",
           wordCount: 23,
@@ -477,14 +462,14 @@ async function main(): Promise<void> {
             actionSuggestion:
               "Registre o PR e defina o próximo alvo (+2,5kg em 2 semanas). Metas específicas mantêm a motivação alta.",
           },
-          createdAt: new Date("2026-03-15T17:45:00.000Z"),
-          updatedAt: new Date("2026-03-15T17:45:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[4]}T17:45:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[4]}T17:45:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: READING_HABIT_ID,
-          entryDate: "2026-03-15",
+          entryDate: SEEDED_DATES[4]!,
           content:
             "Li o capítulo 5 — sobre recompensas imediatas. Difícil manter hábitos quando a recompensa é distante. O truque do 'never miss twice' vai entrar na minha rotina agora.",
           wordCount: 27,
@@ -506,14 +491,14 @@ async function main(): Promise<void> {
             actionSuggestion:
               "Antes de dormir, anote um hábito atual onde o 'never miss twice' se aplicaria. Amanhã releia essa nota.",
           },
-          createdAt: new Date("2026-03-15T22:15:00.000Z"),
-          updatedAt: new Date("2026-03-15T22:15:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[4]}T22:15:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[4]}T22:15:00.000Z`),
         },
         {
           id: randomUUID(),
           userId: user.id,
           habitId: ENGLISH_HABIT_ID,
-          entryDate: "2026-03-16",
+          entryDate: SEEDED_DATES[5]!,
           content:
             "Morning session today. I wrote about my weekend plans entirely in English without stopping to translate. Vocabulary is expanding naturally through context. Feeling very confident.",
           wordCount: 28,
@@ -521,8 +506,8 @@ async function main(): Promise<void> {
           targetSkillSnap: "en-US",
           moodScore: 5,
           energyScore: 4,
-          createdAt: new Date("2026-03-16T09:10:00.000Z"),
-          updatedAt: new Date("2026-03-16T09:10:00.000Z"),
+          createdAt: new Date(`${SEEDED_DATES[5]}T09:10:00.000Z`),
+          updatedAt: new Date(`${SEEDED_DATES[5]}T09:10:00.000Z`),
         },
       ]);
 
