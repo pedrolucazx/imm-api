@@ -138,7 +138,7 @@ describe("ai service", () => {
       const { service, journalRepo, habitsRepo, userProfilesRepo } = makeService();
       journalRepo.findById.mockResolvedValue(mockJournalEntry);
       habitsRepo.findById.mockResolvedValue(mockHabit);
-      userProfilesRepo.findByUserId.mockResolvedValue({ ...mockProfile, aiRequestsToday: 10 });
+      userProfilesRepo.findByUserId.mockResolvedValue({ ...mockProfile, aiRequestsToday: 15 });
 
       await expect(
         service.analyze(
