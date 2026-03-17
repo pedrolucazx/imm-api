@@ -1,11 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { JournalService } from "./journal.service.js";
-import {
-  createJournalEntrySchema,
-  updateJournalEntrySchema,
-  type CreateJournalEntryInput,
-  type UpdateJournalEntryInput,
-} from "./journal.types.js";
+import { createJournalEntrySchema, type CreateJournalEntryInput } from "./journal.types.js";
 import { handleControllerError } from "../../shared/utils/http.js";
 
 export function createJournalController(service: JournalService) {
@@ -51,33 +46,15 @@ export function createJournalController(service: JournalService) {
       }
     },
 
-    async getEntryByDate(
-      request: FastifyRequest<{ Params: { date: string }; Querystring: { habit_id: string } }>,
+    async listHistory(
+      request: FastifyRequest<{ Querystring: { limit?: string } }>,
       reply: FastifyReply
     ) {
       try {
         const { id: userId } = request.user;
-        const { date } = request.params;
-        const habitId = request.query.habit_id;
-        const entry = await service.getEntryByDate(userId, habitId, date);
-        if (!entry) {
-          return reply.code(404).send({ error: "Journal entry not found" });
-        }
-        return reply.code(200).send(entry);
-      } catch (error) {
-        return handleControllerError(error, reply);
-      }
-    },
-
-    async updateEntry(
-      request: FastifyRequest<{ Params: { id: string }; Body: UpdateJournalEntryInput }>,
-      reply: FastifyReply
-    ) {
-      try {
-        const { id: userId } = request.user;
-        const data = updateJournalEntrySchema.parse(request.body);
-        const entry = await service.updateEntry(userId, request.params.id, data);
-        return reply.code(200).send(entry);
+        const limit = request.query.limit ? parseInt(request.query.limit, 10) : 100;
+        const entries = await service.listHistory(userId, limit);
+        return reply.code(200).send(entries);
       } catch (error) {
         return handleControllerError(error, reply);
       }
