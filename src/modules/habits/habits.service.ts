@@ -166,6 +166,7 @@ export function createHabitsService({
       }
 
       const habit = await habitsRepo.create({
+        startDate: getTodayUTCString(),
         ...input,
         userId,
         planStatus,
@@ -189,6 +190,7 @@ export function createHabitsService({
       const uiLanguage = profile?.uiLanguage ?? "pt-BR";
 
       const habit = await habitsRepo.create({
+        startDate: getTodayUTCString(),
         ...habitInput,
         userId,
         planStatus: "generating",
