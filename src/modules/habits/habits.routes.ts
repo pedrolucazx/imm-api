@@ -231,6 +231,11 @@ export async function habitsRoutes(fastify: FastifyInstance) {
             enum: ["beginner", "intermediate", "advanced"],
             examples: ["beginner"],
           },
+          feedbackOnPlan: {
+            type: "string",
+            maxLength: 500,
+            examples: ["As tarefas diárias eram muito longas para meu nível"],
+          },
         },
       },
       response: {

@@ -35,9 +35,12 @@ export const plannerWizardSchema = z.object({
   painPoints: z.array(z.string().min(1)).min(1),
   availableMinutes: z.number().int().positive(),
   level: z.enum(["beginner", "intermediate", "advanced"]),
+  feedbackOnPlan: z.string().max(500).optional(),
 });
 
-export const createWithPlanSchema = createHabitSchema.extend(plannerWizardSchema.shape);
+export const createWithPlanSchema = createHabitSchema.extend(
+  plannerWizardSchema.omit({ feedbackOnPlan: true }).shape
+);
 
 export const regeneratePlanSchema = plannerWizardSchema;
 

@@ -141,6 +141,7 @@ export function createHabitsService({
           availableMinutes: input.availableMinutes,
           level: input.level,
           uiLanguage,
+          feedbackOnPlan: input.feedbackOnPlan ?? undefined,
         },
         mode
       );

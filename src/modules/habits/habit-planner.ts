@@ -18,6 +18,7 @@ type PlannerInput = {
   availableMinutes: number;
   level: string;
   uiLanguage?: string;
+  feedbackOnPlan?: string;
 };
 
 function buildFullTemplate(input: PlannerInput): string {
@@ -28,7 +29,7 @@ Habit: "${input.name}"
 Target skill: ${input.targetSkill ?? "general"}
 Pain points: ${input.painPoints.join(", ")}
 Available minutes per day: ${input.availableMinutes}
-Level: ${input.level}
+Level: ${input.level}${input.feedbackOnPlan ? `\nUser feedback on previous plan: ${input.feedbackOnPlan}` : ""}
 
 Generate a 66-day skill-building plan with EXACTLY 3 phases. Be extremely concise. Return ONLY valid JSON:
 {
@@ -54,7 +55,7 @@ ${langInstruction(input.uiLanguage ?? "pt-BR")}
 Habit: "${input.name}"
 Pain points: ${input.painPoints.join(", ")}
 Available minutes per day: ${input.availableMinutes}
-Level: ${input.level}
+Level: ${input.level}${input.feedbackOnPlan ? `\nUser feedback on previous plan: ${input.feedbackOnPlan}` : ""}
 
 Generate a lightweight 66-day consistency plan with EXACTLY 3 phases. Be extremely concise. Return ONLY valid JSON:
 {
