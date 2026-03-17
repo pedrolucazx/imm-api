@@ -243,9 +243,10 @@ async function main(): Promise<void> {
         },
       ]);
 
-      const englishLogs = buildLogs(ENGLISH_HABIT_ID, [2, 3, 4, 5, 6]);
-      const gymLogs = buildLogs(GYM_HABIT_ID, [3, 4, 5, 6]);
-      const readingLogs = buildLogs(READING_HABIT_ID, [1, 2, 3, 4, 5, 6]);
+      // Índice 6 = hoje — não completado para simular início do dia
+      const englishLogs = buildLogs(ENGLISH_HABIT_ID, [2, 3, 4, 5]);
+      const gymLogs = buildLogs(GYM_HABIT_ID, [3, 4, 5]);
+      const readingLogs = buildLogs(READING_HABIT_ID, [1, 2, 3, 4, 5]);
 
       await tx.insert(schema.habitLogs).values([...englishLogs, ...gymLogs, ...readingLogs]);
 
