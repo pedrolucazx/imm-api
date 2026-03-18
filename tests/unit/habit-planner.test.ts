@@ -140,6 +140,21 @@ describe("generateHabitPlan — tracking-coached (light)", () => {
 });
 
 describe("generateHabitPlan — failures", () => {
+  it("throws when a phase is missing journal_prompt", async () => {
+    const invalid = JSON.parse(FULL_PLAN) as {
+      phases: Array<Record<string, unknown>>;
+    };
+    delete invalid.phases[0].journal_prompt;
+    mockFetch.mockResolvedValue(makeGeminiResponse(JSON.stringify(invalid)));
+
+    await expect(
+      generateHabitPlan(
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
+        "skill-building"
+      )
+    ).rejects.toThrow();
+  });
+
   it("throws when Gemini API returns non-ok status", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 503, statusText: "Service Unavailable" });
 
