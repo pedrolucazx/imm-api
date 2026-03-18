@@ -1,7 +1,6 @@
-import { randomBytes } from "crypto";
 import { eq } from "drizzle-orm";
 import { hashPassword, comparePassword } from "../../shared/utils/password.js";
-import { hashToken } from "../../shared/utils/token.js";
+import { hashToken, generateTokens } from "../../shared/utils/token.js";
 import type { DrizzleDb } from "../../core/database/connection.js";
 import * as usersSchema from "../../core/database/schema/users.schema.js";
 import * as userProfilesSchema from "../../core/database/schema/user-profiles.schema.js";
@@ -10,8 +9,6 @@ import type { UserProfilesRepository } from "../users/user-profiles.repository.j
 import type { RefreshTokensRepository } from "./refresh-tokens.repository.js";
 import { ConflictError, UnauthorizedError } from "../../shared/errors/index.js";
 import {
-  ACCESS_TOKEN_EXPIRES,
-  REFRESH_TOKEN_EXPIRES,
   REFRESH_TOKEN_EXPIRES_MS,
   DEFAULT_UI_LANGUAGE,
   PG_DUPLICATE_KEY_CODE,
@@ -24,20 +21,6 @@ type AuthServiceDeps = {
   profilesRepo: UserProfilesRepository;
   refreshTokensRepo: RefreshTokensRepository;
 };
-
-function generateTokens(
-  jwt: JwtSignFn,
-  user: { id: string; email: string }
-): { accessToken: string; refreshToken: string } {
-  const nonce = randomBytes(16).toString("hex");
-  const accessToken = jwt({ id: user.id, email: user.email }, { expiresIn: ACCESS_TOKEN_EXPIRES });
-  const refreshToken = jwt(
-    { id: user.id, type: "refresh", nonce },
-    { expiresIn: REFRESH_TOKEN_EXPIRES }
-  );
-
-  return { accessToken, refreshToken };
-}
 
 export function createAuthService({
   db,
