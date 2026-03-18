@@ -18,7 +18,13 @@ const FULL_PLAN = {
   plan_type: "full" as const,
   strategy: "Progressive skill mastery",
   phases: [
-    { phase: 1, days: "1-14", theme: "Foundation", daily_tasks: ["Task"], techniques: ["Tech"] },
+    {
+      phase: 1,
+      days: "1-14",
+      theme: "Foundation",
+      daily_tasks: ["Task"],
+      journal_prompt: "What did you practice today?",
+    },
   ],
   total_time_per_day_minutes: 30,
   success_metrics: "B1 in 66 days",
