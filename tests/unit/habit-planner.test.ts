@@ -32,14 +32,22 @@ const FULL_PLAN = JSON.stringify({
       days: "1-22",
       theme: "Foundation",
       daily_tasks: ["Listen 15min", "Repeat phrases"],
+      journal_prompt: "What did you practice today?",
     },
     {
       phase: 2,
       days: "23-44",
       theme: "Consolidation",
       daily_tasks: ["Shadow 20min", "Write sentences"],
+      journal_prompt: "What errors did you make and what did you learn?",
     },
-    { phase: 3, days: "45-66", theme: "Fluency", daily_tasks: ["Converse 30min", "Review vocab"] },
+    {
+      phase: 3,
+      days: "45-66",
+      theme: "Fluency",
+      daily_tasks: ["Converse 30min", "Review vocab"],
+      journal_prompt: "In what real situation did you use English today?",
+    },
   ],
   total_time_per_day_minutes: 30,
   success_metrics: "Reach B1 level in 66 days",
@@ -56,6 +64,7 @@ const LIGHT_PLAN = JSON.stringify({
       theme: "Habit Formation",
       weekly_focus: "Daily 15-min sessions",
       tip: "Attach to existing routine",
+      journal_prompt: "How was your session today? Did you keep the planned schedule?",
     },
     {
       phase: 2,
@@ -63,6 +72,7 @@ const LIGHT_PLAN = JSON.stringify({
       theme: "Momentum",
       weekly_focus: "Increase intensity gradually",
       tip: "Track streaks visually",
+      journal_prompt: "What idea from today's session impacted you the most?",
     },
     {
       phase: 3,
@@ -70,6 +80,7 @@ const LIGHT_PLAN = JSON.stringify({
       theme: "Automaticity",
       weekly_focus: "Make it non-negotiable",
       tip: "Reward yourself weekly",
+      journal_prompt: "How is this habit changing the way you think?",
     },
   ],
   total_time_per_day_minutes: 15,
@@ -129,6 +140,21 @@ describe("generateHabitPlan — tracking-coached (light)", () => {
 });
 
 describe("generateHabitPlan — failures", () => {
+  it("throws when a phase is missing journal_prompt", async () => {
+    const invalid = JSON.parse(FULL_PLAN) as {
+      phases: Array<Record<string, unknown>>;
+    };
+    delete invalid.phases[0].journal_prompt;
+    mockFetch.mockResolvedValue(makeGeminiResponse(JSON.stringify(invalid)));
+
+    await expect(
+      generateHabitPlan(
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
+        "skill-building"
+      )
+    ).rejects.toThrow();
+  });
+
   it("throws when Gemini API returns non-ok status", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 503, statusText: "Service Unavailable" });
 

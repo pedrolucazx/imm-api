@@ -63,6 +63,7 @@ const englishPlan = {
         "Escreva 5 novas palavras de vocabulário profissional em contexto — 10 min",
         "Grave a si mesmo falando por 2 minutos — 5 min",
       ],
+      journal_prompt: "O que você praticou hoje? Descreva uma palavra ou expressão nova que usou.",
     },
     {
       phase: 2,
@@ -73,6 +74,8 @@ const englishPlan = {
         "Pratique 3 frases do vocabulário de ontem — 5 min",
         "Shadowing: 1 segmento de TED talk — 10 min",
       ],
+      journal_prompt:
+        "Escreva sobre seu dia em inglês. Que erros você cometeu e o que aprendeu com eles?",
     },
     {
       phase: 3,
@@ -82,6 +85,7 @@ const englishPlan = {
         "Entrada completa no diário + autocrítica — 20 min",
         "Roleplay de cenário profissional (escrito) — 10 min",
       ],
+      journal_prompt: "Em que situação real você usou inglês hoje? O que fluiu naturalmente?",
     },
   ],
 };
@@ -98,6 +102,7 @@ const readingPlan = {
       weekly_focus:
         "Leia no mesmo horário todos os dias. Comece com 15 páginas se 1 capítulo parecer muito.",
       tip: "Deixe o livro visível — na travesseira ou na mesa.",
+      journal_prompt: "Como foi sua sessão de leitura hoje? Conseguiu manter o horário planejado?",
     },
     {
       phase: 2,
@@ -105,6 +110,7 @@ const readingPlan = {
       theme: "Aprofundar a Rotina",
       weekly_focus: "Capítulo completo diariamente. Após ler, escreva 2 frases sobre o que leu.",
       tip: "Sempre tenha o próximo livro escolhido antes de terminar o atual.",
+      journal_prompt: "Qual ideia do capítulo de hoje mais te impactou? Por quê?",
     },
     {
       phase: 3,
@@ -113,6 +119,7 @@ const readingPlan = {
       weekly_focus:
         "Você é um leitor agora. Reflita semanalmente sobre o que a leitura mudou no seu pensamento.",
       tip: "Compartilhe um insight por semana com alguém.",
+      journal_prompt: "Como este hábito de leitura está mudando sua forma de pensar?",
     },
   ],
 };
