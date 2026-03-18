@@ -2,7 +2,7 @@ import { logger } from "../../core/config/logger.js";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-const multipliers: Record<string, number> = {
+const multipliers: Record<"s" | "m" | "h" | "d", number> = {
   s: 1000,
   m: 60 * 1000,
   h: 60 * 60 * 1000,
@@ -19,5 +19,5 @@ export function parseMs(expiresIn: string): number {
   const value = parseInt(match[1], 10);
   const unit = match[2];
 
-  return value * multipliers[unit];
+  return value * multipliers[unit as keyof typeof multipliers];
 }
