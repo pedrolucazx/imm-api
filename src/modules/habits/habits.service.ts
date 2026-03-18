@@ -19,55 +19,17 @@ import type {
 } from "./habits.types.js";
 import { generateHabitPlan } from "./habit-planner.js";
 import type { HabitPlan } from "./habit-plan.schema.js";
-import { MAX_HABIT_DAYS, MAX_ACTIVE_HABITS } from "../../shared/constants.js";
+import { MAX_ACTIVE_HABITS } from "../../shared/constants.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
-import { assertAiRateLimit, nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
+import { computeCurrentDay, computeStreak } from "../../shared/utils/habit-math.js";
+import { nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
+import { assertAiRateLimit } from "../../shared/guards/ai-rate-limit.guard.js";
 
 export type HabitWithStats = Habit & {
   streak: number;
   currentDay: number;
   completedToday: boolean;
 };
-
-function computeCurrentDay(startDate: string | Date | null): number {
-  if (!startDate) return 1;
-  const start = new Date(startDate);
-  if (Number.isNaN(start.getTime())) return 1;
-  const now = new Date();
-  const startUTC = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
-  const nowUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const diff = Math.floor((nowUTC - startUTC) / (1000 * 60 * 60 * 24));
-  return Math.max(1, Math.min(diff + 1, MAX_HABIT_DAYS));
-}
-
-function computeStreak(logs: HabitLog[]): number {
-  const completedDates = new Set(logs.filter((l) => l.completed).map((l) => l.logDate));
-  if (completedDates.size === 0) return 0;
-
-  const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const todayStr = todayUTC.toISOString().slice(0, 10);
-  const yesterdayDate = new Date(todayUTC);
-  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
-  const yesterdayStr = yesterdayDate.toISOString().slice(0, 10);
-
-  if (!completedDates.has(todayStr) && !completedDates.has(yesterdayStr)) return 0;
-
-  let streak = 0;
-  let cursor = completedDates.has(todayStr) ? new Date(todayUTC) : new Date(yesterdayDate);
-
-  while (true) {
-    const dateStr = cursor.toISOString().slice(0, 10);
-    if (completedDates.has(dateStr)) {
-      streak++;
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
-    } else {
-      break;
-    }
-  }
-
-  return streak;
-}
 
 function enrichHabit(habit: Habit, logs: HabitLog[]): HabitWithStats {
   const todayStr = getTodayUTCString();

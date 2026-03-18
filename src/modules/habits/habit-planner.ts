@@ -9,7 +9,7 @@ import {
 } from "../../shared/constants.js";
 import { sanitizeJsonString } from "../../shared/utils/json.js";
 import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
-import { langInstruction } from "../ai-agents/utils.js";
+import { langInstruction } from "../../shared/utils/ai-prompt.js";
 
 type PlannerInput = {
   name: string;

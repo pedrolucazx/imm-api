@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { UsersService } from "./users.service.js";
 import { updateProfileSchema, type UpdateProfileInput } from "./users.types.js";
-import { handleControllerError } from "../../shared/utils/http.js";
+import { handleControllerError } from "../../shared/http/handle-error.js";
 import {
   createAvatarSignedUploadUrl,
   isAllowedContentType,
