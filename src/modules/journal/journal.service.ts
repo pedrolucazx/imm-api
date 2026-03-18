@@ -1,7 +1,7 @@
 import type { JournalRepository } from "./journal.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
-import { format } from "date-fns";
+import { getTodayUTCString } from "../../shared/utils/date.js";
 import type { CreateJournalEntryInput } from "./journal.types.js";
 import type { JournalEntry } from "../../core/database/schema/index.js";
 import { NotFoundError } from "../../shared/errors/index.js";
@@ -30,7 +30,7 @@ export function createJournalService({
       const uiLanguageSnap = profile?.uiLanguage ?? "pt-BR";
       const targetSkillSnap = habit.targetSkill ?? null;
       const wordCount = countWords(input.content);
-      const today = input.entryDate ?? format(new Date(), "yyyy-MM-dd");
+      const today = input.entryDate ?? getTodayUTCString();
 
       const existing = await journalRepo.findByHabitAndDate(input.habitId, userId, today);
 

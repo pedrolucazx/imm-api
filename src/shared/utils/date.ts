@@ -1,7 +1,7 @@
-import { format, isSameDay as dateFnsIsSameDay } from "date-fns";
+import { isSameDay as dateFnsIsSameDay } from "date-fns";
 
 export function getTodayUTCString(): string {
-  return format(new Date(), "yyyy-MM-dd");
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function isSameDay(a: Date, b: Date): boolean {
