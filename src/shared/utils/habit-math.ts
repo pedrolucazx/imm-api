@@ -35,3 +35,26 @@ export function computeStreak(logs: HabitLog[]): number {
 
   return streak;
 }
+
+export function computeBestStreak(logs: HabitLog[]): number {
+  const completedDates = logs
+    .filter((l) => l.completed)
+    .map((l) => l.logDate)
+    .sort();
+
+  if (completedDates.length === 0) return 0;
+
+  let best = 1;
+  let current = 1;
+  for (let i = 1; i < completedDates.length; i++) {
+    const prev = parseISO(completedDates[i - 1]!);
+    const curr = parseISO(completedDates[i]!);
+    if (differenceInCalendarDays(curr, prev) === 1) {
+      current++;
+      if (current > best) best = current;
+    } else {
+      current = 1;
+    }
+  }
+  return best;
+}
