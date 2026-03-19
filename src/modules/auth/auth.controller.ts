@@ -3,7 +3,7 @@ import type { AuthService } from "./auth.service.js";
 import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from "./auth.types.js";
 import { AppError } from "../../shared/errors/index.js";
 import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
-import { handleControllerError } from "../../shared/utils/http.js";
+import { handleControllerError } from "../../shared/http/handle-error.js";
 import { env } from "../../core/config/env.js";
 
 export function createAuthController(service: AuthService) {

@@ -1,5 +1,5 @@
 import { z, ZodError } from "zod";
-import { handleControllerError } from "@/shared/utils/http.js";
+import { handleControllerError } from "@/shared/http/handle-error.js";
 import { UnauthorizedError, TooManyRequestsError } from "@/shared/errors/index.js";
 
 function makeReply() {
