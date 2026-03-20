@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { callGemini, sanitizeJsonString } from "./gemini-client.js";
-import { langInstruction } from "./utils.js";
+import { langInstruction } from "../../shared/utils/ai-prompt.js";
 import { logger } from "../../core/config/logger.js";
 
 export const behavioralAgentBehavioralSchema = z.object({
