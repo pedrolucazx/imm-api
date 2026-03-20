@@ -103,6 +103,18 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         };
       });
 
+      const avgConsistencyRate =
+        allHabits.length > 0
+          ? Math.round(
+              (allHabits.reduce((sum, habit) => {
+                const logs = logsByHabit.get(habit.id) ?? [];
+                return sum + computeConsistencyRate(logs, habit.startDate);
+              }, 0) /
+                allHabits.length) *
+                1000
+            ) / 1000
+          : 0;
+
       // Global stats
       const [
         journalCount,
@@ -150,6 +162,7 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
       const global = {
         completionRateToday:
           habitIds.length > 0 ? Math.round((completedToday / habitIds.length) * 100) / 100 : 0,
+        avgConsistencyRate,
         totalJournalEntries: journalCount,
         totalWords: wordStats.total,
         avgWordsPerEntry: wordStats.avg,

@@ -31,6 +31,7 @@ export const habitStatSchema = z.object({
 
 export const globalStatsSchema = z.object({
   completionRateToday: z.number(),
+  avgConsistencyRate: z.number(),
   totalJournalEntries: z.number(),
   totalWords: z.number(),
   avgWordsPerEntry: z.number(),
