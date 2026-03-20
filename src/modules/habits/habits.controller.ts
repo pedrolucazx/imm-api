@@ -14,7 +14,7 @@ import {
   type RegeneratePlanInput,
   type PreviewPlanInput,
 } from "./habits.types.js";
-import { handleControllerError } from "../../shared/http/handle-error.js";
+import { handleControllerError } from "../../shared/utils/http.js";
 
 export function createHabitsController(service: HabitsService) {
   return {

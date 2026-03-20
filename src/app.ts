@@ -8,7 +8,6 @@ import { journalRoutes } from "./modules/journal/journal.routes.js";
 import { healthRoutes } from "./modules/health/health.routes.js";
 import { usersRoutes } from "./modules/users/users.routes.js";
 import { aiRoutes } from "./modules/ai-agents/ai.routes.js";
-import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
 import {
   cookiePlugin,
   corsPlugin,
@@ -33,7 +32,6 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(habitsRoutes, { prefix: "/api" });
   await fastify.register(journalRoutes, { prefix: "/api" });
   await fastify.register(aiRoutes, { prefix: "/api" });
-  await fastify.register(analyticsRoutes, { prefix: "/api" });
 
   return fastify;
 }

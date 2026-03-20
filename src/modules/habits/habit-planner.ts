@@ -9,7 +9,7 @@ import {
 } from "../../shared/constants.js";
 import { sanitizeJsonString } from "../../shared/utils/json.js";
 import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
-import { langInstruction } from "../../shared/utils/ai-prompt.js";
+import { langInstruction } from "../ai-agents/utils.js";
 
 type PlannerInput = {
   name: string;
@@ -37,9 +37,9 @@ Generate a 66-day skill-building plan with EXACTLY 3 phases. Be extremely concis
   "plan_type": "full",
   "strategy": "short strategy (max 10 words)",
   "phases": [
-    { "phase": 1, "days": "1-22", "theme": "short theme", "daily_tasks": ["task1 (max 6 words)", "task2 (max 6 words)"], "journal_prompt": "question guiding today's reflection for this phase (max 15 words)" },
-    { "phase": 2, "days": "23-44", "theme": "short theme", "daily_tasks": ["task1", "task2"], "journal_prompt": "question guiding today's reflection for this phase (max 15 words)" },
-    { "phase": 3, "days": "45-66", "theme": "short theme", "daily_tasks": ["task1", "task2"], "journal_prompt": "question guiding today's reflection for this phase (max 15 words)" }
+    { "phase": 1, "days": "1-22", "theme": "short theme", "daily_tasks": ["task1 (max 6 words)", "task2 (max 6 words)"] },
+    { "phase": 2, "days": "23-44", "theme": "short theme", "daily_tasks": ["task1", "task2"] },
+    { "phase": 3, "days": "45-66", "theme": "short theme", "daily_tasks": ["task1", "task2"] }
   ],
   "total_time_per_day_minutes": ${input.availableMinutes},
   "success_metrics": "short metric (max 10 words)"
@@ -63,9 +63,9 @@ Generate a lightweight 66-day consistency plan with EXACTLY 3 phases. Be extreme
   "plan_type": "light",
   "strategy": "short strategy (max 10 words)",
   "phases": [
-    { "phase": 1, "days": "1-22", "theme": "short theme", "weekly_focus": "focus (max 8 words)", "tip": "tip (max 8 words)", "journal_prompt": "question guiding today's reflection for this phase (max 15 words)" },
-    { "phase": 2, "days": "23-44", "theme": "short theme", "weekly_focus": "focus", "tip": "tip", "journal_prompt": "question guiding today's reflection for this phase (max 15 words)" },
-    { "phase": 3, "days": "45-66", "theme": "short theme", "weekly_focus": "focus", "tip": "tip", "journal_prompt": "question guiding today's reflection for this phase (max 15 words)" }
+    { "phase": 1, "days": "1-22", "theme": "short theme", "weekly_focus": "focus (max 8 words)", "tip": "tip (max 8 words)" },
+    { "phase": 2, "days": "23-44", "theme": "short theme", "weekly_focus": "focus", "tip": "tip" },
+    { "phase": 3, "days": "45-66", "theme": "short theme", "weekly_focus": "focus", "tip": "tip" }
   ],
   "total_time_per_day_minutes": ${input.availableMinutes},
   "success_metrics": "66 consecutive days completed"
@@ -89,9 +89,8 @@ const FULL_PLAN_RESPONSE_SCHEMA = {
           days: { type: "string" },
           theme: { type: "string" },
           daily_tasks: { type: "array", items: { type: "string" } },
-          journal_prompt: { type: "string" },
         },
-        required: ["phase", "days", "theme", "daily_tasks", "journal_prompt"],
+        required: ["phase", "days", "theme", "daily_tasks"],
       },
     },
     total_time_per_day_minutes: { type: "number" },
@@ -123,9 +122,8 @@ const LIGHT_PLAN_RESPONSE_SCHEMA = {
           theme: { type: "string" },
           weekly_focus: { type: "string" },
           tip: { type: "string" },
-          journal_prompt: { type: "string" },
         },
-        required: ["phase", "days", "theme", "weekly_focus", "tip", "journal_prompt"],
+        required: ["phase", "days", "theme", "weekly_focus", "tip"],
       },
     },
     total_time_per_day_minutes: { type: "number" },

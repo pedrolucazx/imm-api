@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { AiService } from "./ai.service.js";
-import { handleControllerError } from "../../shared/http/handle-error.js";
+import { handleControllerError } from "../../shared/utils/http.js";
 
 const analyzeSchema = z.object({
   journal_entry_id: z.uuid(),

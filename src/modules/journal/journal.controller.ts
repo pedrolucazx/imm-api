@@ -1,7 +1,7 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { JournalService } from "./journal.service.js";
 import { createJournalEntrySchema, type CreateJournalEntryInput } from "./journal.types.js";
-import { handleControllerError } from "../../shared/http/handle-error.js";
+import { handleControllerError } from "../../shared/utils/http.js";
 
 export function createJournalController(service: JournalService) {
   return {
