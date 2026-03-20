@@ -50,6 +50,25 @@ export function createUsersController(service: UsersService) {
         return handleControllerError(error, reply);
       }
     },
+
+    async delete(
+      request: FastifyRequest<{ Body: { password: string; reason?: string } }>,
+      reply: FastifyReply
+    ) {
+      try {
+        const { id } = request.user;
+        const { password } = request.body;
+
+        if (!password) {
+          return reply.code(400).send({ error: "Password is required" });
+        }
+
+        await service.deleteAccount(id, password);
+        return reply.code(204).send();
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
   };
 }
 

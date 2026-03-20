@@ -19,6 +19,7 @@ function makeMockService(): jest.Mocked<UsersService> {
   return {
     getProfile: jest.fn(),
     updateProfile: jest.fn(),
+    deleteAccount: jest.fn(),
   };
 }
 

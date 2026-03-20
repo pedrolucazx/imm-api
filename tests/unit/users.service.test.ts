@@ -30,6 +30,7 @@ function makeMockUsersRepo(): jest.Mocked<UsersRepository> {
     findByEmail: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
+    deleteById: jest.fn(),
   };
 }
 

@@ -22,9 +22,12 @@ function makeDb(selectResult = [mockUser]) {
   const values = jest.fn().mockReturnValue({ returning });
   const insert = jest.fn().mockReturnValue({ values });
 
+  const deleteMock = jest.fn().mockResolvedValue([]);
+  const deleteFn = jest.fn().mockReturnValue({ where: deleteMock });
+
   return {
-    db: { select, insert } as unknown as DrizzleDb,
-    mocks: { select, from, where, insert, values, returning },
+    db: { select, insert, delete: deleteFn } as unknown as DrizzleDb,
+    mocks: { select, from, where, insert, values, returning, delete: deleteMock },
   };
 }
 
@@ -92,5 +95,16 @@ describe("UsersRepository.findById", () => {
     const result = await repo.findById("00000000-0000-0000-0000-000000000000");
 
     expect(result).toBeUndefined();
+  });
+});
+
+describe("UsersRepository.deleteById", () => {
+  it("deletes user by id", async () => {
+    const { db, mocks } = makeDb();
+    const repo = createUsersRepository(db);
+
+    await repo.deleteById(mockUser.id);
+
+    expect(mocks.delete).toHaveBeenCalled();
   });
 });

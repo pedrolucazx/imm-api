@@ -1,0 +1,35 @@
+name: CD — Deploy (Railway)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api-railway
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "Deploy to Railway"
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.insidemymind.tech
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+        run: |
+          railway up --service imm-production --detach
