@@ -104,9 +104,14 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
       });
 
       const avgConsistencyRate =
-        habits.length > 0
+        allHabits.length > 0
           ? Math.round(
-              (habits.reduce((sum, h) => sum + h.consistencyRate, 0) / habits.length) * 1000
+              (allHabits.reduce((sum, habit) => {
+                const logs = logsByHabit.get(habit.id) ?? [];
+                return sum + computeConsistencyRate(logs, habit.startDate);
+              }, 0) /
+                allHabits.length) *
+                1000
             ) / 1000
           : 0;
 

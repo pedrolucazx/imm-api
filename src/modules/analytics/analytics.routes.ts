@@ -102,6 +102,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
               type: "object",
               properties: {
                 completionRateToday: { type: "number" },
+                avgConsistencyRate: { type: "number" },
                 totalJournalEntries: { type: "number" },
                 totalWords: { type: "number" },
                 avgWordsPerEntry: { type: "number" },
