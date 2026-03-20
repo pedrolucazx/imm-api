@@ -12,8 +12,7 @@ import type { BehavioralAgentResponse } from "./behavioral-agent.js";
 import type { JournalRepository } from "../journal/journal.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
-import { nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
-import { assertAiRateLimit } from "../../shared/guards/ai-rate-limit.guard.js";
+import { assertAiRateLimit, nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 
 export type AiAnalyzeInput = {
   journalEntryId: string;

@@ -5,7 +5,6 @@ const fullPhaseSchema = z.object({
   days: z.string().min(1),
   theme: z.string().min(1),
   daily_tasks: z.array(z.string().trim().min(1)).min(1),
-  journal_prompt: z.string().min(1),
 });
 
 const lightPhaseSchema = z.object({
@@ -14,7 +13,6 @@ const lightPhaseSchema = z.object({
   theme: z.string().min(1),
   weekly_focus: z.string().min(1),
   tip: z.string().min(1),
-  journal_prompt: z.string().min(1),
 });
 
 export const fullHabitPlanSchema = z.object({

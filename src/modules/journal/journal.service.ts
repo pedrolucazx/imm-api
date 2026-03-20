@@ -1,11 +1,9 @@
 import type { JournalRepository } from "./journal.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
-import { getTodayUTCString } from "../../shared/utils/date.js";
 import type { CreateJournalEntryInput } from "./journal.types.js";
 import type { JournalEntry } from "../../core/database/schema/index.js";
 import { NotFoundError } from "../../shared/errors/index.js";
-import { countWords } from "../../shared/utils/string.js";
 
 type JournalServiceDeps = {
   journalRepo: JournalRepository;
@@ -15,6 +13,10 @@ type JournalServiceDeps = {
 
 const DEFAULT_HISTORY_LIMIT = 100;
 const MAX_HISTORY_LIMIT = 365;
+
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
 
 export function createJournalService({
   journalRepo,
@@ -30,7 +32,7 @@ export function createJournalService({
       const uiLanguageSnap = profile?.uiLanguage ?? "pt-BR";
       const targetSkillSnap = habit.targetSkill ?? null;
       const wordCount = countWords(input.content);
-      const today = input.entryDate ?? getTodayUTCString();
+      const today = input.entryDate ?? new Date().toISOString().slice(0, 10);
 
       const existing = await journalRepo.findByHabitAndDate(input.habitId, userId, today);
 
