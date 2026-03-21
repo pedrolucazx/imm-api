@@ -38,6 +38,11 @@ export function createUsersRepository(db: DrizzleDb) {
         .returning();
       return user;
     },
+
+    async deleteById(userId: string, tx?: DbClient): Promise<void> {
+      const client = tx ?? db;
+      await client.delete(users).where(eq(users.id, userId));
+    },
   };
 }
 
