@@ -11,4 +11,11 @@ CREATE TABLE IF NOT EXISTS "consents" (
 
 -- Unique constraint: one consent record per user per type
 -- Also serves for efficient user consent lookups (user_id as leading column)
-ALTER TABLE "consents" ADD CONSTRAINT "consents_user_type_unique" UNIQUE ("user_id", "type");
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'consents_user_type_unique'
+  ) THEN
+    ALTER TABLE "consents" ADD CONSTRAINT "consents_user_type_unique" UNIQUE ("user_id", "type");
+  END IF;
+END $$;
