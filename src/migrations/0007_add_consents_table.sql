@@ -10,7 +10,5 @@ CREATE TABLE IF NOT EXISTS "consents" (
 );
 
 -- Unique constraint: one consent record per user per type
+-- Also serves for efficient user consent lookups (user_id as leading column)
 CREATE UNIQUE INDEX IF NOT EXISTS "consents_user_type_unique" ON "consents"("user_id", "type");
-
--- Index for efficient user consent lookups
-CREATE INDEX IF NOT EXISTS "idx_consents_user_id" ON "consents"("user_id");

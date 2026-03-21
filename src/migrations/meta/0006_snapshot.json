@@ -663,23 +663,7 @@
           "notNull": true
         }
       },
-      "indexes": {
-        "idx_consents_user_id": {
-          "name": "idx_consents_user_id",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "consents_user_id_fkey": {
           "name": "consents_user_id_fkey",
