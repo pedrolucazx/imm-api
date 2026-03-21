@@ -57,7 +57,7 @@ export function createUsersController(service: UsersService) {
     ) {
       try {
         const { id } = request.user;
-        const { password } = request.body;
+        const { password } = request.body ?? {};
 
         if (!password) {
           return reply.code(400).send({ error: "Password is required" });

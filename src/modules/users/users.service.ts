@@ -80,13 +80,13 @@ export function createUsersService({ usersRepo, userProfilesRepo, db }: UsersSer
     },
 
     async deleteAccount(userId: string, password: string): Promise<void> {
-      const user = await usersRepo.findById(userId);
-      if (!user) throw new NotFoundError("User not found");
-
-      const isValidPassword = await comparePassword(password, user.passwordHash);
-      if (!isValidPassword) throw new UnauthorizedError("Invalid password");
-
       await db.transaction(async (tx) => {
+        const user = await usersRepo.findById(userId, tx);
+        if (!user) throw new NotFoundError("User not found");
+
+        const isValidPassword = await comparePassword(password, user.passwordHash);
+        if (!isValidPassword) throw new UnauthorizedError("Invalid password");
+
         await usersRepo.deleteById(userId, tx);
       });
     },
