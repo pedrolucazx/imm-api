@@ -1,8 +1,17 @@
+/**
+ * Database schema for user consents (LGPD compliance).
+ * Stores user consent records for cookies, privacy policy, and terms of use.
+ */
 import { pgTable, uuid, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { users } from "./users.schema.js";
 
+/** Types of consent supported by the system. */
 export type ConsentType = "cookie_consent" | "privacy_policy" | "terms_of_use";
 
+/**
+ * Users table - stores user consent records for LGPD compliance.
+ * Each user can have one consent record per type.
+ */
 export const consents = pgTable(
   "consents",
   {

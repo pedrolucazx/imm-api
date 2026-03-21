@@ -1,13 +1,25 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { ConsentsService } from "./consents.service.js";
 
+/** Controller interface for consent HTTP handlers. */
 export interface ConsentsController {
+  /** Handles POST /consents - saves a consent record. */
   save(request: FastifyRequest, reply: FastifyReply): Promise<void>;
+  /** Handles GET /consents - lists all consents for a user. */
   list(request: FastifyRequest, reply: FastifyReply): Promise<void>;
 }
 
+/**
+ * Creates a consents controller instance.
+ * @param service - ConsentsService implementation
+ * @returns ConsentsController implementation
+ */
 export function createConsentsController(service: ConsentsService): ConsentsController {
   return {
+    /**
+     * Saves a consent record for the authenticated user.
+     * Validates that consent type is provided and is valid.
+     */
     async save(request: FastifyRequest, reply: FastifyReply): Promise<void> {
       try {
         const { id: userId } = request.user;
@@ -35,6 +47,9 @@ export function createConsentsController(service: ConsentsService): ConsentsCont
       }
     },
 
+    /**
+     * Lists all consent records for the authenticated user.
+     */
     async list(request: FastifyRequest, reply: FastifyReply): Promise<void> {
       try {
         const { id: userId } = request.user;
