@@ -2,14 +2,15 @@ import type { FastifyInstance } from "fastify";
 import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
 import { createConsentsModule } from "./consents.module.js";
+import { CONSENT_TYPES } from "@/core/database/schema/consents.schema.js";
 
 const consentResponseSchema = {
   type: "object",
   properties: {
     id: { type: "string" },
-    type: { type: "string", enum: ["cookie_consent", "privacy_policy", "terms_of_use"] },
+    type: { type: "string", enum: CONSENT_TYPES },
     version: { type: "string" },
-    acceptedAt: { type: "string" },
+    acceptedAt: { type: "string", format: "date-time" },
   },
 };
 
@@ -28,7 +29,7 @@ export async function consentsRoutes(fastify: FastifyInstance) {
         properties: {
           type: {
             type: "string",
-            enum: ["cookie_consent", "privacy_policy", "terms_of_use"],
+            enum: CONSENT_TYPES,
             description: "Type of consent",
           },
         },
