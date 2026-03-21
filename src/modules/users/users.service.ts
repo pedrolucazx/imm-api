@@ -1,10 +1,11 @@
 import type { DrizzleDb } from "../../core/database/connection.js";
 import type { UsersRepository } from "./users.repository.js";
 import type { UserProfilesRepository } from "./user-profiles.repository.js";
-import { NotFoundError } from "../../shared/errors/index.js";
+import { NotFoundError, UnauthorizedError } from "../../shared/errors/index.js";
 import { DEFAULT_UI_LANGUAGE } from "../../shared/constants.js";
 import { DEFAULT_PROFILE_FIELDS } from "../../core/database/schema/user-profiles.schema.js";
 import { isSameDay } from "../../shared/utils/date.js";
+import { comparePassword } from "../../shared/utils/password.js";
 import type { UpdateProfileInput, ProfileResponse } from "./users.types.js";
 
 type UsersServiceDeps = {
@@ -75,6 +76,18 @@ export function createUsersService({ usersRepo, userProfilesRepo, db }: UsersSer
             ({ userId, ...DEFAULT_PROFILE_FIELDS } as const));
 
         return toProfileResponse(user, profile);
+      });
+    },
+
+    async deleteAccount(userId: string, password: string): Promise<void> {
+      await db.transaction(async (tx) => {
+        const user = await usersRepo.findById(userId, tx);
+        if (!user) throw new NotFoundError("User not found");
+
+        const isValidPassword = await comparePassword(password, user.passwordHash);
+        if (!isValidPassword) throw new UnauthorizedError("Invalid password");
+
+        await usersRepo.deleteById(userId, tx);
       });
     },
   };

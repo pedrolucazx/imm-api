@@ -19,6 +19,7 @@ function makeMockService(): jest.Mocked<UsersService> {
   return {
     getProfile: jest.fn(),
     updateProfile: jest.fn(),
+    deleteAccount: jest.fn(),
   };
 }
 
@@ -175,5 +176,83 @@ describe("UsersController.update", () => {
     await controller.update(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(401);
+  });
+});
+
+describe("UsersController.delete", () => {
+  let mockService: jest.Mocked<UsersService>;
+  let controller: ReturnType<typeof createUsersController>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockService = makeMockService();
+    controller = createUsersController(mockService);
+  });
+
+  it("returns 204 on successful account deletion", async () => {
+    mockService.deleteAccount.mockResolvedValue(undefined);
+    const request = makeRequest({ password: "valid-password" });
+    const reply = makeReply();
+
+    await controller.delete(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(204);
+    expect(reply.send).toHaveBeenCalled();
+    expect(mockService.deleteAccount).toHaveBeenCalledWith(request.user.id, "valid-password");
+  });
+
+  it("returns 400 when password is missing", async () => {
+    const request = makeRequest({});
+    const reply = makeReply();
+
+    await controller.delete(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(400);
+    expect(reply.send).toHaveBeenCalledWith({ error: "Password is required" });
+    expect(mockService.deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when body is null", async () => {
+    const request = makeRequest(null as unknown as Record<string, unknown>);
+    const reply = makeReply();
+
+    await controller.delete(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(400);
+    expect(reply.send).toHaveBeenCalledWith({ error: "Password is required" });
+    expect(mockService.deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when password is invalid", async () => {
+    mockService.deleteAccount.mockRejectedValue(new UnauthorizedError("Invalid password"));
+    const request = makeRequest({ password: "wrong-password" });
+    const reply = makeReply();
+
+    await controller.delete(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(401);
+    expect(reply.send).toHaveBeenCalledWith({ error: "Invalid password" });
+  });
+
+  it("returns 404 when user not found", async () => {
+    mockService.deleteAccount.mockRejectedValue(new NotFoundError("User not found"));
+    const request = makeRequest({ password: "valid-password" });
+    const reply = makeReply();
+
+    await controller.delete(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(404);
+    expect(reply.send).toHaveBeenCalledWith({ error: "User not found" });
+  });
+
+  it("returns 500 on unexpected error", async () => {
+    mockService.deleteAccount.mockRejectedValue(new Error("Database connection lost"));
+    const request = makeRequest({ password: "valid-password" });
+    const reply = makeReply();
+
+    await controller.delete(request as never, reply as never);
+
+    expect(reply.code).toHaveBeenCalledWith(500);
+    expect(reply.send).toHaveBeenCalledWith({ error: "Internal server error" });
   });
 });

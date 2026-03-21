@@ -134,4 +134,30 @@ export async function usersRoutes(fastify: FastifyInstance) {
     preHandler: authenticate,
     handler: controller.update,
   });
+
+  fastify.delete("/users/me", {
+    schema: {
+      description: "Delete the authenticated user's account permanently (LGPD Article 18)",
+      tags: ["Users"],
+      summary: "Delete account",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["password"],
+        additionalProperties: false,
+        properties: {
+          password: { type: "string", examples: ["currentPassword123"] },
+          reason: { type: "string", examples: ["I'm not using the app anymore"] },
+        },
+      },
+      response: {
+        204: { description: "Account deleted successfully" },
+        400: errorResponse("Password is required"),
+        401: errorResponse("Unauthorized - invalid or missing token or wrong password"),
+        404: errorResponse("User not found"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.delete,
+  });
 }
