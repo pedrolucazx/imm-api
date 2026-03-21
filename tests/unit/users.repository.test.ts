@@ -99,11 +99,21 @@ describe("UsersRepository.findById", () => {
 });
 
 describe("UsersRepository.deleteById", () => {
-  it("deletes user by id", async () => {
+  it("deletes user by id using eq filter", async () => {
     const { db, mocks } = makeDb();
     const repo = createUsersRepository(db);
 
     await repo.deleteById(mockUser.id);
+
+    expect(mocks.delete).toHaveBeenCalled();
+  });
+
+  it("uses transaction client when provided", async () => {
+    const { db, mocks } = makeDb();
+    const repo = createUsersRepository(db);
+    const tx = db as unknown;
+
+    await repo.deleteById(mockUser.id, tx as Parameters<typeof repo.deleteById>[1]);
 
     expect(mocks.delete).toHaveBeenCalled();
   });

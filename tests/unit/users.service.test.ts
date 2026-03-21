@@ -1,8 +1,11 @@
 import { createUsersService } from "@/modules/users/users.service.js";
-import { NotFoundError } from "@/shared/errors/index.js";
+import { NotFoundError, UnauthorizedError } from "@/shared/errors/index.js";
+import { comparePassword } from "@/shared/utils/password.js";
 import type { UsersRepository } from "@/modules/users/users.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import type { DrizzleDb } from "@/core/database/connection.js";
+
+jest.mock("@/shared/utils/password.js");
 
 const mockUser = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -202,5 +205,56 @@ describe("UsersService.updateProfile", () => {
     await expect(service.updateProfile(mockUser.id, { name: "Ghost" })).rejects.toBeInstanceOf(
       NotFoundError
     );
+  });
+});
+
+describe("UsersService.deleteAccount", () => {
+  let usersRepo: jest.Mocked<UsersRepository>;
+  let userProfilesRepo: jest.Mocked<UserProfilesRepository>;
+  let db: jest.Mocked<DrizzleDb>;
+  let service: ReturnType<typeof createUsersService>;
+
+  const txSentinel = {};
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    usersRepo = makeMockUsersRepo();
+    userProfilesRepo = makeMockUserProfilesRepo();
+    db = {
+      transaction: jest
+        .fn()
+        .mockImplementation((fn: (tx: unknown) => Promise<unknown>) => fn(txSentinel)),
+    } as unknown as jest.Mocked<DrizzleDb>;
+    service = createUsersService({ usersRepo, userProfilesRepo, db });
+  });
+
+  it("deletes user inside transaction after password validation", async () => {
+    usersRepo.findById.mockResolvedValue(mockUser);
+    usersRepo.deleteById.mockResolvedValue(undefined);
+    (comparePassword as jest.Mock).mockResolvedValue(true);
+
+    await service.deleteAccount(mockUser.id, "any-password");
+
+    expect(comparePassword).toHaveBeenCalledWith("any-password", mockUser.passwordHash);
+    expect(usersRepo.deleteById).toHaveBeenCalledWith(mockUser.id, txSentinel);
+  });
+
+  it("throws NotFoundError when user does not exist", async () => {
+    usersRepo.findById.mockResolvedValue(undefined);
+
+    await expect(service.deleteAccount(mockUser.id, "password")).rejects.toBeInstanceOf(
+      NotFoundError
+    );
+    expect(usersRepo.deleteById).not.toHaveBeenCalled();
+  });
+
+  it("throws UnauthorizedError when password is invalid", async () => {
+    usersRepo.findById.mockResolvedValue(mockUser);
+    (comparePassword as jest.Mock).mockResolvedValue(false);
+
+    await expect(service.deleteAccount(mockUser.id, "wrong-password")).rejects.toBeInstanceOf(
+      UnauthorizedError
+    );
+    expect(usersRepo.deleteById).not.toHaveBeenCalled();
   });
 });
