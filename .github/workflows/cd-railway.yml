@@ -32,7 +32,7 @@ jobs:
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
         run: |
-          railway up --service imm-production --detach
+          railway up --service imm-production
 
       - name: Run migrations
         env:
@@ -41,3 +41,15 @@ jobs:
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
         run: |
           railway run npx drizzle-kit migrate
+
+      - name: Post-migration health check
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 10
+          HEALTH_RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://api.insidemymind.tech/health || echo "000")
+          if [ "$HEALTH_RESPONSE" = "200" ]; then
+            echo "Health check passed (HTTP $HEALTH_RESPONSE)"
+          else
+            echo "Health check failed (HTTP $HEALTH_RESPONSE)"
+            exit 1
+          fi
