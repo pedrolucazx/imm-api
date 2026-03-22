@@ -30,6 +30,25 @@ jobs:
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
         run: npx drizzle-kit migrate
 
+      - name: Verify migrations applied
+        env:
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
+        run: |
+          SQL_COUNT=$(ls src/migrations/*.sql | wc -l | tr -d ' ')
+          DB_COUNT=$(node -e "
+            const postgres = require('./node_modules/postgres');
+            const sql = postgres(process.env.DATABASE_URL, { ssl: 'require', max: 1 });
+            sql\`SELECT COUNT(*)::int AS n FROM drizzle.__drizzle_migrations\`
+              .then(r => { console.log(r[0].n); return sql.end(); })
+              .catch(e => { console.error(e.message); process.exit(1); });
+          ")
+          echo "SQL files: $SQL_COUNT | DB migrations: $DB_COUNT"
+          if [ "$SQL_COUNT" != "$DB_COUNT" ]; then
+            echo "ERROR: $SQL_COUNT migration files but only $DB_COUNT applied in DB"
+            exit 1
+          fi
+          echo "All $SQL_COUNT migrations applied"
+
       - name: Health check
         run: |
           sleep 15
