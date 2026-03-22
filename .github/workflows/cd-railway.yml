@@ -41,7 +41,7 @@ jobs:
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
         run: |
-          railway run npx drizzle-kit migrate
+          railway run npx drizzle-kit push --force
 
       - name: Post-migration health check
         run: |
