@@ -1,6 +1,6 @@
 {
-  "id": "a7c3e891-5b2d-4f8a-9c1e-6d4b0e2f7a83",
-  "prevId": "1359b307-d492-41f1-aaad-354d55abbacf",
+  "id": "f0ed6073-f9dd-4071-986f-5a4c1e3120e6",
+  "prevId": "c1d2e3f4-5678-90ab-cdef-1234567890ab",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -616,6 +616,66 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.consents": {
+      "name": "consents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "consents_user_id_fkey": {
+          "name": "consents_user_id_fkey",
+          "tableFrom": "consents",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "consents_user_type_unique": {
+          "name": "consents_user_type_unique",
+          "nullsNotDistinct": false,
+          "columns": ["user_id", "type"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

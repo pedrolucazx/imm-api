@@ -132,17 +132,16 @@
           ],
           "isUnique": true,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         }
       },
       "foreignKeys": {
         "user_profiles_user_id_fkey": {
           "name": "user_profiles_user_id_fkey",
-          "tableName": "user_profiles",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "user_profiles",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -199,10 +198,10 @@
       "foreignKeys": {
         "refresh_tokens_user_id_fkey": {
           "name": "refresh_tokens_user_id_fkey",
-          "tableName": "refresh_tokens",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "refresh_tokens",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -336,8 +335,7 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         },
         "idx_habits_user_active": {
           "name": "idx_habits_user_active",
@@ -351,9 +349,8 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree",
-          "where": "is_active = true"
+          "where": "is_active = true",
+          "method": "btree"
         },
         "idx_habit_plan_gin": {
           "name": "idx_habit_plan_gin",
@@ -367,17 +364,16 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "gin"
+          "method": "gin"
         }
       },
       "foreignKeys": {
         "habits_user_id_fkey": {
           "name": "habits_user_id_fkey",
-          "tableName": "habits",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "habits",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -444,17 +440,16 @@
           ],
           "isUnique": true,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         }
       },
       "foreignKeys": {
         "habit_logs_habit_id_fkey": {
           "name": "habit_logs_habit_id_fkey",
-          "tableName": "habit_logs",
-          "columns": ["habit_id"],
-          "referencedTable": "habits",
-          "referencedColumns": ["id"],
+          "tableFrom": "habit_logs",
+          "columnsFrom": ["habit_id"],
+          "tableTo": "habits",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -582,8 +577,7 @@
           ],
           "isUnique": true,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         },
         "idx_journal_ai_gin": {
           "name": "idx_journal_ai_gin",
@@ -597,26 +591,25 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "gin"
+          "method": "gin"
         }
       },
       "foreignKeys": {
         "journal_entries_user_id_fkey": {
           "name": "journal_entries_user_id_fkey",
-          "tableName": "journal_entries",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "journal_entries",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "journal_entries_habit_id_fkey": {
           "name": "journal_entries_habit_id_fkey",
-          "tableName": "journal_entries",
-          "columns": ["habit_id"],
-          "referencedTable": "habits",
-          "referencedColumns": ["id"],
+          "tableFrom": "journal_entries",
+          "columnsFrom": ["habit_id"],
+          "tableTo": "habits",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -667,10 +660,10 @@
       "foreignKeys": {
         "consents_user_id_fkey": {
           "name": "consents_user_id_fkey",
-          "tableName": "consents",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "consents",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
