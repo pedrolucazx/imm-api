@@ -15,14 +15,24 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "email": { "name": "email", "type": "varchar(255)", "primaryKey": false, "notNull": true },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "password_hash": {
           "name": "password_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "name": { "name": "name", "type": "varchar(80)", "primaryKey": false, "notNull": true },
+        "name": {
+          "name": "name",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "avatar_url": {
           "name": "avatar_url",
           "type": "varchar(500)",
@@ -69,7 +79,12 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "user_id": { "name": "user_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "ui_language": {
           "name": "ui_language",
           "type": "varchar(10)",
@@ -77,7 +92,12 @@
           "notNull": true,
           "default": "'pt-BR'"
         },
-        "bio": { "name": "bio", "type": "text", "primaryKey": false, "notNull": false },
+        "bio": {
+          "name": "bio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "timezone": {
           "name": "timezone",
           "type": "varchar(50)",
@@ -103,21 +123,25 @@
         "idx_profiles_user": {
           "name": "idx_profiles_user",
           "columns": [
-            { "expression": "user_id", "isExpression": false, "asc": true, "nulls": "last" }
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
           "isUnique": true,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         }
       },
       "foreignKeys": {
         "user_profiles_user_id_fkey": {
           "name": "user_profiles_user_id_fkey",
-          "tableName": "user_profiles",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "user_profiles",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -139,7 +163,12 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "user_id": { "name": "user_id", "type": "uuid", "primaryKey": false, "notNull": true },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
         "token_hash": {
           "name": "token_hash",
           "type": "varchar(255)",
@@ -169,10 +198,10 @@
       "foreignKeys": {
         "refresh_tokens_user_id_fkey": {
           "name": "refresh_tokens_user_id_fkey",
-          "tableName": "refresh_tokens",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "refresh_tokens",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -200,16 +229,36 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "user_id": { "name": "user_id", "type": "uuid", "primaryKey": false, "notNull": true },
-        "name": { "name": "name", "type": "varchar(80)", "primaryKey": false, "notNull": true },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "target_skill": {
           "name": "target_skill",
           "type": "varchar(100)",
           "primaryKey": false,
           "notNull": false
         },
-        "icon": { "name": "icon", "type": "varchar(50)", "primaryKey": false, "notNull": true },
-        "color": { "name": "color", "type": "varchar(20)", "primaryKey": false, "notNull": true },
+        "icon": {
+          "name": "icon",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "frequency": {
           "name": "frequency",
           "type": "varchar(20)",
@@ -277,42 +326,54 @@
         "idx_habits_user_id": {
           "name": "idx_habits_user_id",
           "columns": [
-            { "expression": "user_id", "isExpression": false, "asc": true, "nulls": "last" }
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         },
         "idx_habits_user_active": {
           "name": "idx_habits_user_active",
           "columns": [
-            { "expression": "user_id", "isExpression": false, "asc": true, "nulls": "last" }
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree",
-          "where": "is_active = true"
+          "where": "is_active = true",
+          "method": "btree"
         },
         "idx_habit_plan_gin": {
           "name": "idx_habit_plan_gin",
           "columns": [
-            { "expression": "habit_plan", "isExpression": false, "asc": true, "nulls": "last" }
+            {
+              "expression": "habit_plan",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
           "isUnique": false,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "gin"
+          "method": "gin"
         }
       },
       "foreignKeys": {
         "habits_user_id_fkey": {
           "name": "habits_user_id_fkey",
-          "tableName": "habits",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "habits",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -334,8 +395,18 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "habit_id": { "name": "habit_id", "type": "uuid", "primaryKey": false, "notNull": true },
-        "log_date": { "name": "log_date", "type": "date", "primaryKey": false, "notNull": true },
+        "habit_id": {
+          "name": "habit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "log_date": {
+          "name": "log_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
         "completed": {
           "name": "completed",
           "type": "boolean",
@@ -354,22 +425,31 @@
         "uq_habit_log": {
           "name": "uq_habit_log",
           "columns": [
-            { "expression": "habit_id", "isExpression": false, "asc": true, "nulls": "last" },
-            { "expression": "log_date", "isExpression": false, "asc": true, "nulls": "last" }
+            {
+              "expression": "habit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "log_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
           "isUnique": true,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         }
       },
       "foreignKeys": {
         "habit_logs_habit_id_fkey": {
           "name": "habit_logs_habit_id_fkey",
-          "tableName": "habit_logs",
-          "columns": ["habit_id"],
-          "referencedTable": "habits",
-          "referencedColumns": ["id"],
+          "tableFrom": "habit_logs",
+          "columnsFrom": ["habit_id"],
+          "tableTo": "habits",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -387,5 +467,9 @@
   "roles": {},
   "policies": {},
   "views": {},
-  "_meta": { "columns": {}, "schemas": {}, "tables": {} }
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
 }

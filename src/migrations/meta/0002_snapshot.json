@@ -132,17 +132,16 @@
           ],
           "isUnique": true,
           "concurrently": false,
-          "ifNotExists": false,
-          "using": "btree"
+          "method": "btree"
         }
       },
       "foreignKeys": {
         "user_profiles_user_id_fkey": {
           "name": "user_profiles_user_id_fkey",
-          "tableName": "user_profiles",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "user_profiles",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -199,10 +198,10 @@
       "foreignKeys": {
         "refresh_tokens_user_id_fkey": {
           "name": "refresh_tokens_user_id_fkey",
-          "tableName": "refresh_tokens",
-          "columns": ["user_id"],
-          "referencedTable": "users",
-          "referencedColumns": ["id"],
+          "tableFrom": "refresh_tokens",
+          "columnsFrom": ["user_id"],
+          "tableTo": "users",
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
