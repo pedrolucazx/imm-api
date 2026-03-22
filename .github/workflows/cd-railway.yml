@@ -11,32 +11,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  migrate:
-    name: "Run migrations"
+  health-check:
+    name: "Health check"
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://api.insidemymind.tech
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run migrations
-        env:
-          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
-        run: npx drizzle-kit migrate
+      - name: Wait for Railway deploy
+        run: sleep 30
 
       - name: Health check
         run: |
-          sleep 15
-          HEALTH=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://api.insidemymind.tech/health || echo "000")
-          if [ "$HEALTH" = "200" ]; then
-            echo "Health check passed (HTTP $HEALTH)"
-          else
-            echo "Health check failed (HTTP $HEALTH)"
-            exit 1
-          fi
+          for i in 1 2 3 4 5; do
+            HEALTH=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://api.insidemymind.tech/health || echo "000")
+            if [ "$HEALTH" = "200" ]; then
+              echo "Health check passed (HTTP $HEALTH)"
+              exit 0
+            fi
+            echo "Attempt $i failed (HTTP $HEALTH), retrying in 15s..."
+            sleep 15
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1
