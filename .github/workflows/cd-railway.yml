@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - develop
   workflow_dispatch:
 
 concurrency:
@@ -12,8 +11,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: "Deploy to Railway"
+  migrate:
+    name: "Run migrations"
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -23,37 +22,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Deploy to Railway
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
-        run: |
-          railway up --service imm-production
-
       - name: Run migrations
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-          RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
           DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
-        run: |
-          railway run npx drizzle-kit push --force
+        run: npx drizzle-kit migrate
 
-      - name: Post-migration health check
+      - name: Health check
         run: |
-          echo "Waiting for deployment to be ready..."
-          sleep 10
-          HEALTH_RESPONSE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://api.insidemymind.tech/health || echo "000")
-          if [ "$HEALTH_RESPONSE" = "200" ]; then
-            echo "Health check passed (HTTP $HEALTH_RESPONSE)"
+          sleep 15
+          HEALTH=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://api.insidemymind.tech/health || echo "000")
+          if [ "$HEALTH" = "200" ]; then
+            echo "Health check passed (HTTP $HEALTH)"
           else
-            echo "Health check failed (HTTP $HEALTH_RESPONSE)"
+            echo "Health check failed (HTTP $HEALTH)"
             exit 1
           fi
