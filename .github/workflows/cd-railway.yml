@@ -39,6 +39,7 @@ jobs:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+          DATABASE_URL: ${{ secrets.RAILWAY_DATABASE_URL }}
         run: |
           railway run npx drizzle-kit migrate
 
