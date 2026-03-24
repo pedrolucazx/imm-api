@@ -19,6 +19,7 @@ import {
   REFRESH_TOKEN_EXPIRES_MS,
   DEFAULT_UI_LANGUAGE,
   PG_DUPLICATE_KEY_CODE,
+  EMAIL_VERIFICATION_TOKEN_EXPIRES_MS,
 } from "../../shared/constants.js";
 import type {
   RegisterInput,
@@ -31,8 +32,6 @@ import type {
 } from "./auth.types.js";
 import { sendVerificationEmail } from "./email.service.js";
 import { env } from "../../core/config/env.js";
-
-const EMAIL_VERIFICATION_TOKEN_EXPIRES_MS = 24 * 60 * 60 * 1000;
 
 type AuthServiceDeps = {
   db: DrizzleDb;
@@ -195,8 +194,13 @@ export function createAuthService({
       const user = await usersRepo.findById(verificationToken.userId);
       if (!user) throw new BadRequestError("User not found");
 
-      await usersRepo.update(user.id, { emailVerifiedAt: new Date() });
+      if (user.emailVerifiedAt) {
+        await emailVerificationTokensRepo.markAsUsed(tokenHash);
+        throw new BadRequestError("Email already verified");
+      }
+
       await emailVerificationTokensRepo.markAsUsed(tokenHash);
+      await usersRepo.markEmailVerified(user.id);
 
       const profile = await profilesRepo.findByUserId(user.id);
       const { accessToken, refreshToken } = generateTokens(jwt, { id: user.id, email: user.email });

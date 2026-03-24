@@ -55,6 +55,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         201: {
           description: "User successfully registered",
           type: "object",
+          required: ["message"],
           properties: {
             message: { type: "string", examples: ["Verification email sent"] },
           },
@@ -83,6 +84,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       response: {
         200: { description: "Successfully authenticated", ...authResponse },
         401: errorResponse("Unauthorized - invalid credentials"),
+        403: errorResponse("Forbidden - email not verified"),
       },
     },
     handler: controller.login,
@@ -163,6 +165,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         200: {
           description: "Email sent if account exists",
           type: "object",
+          required: ["message"],
           properties: { message: { type: "string" } },
         },
       },

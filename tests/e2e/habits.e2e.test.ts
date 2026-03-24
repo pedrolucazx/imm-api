@@ -23,13 +23,18 @@ async function registerAndLogin(
   const email = `habits-e2e-${suffix}-${Date.now()}@example.com`;
   await request(app.server)
     .post("/api/auth/register")
-    .send({ email, password: "password123", name: "Habits User" });
+    .send({ email, password: "password123", name: "Habits User" })
+    .expect(201);
 
   await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email));
 
   const res = await request(app.server)
     .post("/api/auth/login")
-    .send({ email, password: "password123" });
+    .send({ email, password: "password123" })
+    .expect(200);
+
+  expect(res.body.token).toBeDefined();
+  expect(res.body.user?.id).toBeDefined();
   return { token: res.body.token, userId: res.body.user.id };
 }
 

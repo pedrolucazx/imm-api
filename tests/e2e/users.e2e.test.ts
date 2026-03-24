@@ -26,14 +26,18 @@ describe("GET /users/me + PUT /users/me", () => {
 
     await request(app.server)
       .post("/api/auth/register")
-      .send({ email: uniqueEmail, password: "password123", name: "Profile User" });
+      .send({ email: uniqueEmail, password: "password123", name: "Profile User" })
+      .expect(201);
 
     await verifyEmailInDb(uniqueEmail);
 
     const loginRes = await request(app.server)
       .post("/api/auth/login")
-      .send({ email: uniqueEmail, password: "password123" });
+      .send({ email: uniqueEmail, password: "password123" })
+      .expect(200);
 
+    expect(loginRes.body.token).toBeDefined();
+    expect(loginRes.body.user?.id).toBeDefined();
     accessToken = loginRes.body.token;
     userId = loginRes.body.user.id;
   }, 120000);

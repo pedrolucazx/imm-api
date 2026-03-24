@@ -34,6 +34,8 @@ function makeMockUsersRepo(): jest.Mocked<UsersRepository> {
     findByEmail: jest.fn(),
     findById: jest.fn(),
     update: jest.fn(),
+    markEmailVerified: jest.fn(),
+    updatePasswordHash: jest.fn(),
     deleteById: jest.fn(),
   };
 }
@@ -92,6 +94,16 @@ describe("UsersService.getProfile", () => {
     });
     expect(usersRepo.findById).toHaveBeenCalledWith(mockUser.id);
     expect(userProfilesRepo.findByUserId).toHaveBeenCalledWith(mockUser.id);
+  });
+
+  it("returns emailVerifiedAt when user is verified", async () => {
+    const verifiedAt = new Date("2026-03-20T10:00:00.000Z");
+    usersRepo.findById.mockResolvedValue({ ...mockUser, emailVerifiedAt: verifiedAt });
+    userProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
+
+    const result = await service.getProfile(mockUser.id);
+
+    expect(result.emailVerifiedAt).toEqual(verifiedAt);
   });
 
   it("returns default profile values when user has no profile row", async () => {

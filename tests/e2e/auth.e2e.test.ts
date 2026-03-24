@@ -56,6 +56,21 @@ describe("POST /auth/register + /auth/login", () => {
     expect(response.status).toBe(409);
   });
 
+  it("returns 403 when email is not verified", async () => {
+    const uniqueEmail = `unverified-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
+    await request(app!.server)
+      .post("/api/auth/register")
+      .send({ email: uniqueEmail, password: "password123", name: "Unverified User" })
+      .expect(201);
+
+    const response = await request(app!.server)
+      .post("/api/auth/login")
+      .send({ email: uniqueEmail, password: "password123" })
+      .expect(403);
+
+    expect(response.body.error).toBeDefined();
+  });
+
   it("logs in and returns a token", async () => {
     const uniqueEmail = `login-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
     await request(app!.server)
@@ -96,7 +111,10 @@ describe("POST /auth/register + /auth/login", () => {
 
     const usersRepo = createUsersRepository(getDb());
     const found = await usersRepo.findByEmail(uniqueEmail);
-    expect(found?.email).toBe(uniqueEmail);
+    expect(found).toBeDefined();
+
+    const foundById = await usersRepo.findById(found!.id);
+    expect(foundById?.email).toBe(uniqueEmail);
 
     const notFound = await usersRepo.findById("00000000-0000-0000-0000-000000000099");
     expect(notFound).toBeUndefined();

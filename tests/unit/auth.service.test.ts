@@ -77,6 +77,8 @@ function makeMocks() {
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    markEmailVerified: jest.fn(),
+    updatePasswordHash: jest.fn(),
     deleteById: jest.fn(),
   };
 
@@ -106,6 +108,7 @@ function makeMocks() {
     findByHash: jest.fn(),
     markAsUsed: jest.fn(),
     invalidateUserTokens: jest.fn(),
+    deleteExpired: jest.fn(),
   };
 
   return {

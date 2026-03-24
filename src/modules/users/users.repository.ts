@@ -22,12 +22,7 @@ export function createUsersRepository(db: DrizzleDb) {
 
     async update(
       userId: string,
-      data: {
-        name?: string;
-        avatarUrl?: string | null;
-        passwordHash?: string;
-        emailVerifiedAt?: Date;
-      },
+      data: { name?: string; avatarUrl?: string | null },
       tx?: DbClient
     ): Promise<User | undefined> {
       const client = tx ?? db;
@@ -39,6 +34,24 @@ export function createUsersRepository(db: DrizzleDb) {
       const [user] = await client
         .update(users)
         .set({ ...fields, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      return user;
+    },
+
+    async markEmailVerified(userId: string): Promise<User | undefined> {
+      const [user] = await db
+        .update(users)
+        .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      return user;
+    },
+
+    async updatePasswordHash(userId: string, passwordHash: string): Promise<User | undefined> {
+      const [user] = await db
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
         .where(eq(users.id, userId))
         .returning();
       return user;

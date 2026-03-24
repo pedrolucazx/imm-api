@@ -1,4 +1,4 @@
-import { eq, and, isNull, gt } from "drizzle-orm";
+import { eq, and, isNull, gt, lt } from "drizzle-orm";
 import type { DrizzleDb } from "../../core/database/connection.js";
 import {
   emailVerificationTokens,
@@ -47,6 +47,12 @@ export function createEmailVerificationTokensRepository(db: DrizzleDb) {
         .where(
           and(eq(emailVerificationTokens.userId, userId), isNull(emailVerificationTokens.usedAt))
         );
+    },
+
+    async deleteExpired(): Promise<void> {
+      await db
+        .delete(emailVerificationTokens)
+        .where(lt(emailVerificationTokens.expiresAt, new Date()));
     },
   };
 }
