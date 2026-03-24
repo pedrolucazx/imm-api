@@ -9,6 +9,7 @@ const mockUser = {
   name: "Test User",
   passwordHash: "hash",
   avatarUrl: null,
+  emailVerifiedAt: null,
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2025-01-01"),
 };

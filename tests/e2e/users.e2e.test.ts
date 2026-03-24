@@ -6,6 +6,7 @@ import { closeDb, getDb } from "@/core/database/connection.js";
 import { users } from "@/core/database/schema/users.schema.js";
 import { userProfiles } from "@/core/database/schema/user-profiles.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
+import { verifyEmailInDb } from "./helpers/db.js";
 
 describe("GET /users/me + PUT /users/me", () => {
   let app: FastifyInstance | undefined;
@@ -20,12 +21,22 @@ describe("GET /users/me + PUT /users/me", () => {
     process.env.DATABASE_URL = testDb.connectionUri;
     app = await buildTestApp();
 
-    const registerRes = await request(app.server)
+    await request(app.server)
       .post("/api/auth/register")
-      .send({ email: uniqueEmail, password: "password123", name: "Profile User" });
+      .send({ email: uniqueEmail, password: "password123", name: "Profile User" })
+      .expect(201);
 
-    accessToken = registerRes.body.token;
-    userId = registerRes.body.user.id;
+    await verifyEmailInDb(uniqueEmail);
+
+    const loginRes = await request(app.server)
+      .post("/api/auth/login")
+      .send({ email: uniqueEmail, password: "password123" })
+      .expect(200);
+
+    expect(loginRes.body.token).toBeDefined();
+    expect(loginRes.body.user?.id).toBeDefined();
+    accessToken = loginRes.body.token;
+    userId = loginRes.body.user.id;
   }, 120000);
 
   afterAll(async () => {

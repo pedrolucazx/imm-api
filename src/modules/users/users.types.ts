@@ -35,6 +35,7 @@ export interface ProfileResponse {
   email: string;
   name: string;
   avatarUrl: string | null;
+  emailVerifiedAt: Date | null;
   profile: {
     uiLanguage: string;
     bio: string | null;

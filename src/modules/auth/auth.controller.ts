@@ -1,6 +1,15 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { AuthService } from "./auth.service.js";
-import { registerSchema, loginSchema, type RegisterInput, type LoginInput } from "./auth.types.js";
+import {
+  registerSchema,
+  loginSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
+  type RegisterInput,
+  type LoginInput,
+  type VerifyEmailInput,
+  type ResendVerificationInput,
+} from "./auth.types.js";
 import { AppError } from "../../shared/errors/index.js";
 import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
 import { handleControllerError } from "../../shared/http/handle-error.js";
@@ -31,11 +40,9 @@ export function createAuthController(service: AuthService) {
     async register(request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) {
       try {
         const data = registerSchema.parse(request.body);
-        const jwt = request.server.jwt.sign.bind(request.server.jwt);
-        const result = await service.register(data, jwt);
+        const result = await service.register(data);
 
-        setRefreshTokenCookie(reply, result.refreshToken);
-        return reply.code(201).send({ token: result.accessToken, user: result.user });
+        return reply.code(201).send({ message: result.message });
       } catch (error) {
         return handleControllerError(error, reply);
       }
@@ -87,6 +94,32 @@ export function createAuthController(service: AuthService) {
 
       clearRefreshTokenCookie(reply);
       return reply.code(204).send();
+    },
+
+    async verifyEmail(request: FastifyRequest<{ Body: VerifyEmailInput }>, reply: FastifyReply) {
+      try {
+        const data = verifyEmailSchema.parse(request.body);
+        const jwt = request.server.jwt.sign.bind(request.server.jwt);
+        const result = await service.verifyEmail(data, jwt);
+
+        setRefreshTokenCookie(reply, result.refreshToken);
+        return reply.code(200).send({ token: result.accessToken, user: result.user });
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async resendVerification(
+      request: FastifyRequest<{ Body: ResendVerificationInput }>,
+      reply: FastifyReply
+    ) {
+      try {
+        const data = resendVerificationSchema.parse(request.body);
+        await service.resendVerification(data);
+        return reply.code(200).send({ message: "Verification email sent if account exists" });
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
     },
   };
 }

@@ -52,7 +52,14 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        201: { description: "User successfully registered", ...authResponse },
+        201: {
+          description: "User successfully registered",
+          type: "object",
+          required: ["message"],
+          properties: {
+            message: { type: "string", examples: ["Verification email sent"] },
+          },
+        },
         400: errorResponse("Bad request - invalid input"),
         409: errorResponse("Conflict - email already exists"),
       },
@@ -77,6 +84,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       response: {
         200: { description: "Successfully authenticated", ...authResponse },
         401: errorResponse("Unauthorized - invalid credentials"),
+        403: errorResponse("Forbidden - email not verified"),
       },
     },
     handler: controller.login,
@@ -119,5 +127,49 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     handler: controller.logout,
+  });
+
+  fastify.post("/auth/verify-email", {
+    schema: {
+      description: "Verify email address using token from email",
+      tags: ["Authentication"],
+      summary: "Verify email",
+      body: {
+        type: "object",
+        required: ["token"],
+        properties: {
+          token: { type: "string", description: "Verification token from email" },
+        },
+      },
+      response: {
+        200: { description: "Email verified successfully", ...authResponse },
+        400: errorResponse("Bad request - invalid token"),
+      },
+    },
+    handler: controller.verifyEmail,
+  });
+
+  fastify.post("/auth/resend-verification", {
+    schema: {
+      description: "Resend email verification link",
+      tags: ["Authentication"],
+      summary: "Resend verification email",
+      body: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: { type: "string", format: "email", examples: ["user@example.com"] },
+        },
+      },
+      response: {
+        200: {
+          description: "Email sent if account exists",
+          type: "object",
+          required: ["message"],
+          properties: { message: { type: "string" } },
+        },
+      },
+    },
+    handler: controller.resendVerification,
   });
 }

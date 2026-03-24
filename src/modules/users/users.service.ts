@@ -15,7 +15,13 @@ type UsersServiceDeps = {
 };
 
 function toProfileResponse(
-  user: { id: string; email: string; name: string; avatarUrl: string | null | undefined },
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null | undefined;
+    emailVerifiedAt: Date | null | undefined;
+  },
   profile: {
     uiLanguage: string;
     bio: string | null | undefined;
@@ -34,6 +40,7 @@ function toProfileResponse(
     email: user.email,
     name: user.name,
     avatarUrl: user.avatarUrl ?? null,
+    emailVerifiedAt: user.emailVerifiedAt ?? null,
     profile: {
       uiLanguage: profile.uiLanguage ?? DEFAULT_UI_LANGUAGE,
       bio: profile.bio ?? null,

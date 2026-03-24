@@ -39,6 +39,24 @@ export function createUsersRepository(db: DrizzleDb) {
       return user;
     },
 
+    async markEmailVerified(userId: string): Promise<User | undefined> {
+      const [user] = await db
+        .update(users)
+        .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      return user;
+    },
+
+    async updatePasswordHash(userId: string, passwordHash: string): Promise<User | undefined> {
+      const [user] = await db
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      return user;
+    },
+
     async deleteById(userId: string, tx?: DbClient): Promise<void> {
       const client = tx ?? db;
       await client.delete(users).where(eq(users.id, userId));
