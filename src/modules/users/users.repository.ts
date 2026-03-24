@@ -22,7 +22,12 @@ export function createUsersRepository(db: DrizzleDb) {
 
     async update(
       userId: string,
-      data: { name?: string; avatarUrl?: string | null },
+      data: {
+        name?: string;
+        avatarUrl?: string | null;
+        passwordHash?: string;
+        emailVerifiedAt?: Date;
+      },
       tx?: DbClient
     ): Promise<User | undefined> {
       const client = tx ?? db;
