@@ -1,12 +1,16 @@
 import { createAuthService } from "@/modules/auth/auth.service.js";
 import { comparePassword } from "@/shared/utils/password.js";
-import { ConflictError, UnauthorizedError } from "@/shared/errors/index.js";
+import { ConflictError, ForbiddenError, UnauthorizedError } from "@/shared/errors/index.js";
 import type { RefreshToken } from "@/core/database/schema/refresh-tokens.schema.js";
 import type { UsersRepository } from "@/modules/users/users.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import type { RefreshTokensRepository } from "@/modules/auth/refresh-tokens.repository.js";
 import type { DrizzleDb } from "@/core/database/connection.js";
 
+jest.mock("@/modules/auth/email.service.js", () => ({
+  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("@/shared/utils/password.js", () => ({
   hashPassword: jest.fn().mockResolvedValue("hashed-password"),
   comparePassword: jest.fn(),
@@ -20,7 +24,7 @@ const mockUser = {
   name: "Test User",
   passwordHash: "$2b$10$examplehashvalue",
   avatarUrl: null,
-  emailVerifiedAt: null,
+  emailVerifiedAt: new Date("2025-01-01"),
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2025-01-01"),
 };
@@ -91,7 +95,27 @@ function makeMocks() {
     deleteExpired: jest.fn(),
   };
 
-  return { mockDb, mockTx, mockUsersRepo, mockProfilesRepo, mockRefreshTokensRepo };
+  const mockEmailVerificationTokensRepo = {
+    create: jest.fn().mockResolvedValue({
+      id: "token-id",
+      userId: mockUser.id,
+      tokenHash: "hash",
+      expiresAt: new Date(),
+      usedAt: null,
+    }),
+    findByHash: jest.fn(),
+    markAsUsed: jest.fn(),
+    invalidateUserTokens: jest.fn(),
+  };
+
+  return {
+    mockDb,
+    mockTx,
+    mockUsersRepo,
+    mockProfilesRepo,
+    mockRefreshTokensRepo,
+    mockEmailVerificationTokensRepo,
+  };
 }
 
 describe("AuthService", () => {
@@ -107,6 +131,7 @@ describe("AuthService", () => {
       usersRepo: mocks.mockUsersRepo,
       profilesRepo: mocks.mockProfilesRepo,
       refreshTokensRepo: mocks.mockRefreshTokensRepo,
+      emailVerificationTokensRepo: mocks.mockEmailVerificationTokensRepo,
     });
   });
 
@@ -121,14 +146,11 @@ describe("AuthService", () => {
       });
 
       await expect(
-        authService.register(
-          {
-            email: "test@example.com",
-            password: "password123",
-            name: "Test User",
-          },
-          mockJwt
-        )
+        authService.register({
+          email: "test@example.com",
+          password: "password123",
+          name: "Test User",
+        })
       ).rejects.toBeInstanceOf(ConflictError);
 
       expect(mocks.mockTx.select).toHaveBeenCalled();
@@ -151,10 +173,7 @@ describe("AuthService", () => {
       });
 
       await expect(
-        authService.register(
-          { email: "dup@example.com", password: "password123", name: "Dup" },
-          mockJwt
-        )
+        authService.register({ email: "dup@example.com", password: "password123", name: "Dup" })
       ).rejects.toBeInstanceOf(ConflictError);
     });
 
@@ -175,10 +194,7 @@ describe("AuthService", () => {
       });
 
       await expect(
-        authService.register(
-          { email: "dup2@example.com", password: "password123", name: "Dup2" },
-          mockJwt
-        )
+        authService.register({ email: "dup2@example.com", password: "password123", name: "Dup2" })
       ).rejects.toBeInstanceOf(ConflictError);
     });
 
@@ -199,10 +215,7 @@ describe("AuthService", () => {
       });
 
       await expect(
-        authService.register(
-          { email: "fail@example.com", password: "password123", name: "Fail" },
-          mockJwt
-        )
+        authService.register({ email: "fail@example.com", password: "password123", name: "Fail" })
       ).rejects.toBe(unexpectedError);
     });
 
@@ -229,20 +242,14 @@ describe("AuthService", () => {
 
       mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
 
-      const result = await authService.register(
-        {
-          email: "new@example.com",
-          password: "password123",
-          name: "New User",
-        },
-        mockJwt
-      );
+      const result = await authService.register({
+        email: "new@example.com",
+        password: "password123",
+        name: "New User",
+      });
 
-      expect(result.user.email).toBe("new@example.com");
-      expect(result.accessToken).toMatch(/^access-token-/);
-      expect(result.refreshToken).toMatch(/^refresh-token-/);
-      expect(result.accessToken).not.toBe(result.refreshToken);
-      expect(mocks.mockRefreshTokensRepo.create).toHaveBeenCalledWith(
+      expect(result.message).toBe("Verification email sent");
+      expect(mocks.mockEmailVerificationTokensRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: newUser.id })
       );
       expect(mocks.mockDb.transaction).toHaveBeenCalled();
@@ -266,6 +273,15 @@ describe("AuthService", () => {
       await expect(
         authService.login({ email: "test@example.com", password: "wrong" }, mockJwt)
       ).rejects.toBeInstanceOf(UnauthorizedError);
+    });
+
+    it("throws ForbiddenError if email is not verified", async () => {
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue({ ...mockUser, emailVerifiedAt: null });
+      mockCompare.mockResolvedValue(true);
+
+      await expect(
+        authService.login({ email: "test@example.com", password: "password123" }, mockJwt)
+      ).rejects.toBeInstanceOf(ForbiddenError);
     });
 
     it("updates profile and returns auth response when ui_lang is provided", async () => {

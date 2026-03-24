@@ -52,7 +52,13 @@ export async function authRoutes(fastify: FastifyInstance) {
         },
       },
       response: {
-        201: { description: "User successfully registered", ...authResponse },
+        201: {
+          description: "User successfully registered",
+          type: "object",
+          properties: {
+            message: { type: "string", examples: ["Verification email sent"] },
+          },
+        },
         400: errorResponse("Bad request - invalid input"),
         409: errorResponse("Conflict - email already exists"),
       },

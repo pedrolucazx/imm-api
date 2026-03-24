@@ -28,6 +28,21 @@ export const loginSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, { error: "Token is required" }),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.email({ error: "Invalid email address" }),
+});
+
+export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
+
+export interface RegisterResponse {
+  message: string;
+}
+
 export type JwtSignFn = (payload: object, options?: { expiresIn?: string | number }) => string;
 
 export interface AuthResponse {

@@ -15,6 +15,8 @@ function makeMockService(): jest.Mocked<AuthService> {
     login: jest.fn(),
     refresh: jest.fn(),
     logout: jest.fn(),
+    verifyEmail: jest.fn(),
+    resendVerification: jest.fn(),
   };
 }
 
@@ -49,12 +51,8 @@ describe("AuthController.register", () => {
     controller = createAuthController(mockService);
   });
 
-  it("returns 201 with token and user on success", async () => {
-    mockService.register.mockResolvedValue({
-      accessToken: "access-token",
-      refreshToken: "refresh-token",
-      user: mockUser,
-    });
+  it("returns 201 with message on success", async () => {
+    mockService.register.mockResolvedValue({ message: "Verification email sent" });
     const request = makeRequest({
       email: "test@example.com",
       password: "password123",
@@ -65,14 +63,7 @@ describe("AuthController.register", () => {
     await controller.register(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(201);
-    expect(reply.send).toHaveBeenCalledWith({ token: "access-token", user: mockUser });
-    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "refresh-token", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      maxAge: expect.any(Number),
-    });
+    expect(reply.send).toHaveBeenCalledWith({ message: "Verification email sent" });
   });
 
   it("returns 409 when authService throws ConflictError", async () => {

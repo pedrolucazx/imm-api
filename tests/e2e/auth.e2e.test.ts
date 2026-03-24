@@ -1,10 +1,16 @@
 import request from "supertest";
 import type { FastifyInstance } from "fastify";
+import { eq } from "drizzle-orm";
 import { buildTestApp } from "./helpers/app.js";
 import { createUsersRepository } from "@/modules/users/users.repository.js";
 import { closeDb, getDb } from "@/core/database/connection.js";
 import { refreshTokens } from "@/core/database/schema/refresh-tokens.schema.js";
+import { users } from "@/core/database/schema/users.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
+
+async function verifyEmailInDb(email: string) {
+  await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email));
+}
 
 describe("POST /auth/register + /auth/login", () => {
   let app: FastifyInstance | undefined;
@@ -30,15 +36,14 @@ describe("POST /auth/register + /auth/login", () => {
     }
   });
 
-  it("registers a new user and returns a token", async () => {
+  it("registers a new user and returns a verification message", async () => {
     const uniqueEmail = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
     const response = await request(app!.server)
       .post("/api/auth/register")
       .send({ email: uniqueEmail, password: "password123", name: "E2E User" })
       .expect(201);
 
-    expect(response.body.token).toBeDefined();
-    expect(response.body.user.email).toBe(uniqueEmail);
+    expect(response.body.message).toBeDefined();
   });
 
   it("returns 409 when registering a duplicate email", async () => {
@@ -57,6 +62,8 @@ describe("POST /auth/register + /auth/login", () => {
       .post("/api/auth/register")
       .send({ email: uniqueEmail, password: "password123", name: "Login User" });
 
+    await verifyEmailInDb(uniqueEmail);
+
     const response = await request(app!.server)
       .post("/api/auth/login")
       .send({ email: uniqueEmail, password: "password123" })
@@ -71,6 +78,8 @@ describe("POST /auth/register + /auth/login", () => {
       .post("/api/auth/register")
       .send({ email: uniqueEmail, password: "correct-password", name: "WrongPw User" });
 
+    await verifyEmailInDb(uniqueEmail);
+
     const response = await request(app!.server)
       .post("/api/auth/login")
       .send({ email: uniqueEmail, password: "wrong-password" })
@@ -81,13 +90,12 @@ describe("POST /auth/register + /auth/login", () => {
 
   it("finds a user by id and returns undefined for unknown id", async () => {
     const uniqueEmail = `findbyid-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
-    const registerRes = await request(app!.server)
+    await request(app!.server)
       .post("/api/auth/register")
       .send({ email: uniqueEmail, password: "password123", name: "FindById User" });
 
-    const userId = registerRes.body.user.id;
     const usersRepo = createUsersRepository(getDb());
-    const found = await usersRepo.findById(userId);
+    const found = await usersRepo.findByEmail(uniqueEmail);
     expect(found?.email).toBe(uniqueEmail);
 
     const notFound = await usersRepo.findById("00000000-0000-0000-0000-000000000099");

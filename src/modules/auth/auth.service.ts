@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { createHash, randomBytes } from "crypto";
 import { hashPassword, comparePassword } from "../../shared/utils/password.js";
 import { hashToken, generateTokens } from "../../shared/utils/token.js";
 import type { DrizzleDb } from "../../core/database/connection.js";
@@ -7,19 +8,38 @@ import * as userProfilesSchema from "../../core/database/schema/user-profiles.sc
 import type { UsersRepository } from "../users/users.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
 import type { RefreshTokensRepository } from "./refresh-tokens.repository.js";
-import { ConflictError, UnauthorizedError } from "../../shared/errors/index.js";
+import type { EmailVerificationTokensRepository } from "./email-verification-tokens.repository.js";
+import {
+  ConflictError,
+  UnauthorizedError,
+  BadRequestError,
+  ForbiddenError,
+} from "../../shared/errors/index.js";
 import {
   REFRESH_TOKEN_EXPIRES_MS,
   DEFAULT_UI_LANGUAGE,
   PG_DUPLICATE_KEY_CODE,
 } from "../../shared/constants.js";
-import type { RegisterInput, LoginInput, AuthResponse, JwtSignFn } from "./auth.types.js";
+import type {
+  RegisterInput,
+  LoginInput,
+  VerifyEmailInput,
+  ResendVerificationInput,
+  RegisterResponse,
+  AuthResponse,
+  JwtSignFn,
+} from "./auth.types.js";
+import { sendVerificationEmail } from "./email.service.js";
+import { env } from "../../core/config/env.js";
+
+const EMAIL_VERIFICATION_TOKEN_EXPIRES_MS = 24 * 60 * 60 * 1000;
 
 type AuthServiceDeps = {
   db: DrizzleDb;
   usersRepo: UsersRepository;
   profilesRepo: UserProfilesRepository;
   refreshTokensRepo: RefreshTokensRepository;
+  emailVerificationTokensRepo: EmailVerificationTokensRepository;
 };
 
 export function createAuthService({
@@ -27,6 +47,7 @@ export function createAuthService({
   usersRepo,
   profilesRepo,
   refreshTokensRepo,
+  emailVerificationTokensRepo,
 }: AuthServiceDeps) {
   async function persistRefreshToken(userId: string, token: string) {
     await refreshTokensRepo.create({
@@ -37,7 +58,7 @@ export function createAuthService({
   }
 
   return {
-    async register(input: RegisterInput, jwt: JwtSignFn): Promise<AuthResponse> {
+    async register(input: RegisterInput): Promise<RegisterResponse> {
       const passwordHash = await hashPassword(input.password);
 
       const result = await db.transaction(async (tx) => {
@@ -75,23 +96,24 @@ export function createAuthService({
         }
       });
 
-      const { accessToken, refreshToken } = generateTokens(jwt, {
-        id: result.user.id,
-        email: result.user.email,
+      const rawToken = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+
+      await emailVerificationTokensRepo.create({
+        userId: result.user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS),
       });
 
-      await persistRefreshToken(result.user.id, refreshToken);
+      const verificationLink = `${env.APP_URL}/verify-email?token=${rawToken}`;
 
-      return {
-        accessToken,
-        refreshToken,
-        user: {
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          ui_lang: result.profile.uiLanguage,
-        },
-      };
+      await sendVerificationEmail({
+        to: result.user.email,
+        verificationLink,
+        name: result.user.name,
+      });
+
+      return { message: "Verification email sent" };
     },
 
     async login(input: LoginInput, jwt: JwtSignFn): Promise<AuthResponse> {
@@ -100,6 +122,10 @@ export function createAuthService({
 
       const isValidPassword = await comparePassword(input.password, user.passwordHash);
       if (!isValidPassword) throw new UnauthorizedError("Invalid email or password");
+
+      if (!user.emailVerifiedAt) {
+        throw new ForbiddenError("EMAIL_NOT_VERIFIED");
+      }
 
       let uiLang = DEFAULT_UI_LANGUAGE;
       if (input.ui_lang !== undefined) {
@@ -156,6 +182,63 @@ export function createAuthService({
 
     async logout(refreshToken: string): Promise<void> {
       await refreshTokensRepo.revoke(hashToken(refreshToken));
+    },
+
+    async verifyEmail(input: VerifyEmailInput, jwt: JwtSignFn): Promise<AuthResponse> {
+      const tokenHash = createHash("sha256").update(input.token).digest("hex");
+      const verificationToken = await emailVerificationTokensRepo.findByHash(tokenHash);
+
+      if (!verificationToken) {
+        throw new BadRequestError("Invalid or expired verification token");
+      }
+
+      const user = await usersRepo.findById(verificationToken.userId);
+      if (!user) throw new BadRequestError("User not found");
+
+      await usersRepo.update(user.id, { emailVerifiedAt: new Date() });
+      await emailVerificationTokensRepo.markAsUsed(tokenHash);
+
+      const profile = await profilesRepo.findByUserId(user.id);
+      const { accessToken, refreshToken } = generateTokens(jwt, { id: user.id, email: user.email });
+
+      await persistRefreshToken(user.id, refreshToken);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          ui_lang: profile?.uiLanguage ?? DEFAULT_UI_LANGUAGE,
+        },
+      };
+    },
+
+    async resendVerification(input: ResendVerificationInput): Promise<void> {
+      const user = await usersRepo.findByEmail(input.email);
+      if (!user) return;
+
+      if (user.emailVerifiedAt) return;
+
+      await emailVerificationTokensRepo.invalidateUserTokens(user.id);
+
+      const rawToken = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+
+      await emailVerificationTokensRepo.create({
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS),
+      });
+
+      const verificationLink = `${env.APP_URL}/verify-email?token=${rawToken}`;
+
+      await sendVerificationEmail({
+        to: user.email,
+        verificationLink,
+        name: user.name,
+      });
     },
   };
 }

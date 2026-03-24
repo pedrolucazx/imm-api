@@ -7,6 +7,10 @@ import { users } from "@/core/database/schema/users.schema.js";
 import { userProfiles } from "@/core/database/schema/user-profiles.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
 
+async function verifyEmailInDb(email: string) {
+  await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email));
+}
+
 describe("GET /users/me + PUT /users/me", () => {
   let app: FastifyInstance | undefined;
   let testDb: TestDatabase | undefined;
@@ -20,12 +24,18 @@ describe("GET /users/me + PUT /users/me", () => {
     process.env.DATABASE_URL = testDb.connectionUri;
     app = await buildTestApp();
 
-    const registerRes = await request(app.server)
+    await request(app.server)
       .post("/api/auth/register")
       .send({ email: uniqueEmail, password: "password123", name: "Profile User" });
 
-    accessToken = registerRes.body.token;
-    userId = registerRes.body.user.id;
+    await verifyEmailInDb(uniqueEmail);
+
+    const loginRes = await request(app.server)
+      .post("/api/auth/login")
+      .send({ email: uniqueEmail, password: "password123" });
+
+    accessToken = loginRes.body.token;
+    userId = loginRes.body.user.id;
   }, 120000);
 
   afterAll(async () => {

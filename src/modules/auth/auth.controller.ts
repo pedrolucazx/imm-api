@@ -31,11 +31,9 @@ export function createAuthController(service: AuthService) {
     async register(request: FastifyRequest<{ Body: RegisterInput }>, reply: FastifyReply) {
       try {
         const data = registerSchema.parse(request.body);
-        const jwt = request.server.jwt.sign.bind(request.server.jwt);
-        const result = await service.register(data, jwt);
+        const result = await service.register(data);
 
-        setRefreshTokenCookie(reply, result.refreshToken);
-        return reply.code(201).send({ token: result.accessToken, user: result.user });
+        return reply.code(201).send({ message: result.message });
       } catch (error) {
         return handleControllerError(error, reply);
       }
