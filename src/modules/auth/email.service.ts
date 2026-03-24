@@ -16,7 +16,13 @@ function escapeHtml(str: string): string {
 }
 
 function sanitizeUrl(url: string): string {
-  const parsed = new URL(url);
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch (err) {
+    logger.warn({ msg: "Invalid URL provided to sanitizeUrl", url, error: err });
+    throw new Error(`Invalid URL: ${url}`);
+  }
   if (!["http:", "https:"].includes(parsed.protocol)) {
     throw new Error(`Invalid URL protocol: ${parsed.protocol}`);
   }
