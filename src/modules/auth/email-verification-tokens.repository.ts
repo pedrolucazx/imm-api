@@ -61,8 +61,9 @@ export function createEmailVerificationTokensRepository(db: DrizzleDb) {
         );
     },
 
-    async invalidateUserTokens(userId: string): Promise<void> {
-      await db
+    async invalidateUserTokens(userId: string, tx?: DbClient): Promise<void> {
+      const client = tx ?? db;
+      await client
         .update(emailVerificationTokens)
         .set({ usedAt: new Date() })
         .where(

@@ -576,11 +576,13 @@ describe("AuthService", () => {
 
       await authService.resendVerification({ email: mockUser.email });
 
-      expect(mocks.mockEmailVerificationTokensRepo.invalidateUserTokens).toHaveBeenCalledWith(
-        mockUser.id
-      );
       expect(mocks.mockEmailVerificationTokensRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: mockUser.id })
+        expect.objectContaining({ userId: mockUser.id }),
+        expect.anything()
+      );
+      expect(mocks.mockEmailVerificationTokensRepo.invalidateUserTokens).toHaveBeenCalledWith(
+        mockUser.id,
+        expect.anything()
       );
     });
   });

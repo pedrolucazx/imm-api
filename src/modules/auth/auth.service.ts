@@ -229,24 +229,27 @@ export function createAuthService({
 
       if (user.emailVerifiedAt) return;
 
-      await emailVerificationTokensRepo.invalidateUserTokens(user.id);
-
       const rawToken = randomBytes(32).toString("hex");
       const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+      const tokenExpiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS);
 
-      await emailVerificationTokensRepo.create({
-        userId: user.id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS),
+      await db.transaction(async (tx) => {
+        await emailVerificationTokensRepo.create(
+          { userId: user.id, tokenHash, expiresAt: tokenExpiresAt },
+          tx
+        );
+        await emailVerificationTokensRepo.invalidateUserTokens(user.id, tx);
       });
 
       const verificationLink = `${env.APP_URL}/verify-email?token=${rawToken}`;
 
-      await sendVerificationEmail({
+      sendVerificationEmail({
         to: user.email,
         verificationLink,
         name: user.name,
-      });
+      }).catch((err) =>
+        logger.error({ err, msg: "Failed to send verification email on resend", userId: user.id })
+      );
     },
   };
 }
