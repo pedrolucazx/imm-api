@@ -1,5 +1,5 @@
 import { eq, and, isNull, gt, lt } from "drizzle-orm";
-import type { DrizzleDb } from "../../core/database/connection.js";
+import type { DrizzleDb, DbClient } from "../../core/database/connection.js";
 import {
   emailVerificationTokens,
   type NewEmailVerificationToken,
@@ -8,9 +8,30 @@ import {
 
 export function createEmailVerificationTokensRepository(db: DrizzleDb) {
   return {
-    async create(input: Omit<NewEmailVerificationToken, "id">): Promise<EmailVerificationToken> {
-      const [token] = await db.insert(emailVerificationTokens).values(input).returning();
+    async create(
+      input: Omit<NewEmailVerificationToken, "id">,
+      tx?: DbClient
+    ): Promise<EmailVerificationToken> {
+      const client = tx ?? db;
+      const [token] = await client.insert(emailVerificationTokens).values(input).returning();
       return token;
+    },
+
+    async consumeByHash(tokenHash: string): Promise<EmailVerificationToken | undefined> {
+      return db.transaction(async (tx) => {
+        const [token] = await tx
+          .update(emailVerificationTokens)
+          .set({ usedAt: new Date() })
+          .where(
+            and(
+              eq(emailVerificationTokens.tokenHash, tokenHash),
+              isNull(emailVerificationTokens.usedAt),
+              gt(emailVerificationTokens.expiresAt, new Date())
+            )
+          )
+          .returning();
+        return token;
+      });
     },
 
     async findByHash(tokenHash: string): Promise<EmailVerificationToken | undefined> {

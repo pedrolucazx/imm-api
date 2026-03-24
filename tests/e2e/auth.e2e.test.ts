@@ -1,16 +1,11 @@
 import request from "supertest";
 import type { FastifyInstance } from "fastify";
-import { eq } from "drizzle-orm";
 import { buildTestApp } from "./helpers/app.js";
 import { createUsersRepository } from "@/modules/users/users.repository.js";
 import { closeDb, getDb } from "@/core/database/connection.js";
 import { refreshTokens } from "@/core/database/schema/refresh-tokens.schema.js";
-import { users } from "@/core/database/schema/users.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
-
-async function verifyEmailInDb(email: string) {
-  await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email));
-}
+import { verifyEmailInDb } from "./helpers/db.js";
 
 describe("POST /auth/register + /auth/login", () => {
   let app: FastifyInstance | undefined;

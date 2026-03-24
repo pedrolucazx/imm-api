@@ -1,6 +1,11 @@
 import { createAuthService } from "@/modules/auth/auth.service.js";
 import { comparePassword } from "@/shared/utils/password.js";
-import { ConflictError, ForbiddenError, UnauthorizedError } from "@/shared/errors/index.js";
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  UnauthorizedError,
+} from "@/shared/errors/index.js";
 import type { RefreshToken } from "@/core/database/schema/refresh-tokens.schema.js";
 import type { UsersRepository } from "@/modules/users/users.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
@@ -106,6 +111,7 @@ function makeMocks() {
       usedAt: null,
     }),
     findByHash: jest.fn(),
+    consumeByHash: jest.fn(),
     markAsUsed: jest.fn(),
     invalidateUserTokens: jest.fn(),
     deleteExpired: jest.fn(),
@@ -253,7 +259,8 @@ describe("AuthService", () => {
 
       expect(result.message).toBe("Verification email sent");
       expect(mocks.mockEmailVerificationTokensRepo.create).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: newUser.id })
+        expect.objectContaining({ userId: newUser.id }),
+        expect.anything()
       );
       expect(mocks.mockDb.transaction).toHaveBeenCalled();
       expect(mocks.mockTx.insert).toHaveBeenCalledTimes(2);
@@ -465,6 +472,116 @@ describe("AuthService", () => {
 
       expect(mocks.mockRefreshTokensRepo.revoke).toHaveBeenCalledTimes(1);
       expect(mocks.mockRefreshTokensRepo.revoke).toHaveBeenCalledWith(expect.any(String));
+    });
+  });
+
+  describe("verifyEmail", () => {
+    it("throws BadRequestError if token is invalid or expired", async () => {
+      mocks.mockEmailVerificationTokensRepo.consumeByHash.mockResolvedValue(undefined);
+
+      await expect(authService.verifyEmail({ token: "bad-token" }, mockJwt)).rejects.toBeInstanceOf(
+        BadRequestError
+      );
+    });
+
+    it("throws BadRequestError if user not found", async () => {
+      mocks.mockEmailVerificationTokensRepo.consumeByHash.mockResolvedValue({
+        id: "token-id",
+        userId: mockUser.id,
+        tokenHash: "hash",
+        expiresAt: new Date(Date.now() + 86400000),
+        usedAt: null,
+      });
+      mocks.mockUsersRepo.findById.mockResolvedValue(undefined);
+
+      await expect(
+        authService.verifyEmail({ token: "valid-token" }, mockJwt)
+      ).rejects.toBeInstanceOf(BadRequestError);
+    });
+
+    it("throws BadRequestError if email already verified", async () => {
+      mocks.mockEmailVerificationTokensRepo.consumeByHash.mockResolvedValue({
+        id: "token-id",
+        userId: mockUser.id,
+        tokenHash: "hash",
+        expiresAt: new Date(Date.now() + 86400000),
+        usedAt: null,
+      });
+      mocks.mockUsersRepo.findById.mockResolvedValue({
+        ...mockUser,
+        emailVerifiedAt: new Date("2025-06-01"),
+      });
+
+      await expect(
+        authService.verifyEmail({ token: "used-token" }, mockJwt)
+      ).rejects.toBeInstanceOf(BadRequestError);
+    });
+
+    it("verifies email and returns auth tokens", async () => {
+      mocks.mockEmailVerificationTokensRepo.consumeByHash.mockResolvedValue({
+        id: "token-id",
+        userId: mockUser.id,
+        tokenHash: "hash",
+        expiresAt: new Date(Date.now() + 86400000),
+        usedAt: null,
+      });
+      mocks.mockUsersRepo.findById.mockResolvedValue({ ...mockUser, emailVerifiedAt: null });
+      mocks.mockUsersRepo.markEmailVerified.mockResolvedValue({
+        ...mockUser,
+        emailVerifiedAt: new Date(),
+      });
+      mocks.mockProfilesRepo.findByUserId.mockResolvedValue(mockProfile);
+      mocks.mockRefreshTokensRepo.create.mockResolvedValue({} as RefreshToken);
+
+      const result = await authService.verifyEmail({ token: "valid-token" }, mockJwt);
+
+      expect(result.user.email).toBe(mockUser.email);
+      expect(result.accessToken).toMatch(/^access-token-/);
+      expect(result.refreshToken).toMatch(/^refresh-token-/);
+      expect(mocks.mockUsersRepo.markEmailVerified).toHaveBeenCalledWith(mockUser.id);
+    });
+  });
+
+  describe("resendVerification", () => {
+    it("does nothing if user does not exist", async () => {
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue(undefined);
+
+      await authService.resendVerification({ email: "nobody@example.com" });
+
+      expect(mocks.mockEmailVerificationTokensRepo.create).not.toHaveBeenCalled();
+    });
+
+    it("does nothing if user is already verified", async () => {
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue({
+        ...mockUser,
+        emailVerifiedAt: new Date("2025-06-01"),
+      });
+
+      await authService.resendVerification({ email: mockUser.email });
+
+      expect(mocks.mockEmailVerificationTokensRepo.invalidateUserTokens).not.toHaveBeenCalled();
+      expect(mocks.mockEmailVerificationTokensRepo.create).not.toHaveBeenCalled();
+    });
+
+    it("invalidates old tokens and sends new verification email", async () => {
+      mocks.mockUsersRepo.findByEmail.mockResolvedValue({ ...mockUser, emailVerifiedAt: null });
+      mocks.mockEmailVerificationTokensRepo.invalidateUserTokens.mockResolvedValue(undefined);
+      mocks.mockEmailVerificationTokensRepo.create.mockResolvedValue({
+        id: "new-token-id",
+        userId: mockUser.id,
+        tokenHash: "new-hash",
+        expiresAt: new Date(Date.now() + 86400000),
+        usedAt: null,
+      });
+
+      await authService.resendVerification({ email: mockUser.email });
+
+      expect(mocks.mockEmailVerificationTokensRepo.invalidateUserTokens).toHaveBeenCalledWith(
+        mockUser.id
+      );
+      expect(mocks.mockEmailVerificationTokensRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: mockUser.id })
+      );
     });
   });
 });

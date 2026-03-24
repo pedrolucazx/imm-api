@@ -6,10 +6,7 @@ import { closeDb, getDb } from "@/core/database/connection.js";
 import { users } from "@/core/database/schema/users.schema.js";
 import { userProfiles } from "@/core/database/schema/user-profiles.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
-
-async function verifyEmailInDb(email: string) {
-  await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email));
-}
+import { verifyEmailInDb } from "./helpers/db.js";
 
 describe("GET /users/me + PUT /users/me", () => {
   let app: FastifyInstance | undefined;

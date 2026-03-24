@@ -1,12 +1,11 @@
 import request from "supertest";
 import type { FastifyInstance } from "fastify";
-import { eq } from "drizzle-orm";
 import { buildTestApp } from "./helpers/app.js";
 import { closeDb, getDb } from "@/core/database/connection.js";
 import { habits } from "@/core/database/schema/habits.schema.js";
 import { habitLogs } from "@/core/database/schema/habit-logs.schema.js";
-import { users } from "@/core/database/schema/users.schema.js";
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
+import { verifyEmailInDb } from "./helpers/db.js";
 
 const BASE_HABIT = {
   name: "Meditar",
@@ -26,7 +25,7 @@ async function registerAndLogin(
     .send({ email, password: "password123", name: "Habits User" })
     .expect(201);
 
-  await getDb().update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.email, email));
+  await verifyEmailInDb(email);
 
   const res = await request(app.server)
     .post("/api/auth/login")

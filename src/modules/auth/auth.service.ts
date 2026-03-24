@@ -32,6 +32,7 @@ import type {
 } from "./auth.types.js";
 import { sendVerificationEmail } from "./email.service.js";
 import { env } from "../../core/config/env.js";
+import { logger } from "../../core/config/logger.js";
 
 type AuthServiceDeps = {
   db: DrizzleDb;
@@ -59,6 +60,9 @@ export function createAuthService({
   return {
     async register(input: RegisterInput): Promise<RegisterResponse> {
       const passwordHash = await hashPassword(input.password);
+      const rawToken = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+      const tokenExpiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS);
 
       const result = await db.transaction(async (tx) => {
         const [existingUser] = await tx
@@ -82,6 +86,11 @@ export function createAuthService({
             .values({ userId: user.id, uiLanguage: input.ui_lang || DEFAULT_UI_LANGUAGE })
             .returning();
 
+          await emailVerificationTokensRepo.create(
+            { userId: user.id, tokenHash, expiresAt: tokenExpiresAt },
+            tx
+          );
+
           return { user, profile };
         } catch (error: unknown) {
           const dbError = error as { code?: string; message?: string };
@@ -95,22 +104,15 @@ export function createAuthService({
         }
       });
 
-      const rawToken = randomBytes(32).toString("hex");
-      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
-
-      await emailVerificationTokensRepo.create({
-        userId: result.user.id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS),
-      });
-
       const verificationLink = `${env.APP_URL}/verify-email?token=${rawToken}`;
 
-      await sendVerificationEmail({
+      sendVerificationEmail({
         to: result.user.email,
         verificationLink,
         name: result.user.name,
-      });
+      }).catch((err) =>
+        logger.error({ err, msg: "Failed to send verification email", userId: result.user.id })
+      );
 
       return { message: "Verification email sent" };
     },
@@ -162,6 +164,10 @@ export function createAuthService({
       const user = await usersRepo.findById(token.userId);
       if (!user) throw new UnauthorizedError("User not found");
 
+      if (!user.emailVerifiedAt) {
+        throw new ForbiddenError("EMAIL_NOT_VERIFIED");
+      }
+
       const profile = await profilesRepo.findByUserId(user.id);
       const newTokens = generateTokens(jwt, { id: user.id, email: user.email });
 
@@ -185,7 +191,7 @@ export function createAuthService({
 
     async verifyEmail(input: VerifyEmailInput, jwt: JwtSignFn): Promise<AuthResponse> {
       const tokenHash = createHash("sha256").update(input.token).digest("hex");
-      const verificationToken = await emailVerificationTokensRepo.findByHash(tokenHash);
+      const verificationToken = await emailVerificationTokensRepo.consumeByHash(tokenHash);
 
       if (!verificationToken) {
         throw new BadRequestError("Invalid or expired verification token");
@@ -195,11 +201,9 @@ export function createAuthService({
       if (!user) throw new BadRequestError("User not found");
 
       if (user.emailVerifiedAt) {
-        await emailVerificationTokensRepo.markAsUsed(tokenHash);
         throw new BadRequestError("Email already verified");
       }
 
-      await emailVerificationTokensRepo.markAsUsed(tokenHash);
       await usersRepo.markEmailVerified(user.id);
 
       const profile = await profilesRepo.findByUserId(user.id);
