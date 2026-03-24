@@ -35,7 +35,7 @@ const envSchema = z.object({
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_TIMEWINDOW: z.coerce.number().int().positive().default(60000),
   RESEND_API_KEY: z.string().min(1),
-  APP_URL: z.string().default("http://localhost:3000"),
+  APP_URL: z.string().url().default("http://localhost:3000"),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
