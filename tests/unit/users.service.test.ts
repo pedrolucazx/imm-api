@@ -13,6 +13,7 @@ const mockUser = {
   name: "Test User",
   passwordHash: "hash",
   avatarUrl: null,
+  emailVerifiedAt: null,
   createdAt: new Date("2025-01-01"),
   updatedAt: new Date("2025-01-01"),
 };
@@ -81,6 +82,7 @@ describe("UsersService.getProfile", () => {
       email: mockUser.email,
       name: mockUser.name,
       avatarUrl: null,
+      emailVerifiedAt: null,
       profile: {
         uiLanguage: "pt-BR",
         bio: null,

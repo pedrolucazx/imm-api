@@ -57,6 +57,20 @@
       "when": 1742516400000,
       "tag": "0007_add_consents_table",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774281832456,
+      "tag": "0008_smart_hedge_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774285475546,
+      "tag": "0009_email_verification",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ const mockProfileResponse = {
   email: "test@example.com",
   name: "Test User",
   avatarUrl: null,
+  emailVerifiedAt: null,
   profile: {
     uiLanguage: "pt-BR",
     bio: null,
