@@ -576,6 +576,11 @@ describe("AuthService", () => {
 
       await authService.resendVerification({ email: mockUser.email });
 
+      const invalidateOrder =
+        mocks.mockEmailVerificationTokensRepo.invalidateUserTokens.mock.invocationCallOrder[0];
+      const createOrder = mocks.mockEmailVerificationTokensRepo.create.mock.invocationCallOrder[0];
+      expect(invalidateOrder).toBeLessThan(createOrder);
+
       expect(mocks.mockEmailVerificationTokensRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({ userId: mockUser.id }),
         expect.anything()

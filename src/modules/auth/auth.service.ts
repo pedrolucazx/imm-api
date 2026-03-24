@@ -234,11 +234,11 @@ export function createAuthService({
       const tokenExpiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_EXPIRES_MS);
 
       await db.transaction(async (tx) => {
+        await emailVerificationTokensRepo.invalidateUserTokens(user.id, tx);
         await emailVerificationTokensRepo.create(
           { userId: user.id, tokenHash, expiresAt: tokenExpiresAt },
           tx
         );
-        await emailVerificationTokensRepo.invalidateUserTokens(user.id, tx);
       });
 
       const verificationLink = `${env.APP_URL}/verify-email?token=${rawToken}`;
