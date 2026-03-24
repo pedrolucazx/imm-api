@@ -112,7 +112,6 @@ function makeMocks() {
     }),
     findByHash: jest.fn(),
     consumeByHash: jest.fn(),
-    markAsUsed: jest.fn(),
     invalidateUserTokens: jest.fn(),
     deleteExpired: jest.fn(),
   };
