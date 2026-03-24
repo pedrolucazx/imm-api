@@ -126,4 +126,47 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
     handler: controller.logout,
   });
+
+  fastify.post("/auth/verify-email", {
+    schema: {
+      description: "Verify email address using token from email",
+      tags: ["Authentication"],
+      summary: "Verify email",
+      body: {
+        type: "object",
+        required: ["token"],
+        properties: {
+          token: { type: "string", description: "Verification token from email" },
+        },
+      },
+      response: {
+        200: { description: "Email verified successfully", ...authResponse },
+        400: errorResponse("Bad request - invalid token"),
+      },
+    },
+    handler: controller.verifyEmail,
+  });
+
+  fastify.post("/auth/resend-verification", {
+    schema: {
+      description: "Resend email verification link",
+      tags: ["Authentication"],
+      summary: "Resend verification email",
+      body: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: { type: "string", format: "email", examples: ["user@example.com"] },
+        },
+      },
+      response: {
+        200: {
+          description: "Email sent if account exists",
+          type: "object",
+          properties: { message: { type: "string" } },
+        },
+      },
+    },
+    handler: controller.resendVerification,
+  });
 }
