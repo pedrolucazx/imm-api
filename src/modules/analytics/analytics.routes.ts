@@ -87,6 +87,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
         type: "object",
         properties: {
           habitId: { type: "string", format: "uuid", description: "Filter by specific habit" },
+          timezone: { type: "string", description: "IANA timezone name (e.g. America/Sao_Paulo)" },
         },
       },
       response: {
