@@ -4,7 +4,7 @@ import type { UserProfilesRepository } from "./user-profiles.repository.js";
 import { NotFoundError, UnauthorizedError } from "../../shared/errors/index.js";
 import { DEFAULT_UI_LANGUAGE } from "../../shared/constants.js";
 import { DEFAULT_PROFILE_FIELDS } from "../../core/database/schema/user-profiles.schema.js";
-import { isSameDay } from "../../shared/utils/date.js";
+import { isSameDayInTimezone } from "../../shared/utils/date.js";
 import { comparePassword } from "../../shared/utils/password.js";
 import type { UpdateProfileInput, ProfileResponse } from "./users.types.js";
 
@@ -31,7 +31,8 @@ function toProfileResponse(
   }
 ): ProfileResponse {
   const aiRequestsToday =
-    profile.lastAiRequest && isSameDay(profile.lastAiRequest, new Date())
+    profile.lastAiRequest &&
+    isSameDayInTimezone(profile.lastAiRequest, new Date(), profile.timezone)
       ? profile.aiRequestsToday
       : 0;
 

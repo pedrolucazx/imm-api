@@ -5,3 +5,17 @@ export function getTodayUTCString(): string {
 export function isSameDay(a: Date, b: Date): boolean {
   return a.toISOString().slice(0, 10) === b.toISOString().slice(0, 10);
 }
+
+export function isSameDayInTimezone(a: Date, b: Date, timezone: string): boolean {
+  try {
+    const fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return fmt.format(a) === fmt.format(b);
+  } catch {
+    return isSameDay(a, b);
+  }
+}
