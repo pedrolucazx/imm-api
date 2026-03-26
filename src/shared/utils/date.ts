@@ -1,3 +1,5 @@
+import { logger } from "../../core/config/logger.js";
+
 export function getTodayUTCString(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -15,7 +17,8 @@ export function isSameDayInTimezone(a: Date, b: Date, timezone: string): boolean
       day: "2-digit",
     });
     return fmt.format(a) === fmt.format(b);
-  } catch {
+  } catch (err) {
+    logger.warn({ timezone, err }, "isSameDayInTimezone: invalid timezone, falling back to UTC");
     return isSameDay(a, b);
   }
 }
