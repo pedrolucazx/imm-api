@@ -1,12 +1,7 @@
 import { isSameDayInTimezone } from "../utils/date.js";
 import { TooManyRequestsError } from "../errors/index.js";
 import { MAX_AI_REQUESTS_PER_DAY, AI_RATE_LIMIT_MS } from "../constants.js";
-
-type RateLimitProfile = {
-  aiRequestsToday: number;
-  lastAiRequest: Date | null;
-  timezone: string;
-};
+import type { RateLimitProfile } from "../types/rate-limit.js";
 
 export function assertAiRateLimit({
   aiRequestsToday,

@@ -1,10 +1,5 @@
 import { isSameDayInTimezone } from "./date.js";
-
-type RateLimitProfile = {
-  aiRequestsToday: number;
-  lastAiRequest: Date | null;
-  timezone: string;
-};
+import type { RateLimitProfile } from "../types/rate-limit.js";
 
 export function nextAiRequestCount({
   aiRequestsToday,
