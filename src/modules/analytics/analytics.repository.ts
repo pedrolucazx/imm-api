@@ -161,14 +161,16 @@ export function createAnalyticsRepository(db: DrizzleDb) {
         .map((r) => ({ mood: r.mood as number, completed: r.completed }));
     },
 
-    async getBestPerformanceHour(userId: string): Promise<number | null> {
+    async getBestPerformanceHour(userId: string, timezone: string): Promise<number | null> {
       const [result] = await db
         .select({
-          hour: sql<number>`EXTRACT(HOUR FROM ${journalEntries.createdAt})`.mapWith(Number),
+          hour: sql<number>`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${timezone})`.mapWith(
+            Number
+          ),
         })
         .from(journalEntries)
         .where(eq(journalEntries.userId, userId))
-        .groupBy(sql`EXTRACT(HOUR FROM ${journalEntries.createdAt})`)
+        .groupBy(sql`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${timezone})`)
         .orderBy(sql`COUNT(*) DESC`)
         .limit(1);
 

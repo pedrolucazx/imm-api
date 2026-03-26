@@ -61,6 +61,13 @@ export const analyticsSummarySchema = z.object({
 
 export const habitIdQuerySchema = z.object({
   habitId: z.string().uuid().optional(),
+  timezone: z
+    .string()
+    .min(1)
+    .max(100)
+    .regex(/^[\w/+-]+$/)
+    .optional()
+    .default("UTC"),
 });
 
 export type HabitStat = z.infer<typeof habitStatSchema>;

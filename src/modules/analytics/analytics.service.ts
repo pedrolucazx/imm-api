@@ -32,7 +32,11 @@ type AiFeedbackLinguistic = {
 
 export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) {
   return {
-    async getSummary(userId: string, habitId?: string): Promise<AnalyticsSummary> {
+    async getSummary(
+      userId: string,
+      habitId?: string,
+      timezone = "UTC"
+    ): Promise<AnalyticsSummary> {
       const today = getTodayUTCString();
 
       // Fetch active habits
@@ -131,7 +135,7 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         analyticsRepo.getUserProfile(userId),
         analyticsRepo.countTodayCompletedHabits(today, habitIds),
         analyticsRepo.getMoodConsistencyCorrelation(userId),
-        analyticsRepo.getBestPerformanceHour(userId),
+        analyticsRepo.getBestPerformanceHour(userId, timezone),
       ]);
 
       // Compute mood consistency correlation
