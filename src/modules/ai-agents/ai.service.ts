@@ -64,10 +64,12 @@ export function createAiService(deps: AiServiceDeps) {
     userId: string;
     aiRequestsToday: number;
     lastAiRequest: Date | null;
+    timezone: string | undefined;
   }) {
     const rateLimitProfile = {
       aiRequestsToday: profile.aiRequestsToday,
       lastAiRequest: profile.lastAiRequest,
+      timezone: profile.timezone ?? "UTC",
     };
 
     assertAiRateLimit(rateLimitProfile);

@@ -57,6 +57,7 @@ export function createHabitsService({
     const rateLimitProfile = {
       aiRequestsToday: profile?.aiRequestsToday ?? 0,
       lastAiRequest: profile?.lastAiRequest ?? null,
+      timezone: profile?.timezone ?? "UTC",
     };
 
     assertAiRateLimit(rateLimitProfile);
