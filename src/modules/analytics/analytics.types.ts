@@ -61,6 +61,23 @@ export const analyticsSummarySchema = z.object({
 
 export const habitIdQuerySchema = z.object({
   habitId: z.string().uuid().optional(),
+  timezone: z
+    .string()
+    .min(1)
+    .max(100)
+    .refine(
+      (tz) => {
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid IANA timezone" }
+    )
+    .optional()
+    .default("UTC"),
 });
 
 export type HabitStat = z.infer<typeof habitStatSchema>;
