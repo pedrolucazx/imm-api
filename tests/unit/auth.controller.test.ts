@@ -17,6 +17,8 @@ function makeMockService(): jest.Mocked<AuthService> {
     logout: jest.fn(),
     verifyEmail: jest.fn(),
     resendVerification: jest.fn(),
+    forgotPassword: jest.fn(),
+    resetPassword: jest.fn(),
   };
 }
 

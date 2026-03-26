@@ -116,6 +116,20 @@ function makeMocks() {
     deleteExpired: jest.fn(),
   };
 
+  const mockPasswordResetTokensRepo = {
+    create: jest.fn().mockResolvedValue({
+      id: "reset-token-id",
+      userId: mockUser.id,
+      tokenHash: "reset-hash",
+      expiresAt: new Date(Date.now() + 3600000),
+      usedAt: null,
+    }),
+    findByHash: jest.fn(),
+    markAsUsed: jest.fn().mockResolvedValue(undefined),
+    invalidateUserTokens: jest.fn().mockResolvedValue(undefined),
+    deleteExpired: jest.fn().mockResolvedValue(undefined),
+  };
+
   return {
     mockDb,
     mockTx,
@@ -123,6 +137,7 @@ function makeMocks() {
     mockProfilesRepo,
     mockRefreshTokensRepo,
     mockEmailVerificationTokensRepo,
+    mockPasswordResetTokensRepo,
   };
 }
 
@@ -140,6 +155,7 @@ describe("AuthService", () => {
       profilesRepo: mocks.mockProfilesRepo,
       refreshTokensRepo: mocks.mockRefreshTokensRepo,
       emailVerificationTokensRepo: mocks.mockEmailVerificationTokensRepo,
+      passwordResetTokensRepo: mocks.mockPasswordResetTokensRepo,
     });
   });
 

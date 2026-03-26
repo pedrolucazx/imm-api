@@ -5,10 +5,14 @@ import {
   loginSchema,
   verifyEmailSchema,
   resendVerificationSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   type RegisterInput,
   type LoginInput,
   type VerifyEmailInput,
   type ResendVerificationInput,
+  type ForgotPasswordInput,
+  type ResetPasswordInput,
 } from "./auth.types.js";
 import { AppError } from "../../shared/errors/index.js";
 import { REFRESH_TOKEN_EXPIRES_MS } from "../../shared/constants.js";
@@ -117,6 +121,32 @@ export function createAuthController(service: AuthService) {
         const data = resendVerificationSchema.parse(request.body);
         await service.resendVerification(data);
         return reply.code(200).send({ message: "Verification email sent if account exists" });
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async forgotPassword(
+      request: FastifyRequest<{ Body: ForgotPasswordInput }>,
+      reply: FastifyReply
+    ) {
+      try {
+        const data = forgotPasswordSchema.parse(request.body);
+        await service.forgotPassword(data);
+        return reply.code(200).send({ message: "Password reset email sent if account exists" });
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async resetPassword(
+      request: FastifyRequest<{ Body: ResetPasswordInput }>,
+      reply: FastifyReply
+    ) {
+      try {
+        const data = resetPasswordSchema.parse(request.body);
+        await service.resetPassword(data);
+        return reply.code(200).send({ message: "Password reset successfully" });
       } catch (error) {
         return handleControllerError(error, reply);
       }
