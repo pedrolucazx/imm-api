@@ -1,13 +1,13 @@
-import { isSameDay } from "../utils/date.js";
+import { isSameDayInTimezone } from "../utils/date.js";
 import { TooManyRequestsError } from "../errors/index.js";
 import { MAX_AI_REQUESTS_PER_DAY, AI_RATE_LIMIT_MS } from "../constants.js";
+import type { RateLimitProfile } from "../types/rate-limit.js";
 
-type RateLimitProfile = {
-  aiRequestsToday: number;
-  lastAiRequest: Date | null;
-};
-
-export function assertAiRateLimit({ aiRequestsToday, lastAiRequest }: RateLimitProfile): void {
+export function assertAiRateLimit({
+  aiRequestsToday,
+  lastAiRequest,
+  timezone,
+}: RateLimitProfile): void {
   if (lastAiRequest) {
     const elapsed = Date.now() - lastAiRequest.getTime();
     if (elapsed < AI_RATE_LIMIT_MS) {
@@ -15,7 +15,7 @@ export function assertAiRateLimit({ aiRequestsToday, lastAiRequest }: RateLimitP
     }
   }
 
-  const sameDay = lastAiRequest && isSameDay(lastAiRequest, new Date());
+  const sameDay = lastAiRequest && isSameDayInTimezone(lastAiRequest, new Date(), timezone);
   const currentCount = sameDay ? aiRequestsToday : 0;
 
   if (currentCount >= MAX_AI_REQUESTS_PER_DAY) {
