@@ -65,7 +65,17 @@ export const habitIdQuerySchema = z.object({
     .string()
     .min(1)
     .max(100)
-    .regex(/^[\w/+-]+$/)
+    .refine(
+      (tz) => {
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: tz });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      { message: "Invalid IANA timezone" }
+    )
     .optional()
     .default("UTC"),
 });

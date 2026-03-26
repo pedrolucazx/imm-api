@@ -162,15 +162,16 @@ export function createAnalyticsRepository(db: DrizzleDb) {
     },
 
     async getBestPerformanceHour(userId: string, timezone: string): Promise<number | null> {
+      const tzParam = sql.param(timezone);
       const [result] = await db
         .select({
-          hour: sql<number>`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${timezone})`.mapWith(
+          hour: sql<number>`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${tzParam})`.mapWith(
             Number
           ),
         })
         .from(journalEntries)
         .where(eq(journalEntries.userId, userId))
-        .groupBy(sql`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${timezone})`)
+        .groupBy(sql`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${tzParam})`)
         .orderBy(sql`COUNT(*) DESC`)
         .limit(1);
 
