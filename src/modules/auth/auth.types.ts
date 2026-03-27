@@ -32,13 +32,12 @@ export const verifyEmailSchema = z.object({
   token: z.string().min(1, { error: "Token is required" }),
 });
 
-export const resendVerificationSchema = z.object({
+const emailInputSchema = z.object({
   email: z.email({ error: "Invalid email address" }),
 });
 
-export const forgotPasswordSchema = z.object({
-  email: z.email({ error: "Invalid email address" }),
-});
+export const resendVerificationSchema = emailInputSchema;
+export const forgotPasswordSchema = emailInputSchema;
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1, { error: "Token is required" }),

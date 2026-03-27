@@ -1,5 +1,5 @@
 import { eq, and, isNull, lt, gt } from "drizzle-orm";
-import type { DrizzleDb } from "../../core/database/connection.js";
+import type { DrizzleDb, DbClient } from "../../core/database/connection.js";
 import {
   passwordResetTokens,
   type NewPasswordResetToken,
@@ -8,8 +8,12 @@ import {
 
 export function createPasswordResetTokensRepository(db: DrizzleDb) {
   return {
-    async create(input: Omit<NewPasswordResetToken, "id">): Promise<PasswordResetToken> {
-      const [token] = await db.insert(passwordResetTokens).values(input).returning();
+    async create(
+      input: Omit<NewPasswordResetToken, "id">,
+      tx?: DbClient
+    ): Promise<PasswordResetToken> {
+      const client = tx ?? db;
+      const [token] = await client.insert(passwordResetTokens).values(input).returning();
       return token;
     },
 
@@ -28,8 +32,9 @@ export function createPasswordResetTokensRepository(db: DrizzleDb) {
       return token;
     },
 
-    async markAsUsed(tokenHash: string): Promise<void> {
-      await db
+    async markAsUsed(tokenHash: string, tx?: DbClient): Promise<void> {
+      const client = tx ?? db;
+      await client
         .update(passwordResetTokens)
         .set({ usedAt: new Date() })
         .where(
@@ -37,8 +42,9 @@ export function createPasswordResetTokensRepository(db: DrizzleDb) {
         );
     },
 
-    async invalidateUserTokens(userId: string): Promise<void> {
-      await db
+    async invalidateUserTokens(userId: string, tx?: DbClient): Promise<void> {
+      const client = tx ?? db;
+      await client
         .update(passwordResetTokens)
         .set({ usedAt: new Date() })
         .where(and(eq(passwordResetTokens.userId, userId), isNull(passwordResetTokens.usedAt)));

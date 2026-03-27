@@ -267,11 +267,12 @@ export function createAuthService({
       const tokenHash = createHash("sha256").update(rawToken).digest("hex");
       const tokenExpiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRES_MS);
 
-      await passwordResetTokensRepo.invalidateUserTokens(user.id);
-      await passwordResetTokensRepo.create({
-        userId: user.id,
-        tokenHash,
-        expiresAt: tokenExpiresAt,
+      await db.transaction(async (tx) => {
+        await passwordResetTokensRepo.invalidateUserTokens(user.id, tx);
+        await passwordResetTokensRepo.create(
+          { userId: user.id, tokenHash, expiresAt: tokenExpiresAt },
+          tx
+        );
       });
 
       const resetLink = `${env.APP_URL}/reset-password?token=${rawToken}`;
@@ -293,12 +294,12 @@ export function createAuthService({
         throw new BadRequestError("Invalid or expired password reset token");
       }
 
-      const user = await usersRepo.findById(resetToken.userId);
-      if (!user) throw new BadRequestError("User not found");
-
       const passwordHash = await hashPassword(input.newPassword);
-      await usersRepo.updatePasswordHash(user.id, passwordHash);
-      await passwordResetTokensRepo.markAsUsed(tokenHash);
+
+      await db.transaction(async (tx) => {
+        await usersRepo.updatePasswordHash(resetToken.userId, passwordHash, tx);
+        await passwordResetTokensRepo.invalidateUserTokens(resetToken.userId, tx);
+      });
     },
   };
 }
