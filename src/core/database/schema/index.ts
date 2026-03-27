@@ -7,3 +7,4 @@ export * from "./habits.schema.js";
 export * from "./habit-logs.schema.js";
 export * from "./journal-entries.schema.js";
 export * from "./consents.schema.js";
+export * from "./pronunciation.schema.js";

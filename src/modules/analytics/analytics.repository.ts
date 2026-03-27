@@ -6,9 +6,11 @@ import {
   habitLogs,
   journalEntries,
   userProfiles,
+  pronunciationEntries,
   type Habit,
   type HabitLog,
 } from "../../core/database/schema/index.js";
+import type { WordCloudItem } from "../pronunciation/pronunciation.types.js";
 
 export function createAnalyticsRepository(db: DrizzleDb) {
   return {
@@ -162,20 +164,51 @@ export function createAnalyticsRepository(db: DrizzleDb) {
     },
 
     async getBestPerformanceHour(userId: string, timezone: string): Promise<number | null> {
-      const tzParam = sql.param(timezone);
-      const [result] = await db
-        .select({
-          hour: sql<number>`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${tzParam})`.mapWith(
-            Number
-          ),
-        })
-        .from(journalEntries)
-        .where(eq(journalEntries.userId, userId))
-        .groupBy(sql`EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${tzParam})`)
-        .orderBy(sql`COUNT(*) DESC`)
-        .limit(1);
+      const [result] = await db.execute<{ hour: number }>(sql`
+        SELECT EXTRACT(HOUR FROM ${journalEntries.createdAt} AT TIME ZONE ${timezone})::int AS hour,
+               COUNT(*) AS cnt
+        FROM ${journalEntries}
+        WHERE ${journalEntries.userId} = ${userId}::uuid
+        GROUP BY 1
+        ORDER BY cnt DESC
+        LIMIT 1
+      `);
 
       return result?.hour ?? null;
+    },
+
+    async getWordCloudByHabitIds(
+      userId: string,
+      habitIds: string[],
+      limit = 50
+    ): Promise<Map<string, WordCloudItem[]>> {
+      if (habitIds.length === 0) return new Map();
+
+      const habitIdParams = sql.join(
+        habitIds.map((id) => sql`${id}::uuid`),
+        sql`, `
+      );
+      const rows = await db.execute(sql`
+        SELECT habit_id, word, COUNT(*)::int AS frequency
+        FROM ${pronunciationEntries},
+             unnest(${pronunciationEntries.missedWords}) AS word
+        WHERE ${pronunciationEntries.userId} = ${userId}::uuid
+          AND ${pronunciationEntries.habitId} = ANY(ARRAY[${habitIdParams}])
+        GROUP BY habit_id, word
+        ORDER BY habit_id, frequency DESC
+      `);
+
+      const result = new Map<string, WordCloudItem[]>();
+      for (const row of rows as unknown as Array<{
+        habit_id: string;
+        word: string;
+        frequency: number;
+      }>) {
+        const arr = result.get(row.habit_id) ?? [];
+        if (arr.length < limit) arr.push({ word: row.word, frequency: row.frequency });
+        result.set(row.habit_id, arr);
+      }
+      return result;
     },
   };
 }

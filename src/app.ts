@@ -10,6 +10,7 @@ import { usersRoutes } from "./modules/users/users.routes.js";
 import { aiRoutes } from "./modules/ai-agents/ai.routes.js";
 import { analyticsRoutes } from "./modules/analytics/analytics.routes.js";
 import { consentsRoutes } from "./modules/consents/consents.routes.js";
+import { pronunciationRoutes } from "./modules/pronunciation/pronunciation.routes.js";
 import {
   cookiePlugin,
   corsPlugin,
@@ -36,6 +37,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(aiRoutes, { prefix: "/api" });
   await fastify.register(analyticsRoutes, { prefix: "/api" });
   await fastify.register(consentsRoutes, { prefix: "/api" });
+  await fastify.register(pronunciationRoutes, { prefix: "/api" });
 
   return fastify;
 }

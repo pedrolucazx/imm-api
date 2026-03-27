@@ -71,6 +71,13 @@
       "when": 1774285475546,
       "tag": "0009_email_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774633532651,
+      "tag": "0010_pronunciation_entries",
+      "breakpoints": true
     }
   ]
 }

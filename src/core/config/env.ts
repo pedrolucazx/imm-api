@@ -31,6 +31,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   SUPABASE_STORAGE_BUCKET: z.string().default("avatars"),
+  SUPABASE_AUDIO_BUCKET: z.string().default("audio-entries"),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_TIMEWINDOW: z.coerce.number().int().positive().default(60000),
