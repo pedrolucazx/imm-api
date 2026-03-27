@@ -9,6 +9,7 @@ import type { UsersRepository } from "../users/users.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
 import type { RefreshTokensRepository } from "./refresh-tokens.repository.js";
 import type { EmailVerificationTokensRepository } from "./email-verification-tokens.repository.js";
+import type { PasswordResetTokensRepository } from "./password-reset-tokens.repository.js";
 import {
   ConflictError,
   UnauthorizedError,
@@ -20,17 +21,20 @@ import {
   DEFAULT_UI_LANGUAGE,
   PG_DUPLICATE_KEY_CODE,
   EMAIL_VERIFICATION_TOKEN_EXPIRES_MS,
+  PASSWORD_RESET_TOKEN_EXPIRES_MS,
 } from "../../shared/constants.js";
 import type {
   RegisterInput,
   LoginInput,
   VerifyEmailInput,
   ResendVerificationInput,
+  ForgotPasswordInput,
+  ResetPasswordInput,
   RegisterResponse,
   AuthResponse,
   JwtSignFn,
 } from "./auth.types.js";
-import { sendVerificationEmail } from "./email.service.js";
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email.service.js";
 import { env } from "../../core/config/env.js";
 import { logger } from "../../core/config/logger.js";
 
@@ -40,6 +44,7 @@ type AuthServiceDeps = {
   profilesRepo: UserProfilesRepository;
   refreshTokensRepo: RefreshTokensRepository;
   emailVerificationTokensRepo: EmailVerificationTokensRepository;
+  passwordResetTokensRepo: PasswordResetTokensRepository;
 };
 
 export function createAuthService({
@@ -48,6 +53,7 @@ export function createAuthService({
   profilesRepo,
   refreshTokensRepo,
   emailVerificationTokensRepo,
+  passwordResetTokensRepo,
 }: AuthServiceDeps) {
   async function persistRefreshToken(userId: string, token: string) {
     await refreshTokensRepo.create({
@@ -250,6 +256,49 @@ export function createAuthService({
       }).catch((err) =>
         logger.error({ err, msg: "Failed to send verification email on resend", userId: user.id })
       );
+    },
+
+    async forgotPassword(input: ForgotPasswordInput): Promise<void> {
+      const user = await usersRepo.findByEmail(input.email);
+      // Return silently whether user exists or not (prevent email enumeration)
+      if (!user || !user.emailVerifiedAt) return;
+
+      const rawToken = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+      const tokenExpiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRES_MS);
+
+      await db.transaction(async (tx) => {
+        await passwordResetTokensRepo.invalidateUserTokens(user.id, tx);
+        await passwordResetTokensRepo.create(
+          { userId: user.id, tokenHash, expiresAt: tokenExpiresAt },
+          tx
+        );
+      });
+
+      const resetLink = `${env.APP_URL}/reset-password?token=${rawToken}`;
+
+      sendPasswordResetEmail({
+        to: user.email,
+        resetLink,
+        name: user.name,
+      }).catch((err) =>
+        logger.error({ err, msg: "Failed to send password reset email", userId: user.id })
+      );
+    },
+
+    async resetPassword(input: ResetPasswordInput): Promise<void> {
+      const tokenHash = createHash("sha256").update(input.token).digest("hex");
+      const passwordHash = await hashPassword(input.newPassword);
+
+      await db.transaction(async (tx) => {
+        const resetToken = await passwordResetTokensRepo.consumeActiveByHash(tokenHash, tx);
+        if (!resetToken) {
+          throw new BadRequestError("Invalid or expired password reset token");
+        }
+
+        await usersRepo.updatePasswordHash(resetToken.userId, passwordHash, tx);
+        await passwordResetTokensRepo.invalidateUserTokens(resetToken.userId, tx);
+      });
     },
   };
 }

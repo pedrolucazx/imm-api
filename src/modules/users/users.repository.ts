@@ -48,8 +48,13 @@ export function createUsersRepository(db: DrizzleDb) {
       return user;
     },
 
-    async updatePasswordHash(userId: string, passwordHash: string): Promise<User | undefined> {
-      const [user] = await db
+    async updatePasswordHash(
+      userId: string,
+      passwordHash: string,
+      tx?: DbClient
+    ): Promise<User | undefined> {
+      const client = tx ?? db;
+      const [user] = await client
         .update(users)
         .set({ passwordHash, updatedAt: new Date() })
         .where(eq(users.id, userId))

@@ -172,4 +172,60 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
     handler: controller.resendVerification,
   });
+
+  fastify.post("/auth/forgot-password", {
+    schema: {
+      description: "Request a password reset email",
+      tags: ["Authentication"],
+      summary: "Forgot password",
+      body: {
+        type: "object",
+        required: ["email"],
+        properties: {
+          email: { type: "string", format: "email", examples: ["user@example.com"] },
+        },
+      },
+      response: {
+        200: {
+          description: "Email sent if account exists and is verified",
+          type: "object",
+          required: ["message"],
+          properties: { message: { type: "string" } },
+        },
+        400: errorResponse("Bad request - invalid input"),
+      },
+    },
+    handler: controller.forgotPassword,
+  });
+
+  fastify.post("/auth/reset-password", {
+    schema: {
+      description: "Reset password using token from email",
+      tags: ["Authentication"],
+      summary: "Reset password",
+      body: {
+        type: "object",
+        required: ["token", "newPassword"],
+        properties: {
+          token: { type: "string", description: "Password reset token from email" },
+          newPassword: {
+            type: "string",
+            minLength: 8,
+            maxLength: 100,
+            examples: ["newSecurePassword123"],
+          },
+        },
+      },
+      response: {
+        200: {
+          description: "Password reset successfully",
+          type: "object",
+          required: ["message"],
+          properties: { message: { type: "string" } },
+        },
+        400: errorResponse("Bad request - invalid or expired token"),
+      },
+    },
+    handler: controller.resetPassword,
+  });
 }
