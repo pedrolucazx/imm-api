@@ -288,15 +288,14 @@ export function createAuthService({
 
     async resetPassword(input: ResetPasswordInput): Promise<void> {
       const tokenHash = createHash("sha256").update(input.token).digest("hex");
-      const resetToken = await passwordResetTokensRepo.findByHash(tokenHash);
-
-      if (!resetToken) {
-        throw new BadRequestError("Invalid or expired password reset token");
-      }
-
       const passwordHash = await hashPassword(input.newPassword);
 
       await db.transaction(async (tx) => {
+        const resetToken = await passwordResetTokensRepo.consumeActiveByHash(tokenHash, tx);
+        if (!resetToken) {
+          throw new BadRequestError("Invalid or expired password reset token");
+        }
+
         await usersRepo.updatePasswordHash(resetToken.userId, passwordHash, tx);
         await passwordResetTokensRepo.invalidateUserTokens(resetToken.userId, tx);
       });

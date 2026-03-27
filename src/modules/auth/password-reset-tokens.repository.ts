@@ -32,6 +32,25 @@ export function createPasswordResetTokensRepository(db: DrizzleDb) {
       return token;
     },
 
+    async consumeActiveByHash(
+      tokenHash: string,
+      tx?: DbClient
+    ): Promise<PasswordResetToken | undefined> {
+      const client = tx ?? db;
+      const [token] = await client
+        .update(passwordResetTokens)
+        .set({ usedAt: new Date() })
+        .where(
+          and(
+            eq(passwordResetTokens.tokenHash, tokenHash),
+            isNull(passwordResetTokens.usedAt),
+            gt(passwordResetTokens.expiresAt, new Date())
+          )
+        )
+        .returning();
+      return token;
+    },
+
     async markAsUsed(tokenHash: string, tx?: DbClient): Promise<void> {
       const client = tx ?? db;
       await client
