@@ -45,6 +45,17 @@ const habitStatSchema = {
         },
       },
     },
+    wordCloud: {
+      nullable: true,
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          word: { type: "string" },
+          frequency: { type: "integer" },
+        },
+      },
+    },
   },
 };
 

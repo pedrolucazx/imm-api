@@ -57,7 +57,10 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
       const languageHabitIds = filteredHabits
         .filter((h) => h.targetSkill != null && SKILL_BUILDING_LOCALE_SET.has(h.targetSkill))
         .map((h) => h.id);
-      const scoreTimelineRows = await analyticsRepo.getScoreTimeline(languageHabitIds);
+      const [scoreTimelineRows, wordCloudMap] = await Promise.all([
+        analyticsRepo.getScoreTimeline(languageHabitIds),
+        analyticsRepo.getWordCloudByHabitIds(userId, languageHabitIds),
+      ]);
 
       // Group timeline rows by habitId
       const timelineByHabit = new Map<
@@ -104,6 +107,7 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
           habitPlan: habit.habitPlan ?? null,
           logs: logs.map((l) => ({ logDate: l.logDate, completed: l.completed })),
           scoreTimeline: isLanguageHabit ? (timelineByHabit.get(habit.id) ?? []) : null,
+          wordCloud: isLanguageHabit ? (wordCloudMap.get(habit.id) ?? []) : null,
         };
       });
 

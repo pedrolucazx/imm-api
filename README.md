@@ -48,7 +48,7 @@
 A API orquestra três agentes especializados via Google Gemini Flash, cada um ativado por tipo de hábito:
 
 - **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito
-- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas
+- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; também transcreve áudios de pronúncia e calcula score de acerto
 - **Behavioral Coach**: identifica padrões de humor e sugere micro-ações para hábitos comportamentais
 
 Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o usuário.
@@ -79,6 +79,7 @@ imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
 | Autenticação        | JWT — access + refresh tokens (`@fastify/jwt`)          |
 | Documentação da API | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`) |
 | Integração com IA   | Google Gemini Flash                                     |
+| Storage             | Supabase Storage (avatars + audio)                      |
 | Logging             | Pino + pino-pretty                                      |
 | Containerização     | Docker + Docker Compose                                 |
 | Deployment          | Render                                                  |
@@ -98,9 +99,10 @@ imm-api/
 │   │   │   └── auth.types.ts
 │   │   ├── users/                # Gerenciamento de usuários
 │   │   │   └── users.repository.ts
-│   │   ├── habits/               # Rastreamento de hábitos (planejado)
-│   │   ├── journal/              # Sistema de journaling (planejado)
-│   │   ├── ai-agents/            # Orquestração de agentes de IA (planejado)
+│   │   ├── habits/               # Rastreamento de hábitos
+│   │   ├── journal/              # Sistema de journaling
+│   │   ├── ai-agents/            # Orquestração de agentes de IA
+│   │   ├── pronunciation/        # Análise de pronúncia via Gemini (hábitos de idiomas)
 │   │   └── health/               # Health check endpoint
 │   │       └── health.routes.ts
 │   ├── core/
@@ -111,7 +113,8 @@ imm-api/
 │   │   │   ├── connection.ts
 │   │   │   └── schema/
 │   │   │       ├── index.ts
-│   │   │       └── users.schema.ts
+│   │   │       ├── users.schema.ts
+│   │   │       └── pronunciation.schema.ts
 │   │   └── plugins/              # Plugins Fastify (cors, jwt, swagger)
 │   ├── shared/
 │   │   └── utils/
@@ -203,23 +206,41 @@ JWT_REFRESH_EXPIRES=7d
 
 # Integração com IA
 GEMINI_API_KEY=sua-chave-api-gemini
+GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent
+
+# Supabase Storage
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=sua-chave-service-role
+SUPABASE_STORAGE_BUCKET=avatars
+SUPABASE_AUDIO_BUCKET=audio-entries
 
 # Rate Limiting (opcional)
 RATE_LIMIT_MAX=100
 RATE_LIMIT_TIMEWINDOW=60000
+
+# Email (Resend — https://resend.com)
+RESEND_API_KEY=re_your_resend_api_key
+APP_URL=http://localhost:3000
 ```
 
-| Variável                | Obrigatória | Descrição                                    |
-| ----------------------- | ----------- | -------------------------------------------- |
-| `DATABASE_URL`          | Sim         | String completa de conexão PostgreSQL        |
-| `JWT_SECRET`            | Sim         | Segredo para assinar JWTs (mín 32 chars)     |
-| `JWT_ACCESS_EXPIRES`    | Sim         | TTL do access token (ex: `15m`)              |
-| `JWT_REFRESH_EXPIRES`   | Sim         | TTL do refresh token (ex: `7d`)              |
-| `CORS_ORIGIN`           | Sim         | Origem(ns) do frontend permitida(s)          |
-| `GEMINI_API_KEY`        | Não\*       | Obrigatória para features de agentes de IA   |
-| `LOG_LEVEL`             | Não         | Nível de log Pino (padrão: `info`)           |
-| `RATE_LIMIT_MAX`        | Não         | Máx requisições por janela (padrão: `100`)   |
-| `RATE_LIMIT_TIMEWINDOW` | Não         | Janela de rate limit em ms (padrão: `60000`) |
+| Variável                    | Obrigatória | Descrição                                                       |
+| --------------------------- | ----------- | --------------------------------------------------------------- |
+| `DATABASE_URL`              | Sim         | String completa de conexão PostgreSQL                           |
+| `JWT_SECRET`                | Sim         | Segredo para assinar JWTs (mín 32 chars)                        |
+| `JWT_ACCESS_EXPIRES`        | Sim         | TTL do access token (ex: `15m`)                                 |
+| `JWT_REFRESH_EXPIRES`       | Sim         | TTL do refresh token (ex: `7d`)                                 |
+| `CORS_ORIGIN`               | Sim         | Origem(ns) do frontend permitida(s)                             |
+| `GEMINI_API_KEY`            | Não\*       | Obrigatória para features de agentes de IA                      |
+| `GEMINI_API_URL`            | Não         | Endpoint Gemini (padrão: gemini-flash-latest)                   |
+| `SUPABASE_URL`              | Sim         | URL do projeto Supabase                                         |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sim         | Chave service role do Supabase                                  |
+| `SUPABASE_STORAGE_BUCKET`   | Não         | Bucket para avatares (padrão: `avatars`)                        |
+| `SUPABASE_AUDIO_BUCKET`     | Não         | Bucket para áudios de pronúncia (padrão: `audio-entries`)       |
+| `RESEND_API_KEY`            | Não\*       | Obrigatória para envio de e-mails (verificação, reset de senha) |
+| `APP_URL`                   | Não\*       | URL base do frontend — usada nos links dos e-mails              |
+| `LOG_LEVEL`                 | Não         | Nível de log Pino (padrão: `info`)                              |
+| `RATE_LIMIT_MAX`            | Não         | Máx requisições por janela (padrão: `100`)                      |
+| `RATE_LIMIT_TIMEWINDOW`     | Não         | Janela de rate limit em ms (padrão: `60000`)                    |
 
 ---
 

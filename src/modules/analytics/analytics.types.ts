@@ -27,6 +27,7 @@ export const habitStatSchema = z.object({
       })
     )
     .nullable(),
+  wordCloud: z.array(z.object({ word: z.string(), frequency: z.number().int() })).nullable(),
 });
 
 export const globalStatsSchema = z.object({

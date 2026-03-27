@@ -4,6 +4,9 @@ import { env } from "../config/env.js";
 const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export type AvatarContentType = (typeof ALLOWED_CONTENT_TYPES)[number];
 
+const ALLOWED_AUDIO_CONTENT_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"] as const;
+export type AudioContentType = (typeof ALLOWED_AUDIO_CONTENT_TYPES)[number];
+
 const EXT_MAP: Record<AvatarContentType, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -25,6 +28,10 @@ export function isAllowedContentType(contentType: string): contentType is Avatar
   return (ALLOWED_CONTENT_TYPES as readonly string[]).includes(contentType);
 }
 
+export function isAllowedAudioContentType(contentType: string): contentType is AudioContentType {
+  return (ALLOWED_AUDIO_CONTENT_TYPES as readonly string[]).includes(contentType);
+}
+
 export async function createAvatarSignedUploadUrl(userId: string, contentType: AvatarContentType) {
   const supabase = getSupabaseClient();
   const ext = EXT_MAP[contentType];
@@ -41,4 +48,47 @@ export async function createAvatarSignedUploadUrl(userId: string, contentType: A
   const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${env.SUPABASE_STORAGE_BUCKET}/${path}`;
 
   return { signedUrl: data.signedUrl, publicUrl, path };
+}
+
+export async function downloadAudioAsBase64(
+  audioUrl: string
+): Promise<{ base64: string; mimeType: string }> {
+  const supabase = getSupabaseClient();
+  const bucket = env.SUPABASE_AUDIO_BUCKET;
+
+  const url = new URL(audioUrl);
+  const expectedHostname = new URL(env.SUPABASE_URL).hostname;
+  if (url.hostname !== expectedHostname) {
+    throw new Error(
+      `Unauthorized audio origin: URL hostname "${url.hostname}" does not match configured Supabase project`
+    );
+  }
+
+  const marker = `/${bucket}/`;
+  const markerIndex = url.pathname.indexOf(marker);
+  if (markerIndex === -1) {
+    throw new Error(`Invalid audio URL: cannot find bucket "${bucket}" in path`);
+  }
+  const filePath = url.pathname.slice(markerIndex + marker.length);
+
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, 60);
+  if (error || !data) {
+    throw new Error(`Failed to create signed download URL: ${error?.message}`);
+  }
+
+  const response = await fetch(data.signedUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download audio: ${response.status} ${response.statusText}`);
+  }
+
+  const contentType = response.headers.get("content-type") ?? "audio/webm";
+  const mimeType = contentType.split(";")[0].trim();
+  if (!isAllowedAudioContentType(mimeType)) {
+    throw new Error(`Unsupported audio mimeType: ${mimeType}`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+
+  return { base64, mimeType };
 }
