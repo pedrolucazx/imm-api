@@ -57,6 +57,13 @@ export async function downloadAudioAsBase64(
   const bucket = env.SUPABASE_AUDIO_BUCKET;
 
   const url = new URL(audioUrl);
+  const expectedHostname = new URL(env.SUPABASE_URL).hostname;
+  if (url.hostname !== expectedHostname) {
+    throw new Error(
+      `Unauthorized audio origin: URL hostname "${url.hostname}" does not match configured Supabase project`
+    );
+  }
+
   const marker = `/${bucket}/`;
   const markerIndex = url.pathname.indexOf(marker);
   if (markerIndex === -1) {
@@ -76,6 +83,10 @@ export async function downloadAudioAsBase64(
 
   const contentType = response.headers.get("content-type") ?? "audio/webm";
   const mimeType = contentType.split(";")[0].trim();
+  if (!isAllowedAudioContentType(mimeType)) {
+    throw new Error(`Unsupported audio mimeType: ${mimeType}`);
+  }
+
   const buffer = await response.arrayBuffer();
   const base64 = Buffer.from(buffer).toString("base64");
 

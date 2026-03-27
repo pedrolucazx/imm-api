@@ -2,17 +2,7 @@ import { createAnalyticsService } from "@/modules/analytics/analytics.service.js
 import type { AnalyticsRepository } from "@/modules/analytics/analytics.repository.js";
 
 jest.mock("@/shared/schemas/habit-mode.js", () => ({
-  SKILL_BUILDING_LOCALE_SET: new Set([
-    "en-US",
-    "pt-BR",
-    "es-ES",
-    "fr-FR",
-    "de-DE",
-    "it-IT",
-    "ja-JP",
-    "zh-CN",
-    "ko-KR",
-  ]),
+  SKILL_BUILDING_LOCALE_SET: new Set(["en-US", "pt-BR", "es-ES", "fr-FR"]),
 }));
 
 describe("AnalyticsService — wordCloud integration", () => {

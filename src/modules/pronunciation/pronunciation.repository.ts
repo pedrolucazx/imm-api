@@ -15,7 +15,7 @@ export function createPronunciationRepository(db: DrizzleDb) {
     },
 
     async getWordCloud(userId: string, habitId: string, limit = 50): Promise<WordCloudItem[]> {
-      const rows = await db.execute(sql`
+      const rawRows = await db.execute(sql`
         SELECT word, COUNT(*)::int AS frequency
         FROM ${pronunciationEntries},
              unnest(${pronunciationEntries.missedWords}) AS word
@@ -25,7 +25,9 @@ export function createPronunciationRepository(db: DrizzleDb) {
         ORDER BY frequency DESC
         LIMIT ${limit}
       `);
-      return rows as unknown as WordCloudItem[];
+      return (rawRows as unknown as Array<Record<string, unknown>>)
+        .filter((row) => typeof row.word === "string" && row.word.length > 0)
+        .map((row) => ({ word: row.word as string, frequency: Number(row.frequency) }));
     },
 
     async findLatestByHabitAndDate(

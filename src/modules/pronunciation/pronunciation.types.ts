@@ -7,6 +7,7 @@ export const analyzePronunciationSchema = z.object({
   entryDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .refine((d) => !Number.isNaN(new Date(d).getTime()), { message: "Invalid calendar date" })
     .optional(),
 });
 

@@ -15,13 +15,16 @@ import type {
 function normalize(s: string): string[] {
   return s
     .toLowerCase()
-    .replace(/[^\w\s]/g, "")
+    .replace(/[^\p{L}\p{N}\s]+/gu, "")
     .trim()
     .split(/\s+/)
     .filter(Boolean);
 }
 
-function computeLCS(a: string[], b: string[]): string[] {
+function computeLCSIndices(
+  a: string[],
+  b: string[]
+): { origIndices: Set<number>; transIndices: Set<number>; lcs: string[] } {
   const m = a.length;
   const n = b.length;
   const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
@@ -33,12 +36,16 @@ function computeLCS(a: string[], b: string[]): string[] {
     }
   }
 
-  const result: string[] = [];
+  const origIndices = new Set<number>();
+  const transIndices = new Set<number>();
+  const lcs: string[] = [];
   let i = m;
   let j = n;
   while (i > 0 && j > 0) {
     if (a[i - 1] === b[j - 1]) {
-      result.unshift(a[i - 1]);
+      origIndices.add(i - 1);
+      transIndices.add(j - 1);
+      lcs.unshift(a[i - 1]);
       i--;
       j--;
     } else if (dp[i - 1][j] > dp[i][j - 1]) {
@@ -47,7 +54,7 @@ function computeLCS(a: string[], b: string[]): string[] {
       j--;
     }
   }
-  return result;
+  return { origIndices, transIndices, lcs };
 }
 
 function compareTexts(
@@ -56,16 +63,15 @@ function compareTexts(
 ): { score: number; missedWords: string[]; correctWords: string[]; extraWords: string[] } {
   const orig = normalize(original);
   const trans = normalize(transcription);
-  const lcs = computeLCS(orig, trans);
-  const lcsSet = new Set(lcs);
+  const { origIndices, transIndices, lcs } = computeLCSIndices(orig, trans);
 
   const score = orig.length > 0 ? Math.round((lcs.length / orig.length) * 1000) / 1000 : 0;
 
   return {
     score,
-    missedWords: orig.filter((w) => !lcsSet.has(w)),
+    missedWords: orig.filter((_, idx) => !origIndices.has(idx)),
     correctWords: lcs,
-    extraWords: trans.filter((w) => !lcsSet.has(w)),
+    extraWords: trans.filter((_, idx) => !transIndices.has(idx)),
   };
 }
 
@@ -144,6 +150,9 @@ export function createPronunciationService({
     async getWordCloud(userId: string, habitId: string, limit = 50): Promise<WordCloudItem[]> {
       const habit = await habitsRepo.findById(habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
+      if (!habit.targetSkill || !SKILL_BUILDING_LOCALE_SET.has(habit.targetSkill)) {
+        throw new BadRequestError("Word cloud is only available for language habits");
+      }
       return pronunciationRepo.getWordCloud(userId, habitId, limit);
     },
   };
