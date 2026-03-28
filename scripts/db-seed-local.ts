@@ -819,12 +819,22 @@ async function main(): Promise<void> {
       if (!user) {
         [user] = await tx
           .insert(schema.users)
-          .values({ email: demoEmail, passwordHash: hashedPassword, name: "João" })
+          .values({
+            email: demoEmail,
+            passwordHash: hashedPassword,
+            name: "João",
+            emailVerifiedAt: new Date(),
+          })
           .returning();
       } else {
         [user] = await tx
           .update(schema.users)
-          .set({ name: "João", passwordHash: hashedPassword, updatedAt: new Date() })
+          .set({
+            name: "João",
+            passwordHash: hashedPassword,
+            emailVerifiedAt: new Date(),
+            updatedAt: new Date(),
+          })
           .where(eq(schema.users.id, user.id))
           .returning();
       }

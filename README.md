@@ -48,7 +48,7 @@
 A API orquestra três agentes especializados via Google Gemini Flash, cada um ativado por tipo de hábito:
 
 - **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito
-- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; também transcreve áudios de pronúncia e calcula score de acerto
+- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; também aceita áudio gravado pelo usuário, transcreve via Gemini e retorna score de acerto com lista de palavras corretas e erradas
 - **Behavioral Coach**: identifica padrões de humor e sugere micro-ações para hábitos comportamentais
 
 Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o usuário.
@@ -102,7 +102,7 @@ imm-api/
 │   │   ├── habits/               # Rastreamento de hábitos
 │   │   ├── journal/              # Sistema de journaling
 │   │   ├── ai-agents/            # Orquestração de agentes de IA
-│   │   ├── pronunciation/        # Análise de pronúncia via Gemini (hábitos de idiomas)
+│   │   ├── pronunciation/        # Gravação, transcrição e score de pronúncia via Gemini (hábitos de idiomas)
 │   │   └── health/               # Health check endpoint
 │   │       └── health.routes.ts
 │   ├── core/
@@ -114,6 +114,7 @@ imm-api/
 │   │   │   └── schema/
 │   │   │       ├── index.ts
 │   │   │       ├── users.schema.ts
+│   │   │       ├── journal-entries.schema.ts
 │   │   │       └── pronunciation.schema.ts
 │   │   └── plugins/              # Plugins Fastify (cors, jwt, swagger)
 │   ├── shared/
