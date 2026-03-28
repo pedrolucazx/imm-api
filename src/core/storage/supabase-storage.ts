@@ -50,6 +50,23 @@ export async function createAvatarSignedUploadUrl(userId: string, contentType: A
   return { signedUrl: data.signedUrl, publicUrl, path };
 }
 
+export async function createAudioSignedUploadUrl(userId: string, contentType: AudioContentType) {
+  const supabase = getSupabaseClient();
+  const ext = contentType === "audio/webm" ? "webm" : contentType === "audio/mp4" ? "mp4" : "ogg";
+  const path = `${userId}/${Date.now()}.${ext}`;
+
+  const { data, error } = await supabase.storage
+    .from(env.SUPABASE_AUDIO_BUCKET)
+    .createSignedUploadUrl(path, { upsert: false });
+
+  if (error || !data) {
+    throw new Error(`Failed to create audio signed upload URL: ${error?.message}`);
+  }
+
+  const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${env.SUPABASE_AUDIO_BUCKET}/${path}`;
+  return { signedUrl: data.signedUrl, publicUrl, path };
+}
+
 export async function downloadAudioAsBase64(
   audioUrl: string
 ): Promise<{ base64: string; mimeType: string }> {

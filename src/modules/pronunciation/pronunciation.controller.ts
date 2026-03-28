@@ -2,6 +2,10 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import type { PronunciationService } from "./pronunciation.service.js";
 import { analyzePronunciationSchema, wordCloudQuerySchema } from "./pronunciation.types.js";
 import { handleControllerError } from "../../shared/http/handle-error.js";
+import {
+  createAudioSignedUploadUrl,
+  isAllowedAudioContentType,
+} from "../../core/storage/supabase-storage.js";
 
 export function createPronunciationController(service: PronunciationService) {
   return {
@@ -22,6 +26,20 @@ export function createPronunciationController(service: PronunciationService) {
         const { habitId } = wordCloudQuerySchema.parse(request.query);
         const wordCloud = await service.getWordCloud(userId, habitId);
         return reply.code(200).send(wordCloud);
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async getAudioUploadUrl(request: FastifyRequest, reply: FastifyReply) {
+      try {
+        const { id: userId } = request.user;
+        const { contentType } = request.body as { contentType: string };
+        if (!isAllowedAudioContentType(contentType)) {
+          return reply.code(422).send({ error: "Invalid content type" });
+        }
+        const result = await createAudioSignedUploadUrl(userId, contentType);
+        return reply.code(200).send(result);
       } catch (error) {
         return handleControllerError(error, reply);
       }

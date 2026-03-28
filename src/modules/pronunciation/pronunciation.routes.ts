@@ -38,6 +38,45 @@ const wordCloudItemSchema = {
 export async function pronunciationRoutes(fastify: FastifyInstance) {
   const { controller } = createPronunciationModule(getDb());
 
+  fastify.post("/pronunciation/upload-url", {
+    schema: {
+      description:
+        "Generate a signed URL to upload pronunciation audio directly to Supabase Storage",
+      tags: ["Pronunciation"],
+      summary: "Get audio upload URL",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["contentType"],
+        additionalProperties: false,
+        properties: {
+          contentType: {
+            type: "string",
+            enum: ["audio/webm", "audio/mp4", "audio/ogg"],
+            examples: ["audio/webm"],
+          },
+        },
+      },
+      response: {
+        200: {
+          description: "Signed upload URL generated",
+          type: "object",
+          additionalProperties: false,
+          required: ["signedUrl", "publicUrl", "path"],
+          properties: {
+            signedUrl: { type: "string" },
+            publicUrl: { type: "string" },
+            path: { type: "string" },
+          },
+        },
+        401: errorResponse("Unauthorized"),
+        422: errorResponse("Invalid content type"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.getAudioUploadUrl,
+  });
+
   fastify.post("/pronunciation/analyze", {
     schema: {
       description: "Transcribe pronunciation audio via Gemini and return comparison score",
