@@ -4,8 +4,14 @@ import { env } from "../config/env.js";
 const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export type AvatarContentType = (typeof ALLOWED_CONTENT_TYPES)[number];
 
-const ALLOWED_AUDIO_CONTENT_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"] as const;
+export const ALLOWED_AUDIO_CONTENT_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"] as const;
 export type AudioContentType = (typeof ALLOWED_AUDIO_CONTENT_TYPES)[number];
+
+const AUDIO_EXT_MAP: Record<AudioContentType, string> = {
+  "audio/webm": "webm",
+  "audio/mp4": "mp4",
+  "audio/ogg": "ogg",
+};
 
 const EXT_MAP: Record<AvatarContentType, string> = {
   "image/jpeg": "jpg",
@@ -47,6 +53,24 @@ export async function createAvatarSignedUploadUrl(userId: string, contentType: A
 
   const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${env.SUPABASE_STORAGE_BUCKET}/${path}`;
 
+  return { signedUrl: data.signedUrl, publicUrl, path };
+}
+
+export async function createAudioSignedUploadUrl(userId: string, contentType: AudioContentType) {
+  const supabase = getSupabaseClient();
+  const ext = AUDIO_EXT_MAP[contentType];
+  const randomSuffix = Math.random().toString(36).slice(2, 10);
+  const path = `${userId}/${Date.now()}-${randomSuffix}.${ext}`;
+
+  const { data, error } = await supabase.storage
+    .from(env.SUPABASE_AUDIO_BUCKET)
+    .createSignedUploadUrl(path, { upsert: false });
+
+  if (error || !data) {
+    throw new Error(`Failed to create audio signed upload URL: ${error?.message}`);
+  }
+
+  const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${env.SUPABASE_AUDIO_BUCKET}/${path}`;
   return { signedUrl: data.signedUrl, publicUrl, path };
 }
 

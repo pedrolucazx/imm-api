@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
+import { ALLOWED_AUDIO_CONTENT_TYPES } from "../../core/storage/supabase-storage.js";
 import { createPronunciationModule } from "./pronunciation.module.js";
 
 const errorResponse = (description: string) => ({
@@ -37,6 +38,44 @@ const wordCloudItemSchema = {
 
 export async function pronunciationRoutes(fastify: FastifyInstance) {
   const { controller } = createPronunciationModule(getDb());
+
+  fastify.post("/pronunciation/upload-url", {
+    schema: {
+      description:
+        "Generate a signed URL to upload pronunciation audio directly to Supabase Storage",
+      tags: ["Pronunciation"],
+      summary: "Get audio upload URL",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["contentType"],
+        additionalProperties: false,
+        properties: {
+          contentType: {
+            type: "string",
+            examples: [...ALLOWED_AUDIO_CONTENT_TYPES],
+          },
+        },
+      },
+      response: {
+        200: {
+          description: "Signed upload URL generated",
+          type: "object",
+          additionalProperties: false,
+          required: ["signedUrl", "publicUrl", "path"],
+          properties: {
+            signedUrl: { type: "string" },
+            publicUrl: { type: "string" },
+            path: { type: "string" },
+          },
+        },
+        401: errorResponse("Unauthorized"),
+        422: errorResponse("Invalid content type"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.getAudioUploadUrl,
+  });
 
   fastify.post("/pronunciation/analyze", {
     schema: {
