@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
+import { ALLOWED_AUDIO_CONTENT_TYPES } from "../../core/storage/supabase-storage.js";
 import { createPronunciationModule } from "./pronunciation.module.js";
 
 const errorResponse = (description: string) => ({
@@ -52,8 +53,7 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
         properties: {
           contentType: {
             type: "string",
-            enum: ["audio/webm", "audio/mp4", "audio/ogg"],
-            examples: ["audio/webm"],
+            examples: [...ALLOWED_AUDIO_CONTENT_TYPES],
           },
         },
       },
