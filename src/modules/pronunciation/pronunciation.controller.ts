@@ -61,7 +61,7 @@ export function createPronunciationController(service: PronunciationService) {
         const { id: userId } = request.user;
         const { path } = deleteAudioSchema.parse(request.body);
         const normalizedPath = path.split("/").filter(Boolean).join("/");
-        if (path.includes("..") || !normalizedPath.startsWith(`${userId}/`)) {
+        if (normalizedPath.includes("..") || !normalizedPath.startsWith(`${userId}/`)) {
           return reply.code(403).send({ error: "Forbidden" });
         }
         await deleteAudioFile(normalizedPath);

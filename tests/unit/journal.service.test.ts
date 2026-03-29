@@ -204,8 +204,7 @@ describe("JournalService — transcribe", () => {
         habitId: "habit-uuid-1",
       });
 
-      expect(result).toHaveProperty("transcription");
-      expect(typeof result.transcription).toBe("string");
+      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
     });
 
     it("returns transcription for pt-BR habit", async () => {
@@ -217,7 +216,7 @@ describe("JournalService — transcribe", () => {
         habitId: "habit-uuid-1",
       });
 
-      expect(result).toHaveProperty("transcription");
+      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
     });
 
     it("returns transcription for fr-FR habit", async () => {
@@ -229,7 +228,7 @@ describe("JournalService — transcribe", () => {
         habitId: "habit-uuid-1",
       });
 
-      expect(result).toHaveProperty("transcription");
+      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
     });
   });
 
