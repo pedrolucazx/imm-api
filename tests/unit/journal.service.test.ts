@@ -270,8 +270,7 @@ describe("JournalService — transcribe", () => {
         habitId: "habit-uuid-1",
       });
 
-      // callGeminiMultimodal trims internally; the service passes it through as-is
-      expect(result.transcription).toBeDefined();
+      expect(result.transcription).toBe("  Hello world  ");
     });
 
     it("propagates errors thrown by downloadAudioAsBase64", async () => {

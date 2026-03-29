@@ -78,6 +78,15 @@ export function createJournalService({
         throw new BadRequestError("Transcription is only available for language habits");
       }
 
+      const audioPath = new URL(input.audioUrl).pathname;
+      const ownerSegment = audioPath.split("/").find((_, i, arr) => {
+        const bucketIndex = arr.indexOf("audio-entries");
+        return bucketIndex !== -1 && i === bucketIndex + 1;
+      });
+      if (ownerSegment !== userId) {
+        throw new BadRequestError("Audio file does not belong to the authenticated user");
+      }
+
       const { base64, mimeType } = await downloadAudioAsBase64(input.audioUrl);
       const prompt = `Transcribe the following audio exactly as spoken in ${habit.targetSkill}. Return only the transcription text, no punctuation corrections, no commentary. Verbatim only.`;
       const transcription = await callGeminiMultimodal(base64, mimeType, prompt, 500);
