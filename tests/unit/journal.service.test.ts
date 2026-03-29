@@ -172,6 +172,16 @@ describe("JournalService — transcribe", () => {
       ).rejects.toThrow(BadRequestError);
     });
 
+    it("throws BadRequestError when audioUrl has invalid storage path format", async () => {
+      const { service } = makeService(mockLanguageHabit);
+      const invalidAudioUrl =
+        "https://fake.supabase.co/storage/v1/object/public/other-bucket/file.webm";
+
+      await expect(
+        service.transcribe("user-uuid-1", { audioUrl: invalidAudioUrl, habitId: "habit-uuid-1" })
+      ).rejects.toThrow(BadRequestError);
+    });
+
     it("throws BadRequestError when audioUrl belongs to another user", async () => {
       const { service } = makeService(mockLanguageHabit);
       const otherUserAudioUrl =
@@ -366,6 +376,14 @@ describe("JournalService — listHistory", () => {
     const { service, journalRepo } = makeService(mockLanguageHabit);
 
     await service.listHistory("user-uuid-1", 0);
+
+    expect(journalRepo.findAllByUserId).toHaveBeenCalledWith("user-uuid-1", 1);
+  });
+
+  it("clamps limit to minimum of 1 when a negative value is provided", async () => {
+    const { service, journalRepo } = makeService(mockLanguageHabit);
+
+    await service.listHistory("user-uuid-1", -10);
 
     expect(journalRepo.findAllByUserId).toHaveBeenCalledWith("user-uuid-1", 1);
   });
