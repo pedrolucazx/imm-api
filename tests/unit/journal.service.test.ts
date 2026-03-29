@@ -270,7 +270,7 @@ describe("JournalService — transcribe", () => {
       expect(promptArg).toContain("en-US");
     });
 
-    it("returns the raw Gemini output as transcription (verbatim, trimmed)", async () => {
+    it("returns the raw Gemini output as transcription (verbatim)", async () => {
       mockGemini.mockResolvedValue("  Hello world  ");
       const { service } = makeService(mockLanguageHabit);
 
