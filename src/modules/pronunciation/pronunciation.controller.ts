@@ -4,8 +4,12 @@ import { analyzePronunciationSchema, wordCloudQuerySchema } from "./pronunciatio
 import { handleControllerError } from "../../shared/http/handle-error.js";
 import {
   createAudioSignedUploadUrl,
+  deleteAudioFile,
   isAllowedAudioContentType,
 } from "../../core/storage/supabase-storage.js";
+import { z } from "zod";
+
+const deleteAudioSchema = z.object({ path: z.string().min(1) });
 
 export function createPronunciationController(service: PronunciationService) {
   return {
@@ -40,6 +44,20 @@ export function createPronunciationController(service: PronunciationService) {
         }
         const result = await createAudioSignedUploadUrl(userId, contentType);
         return reply.code(200).send(result);
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async deleteOrphanAudio(request: FastifyRequest, reply: FastifyReply) {
+      try {
+        const { id: userId } = request.user;
+        const { path } = deleteAudioSchema.parse(request.body);
+        if (!path.startsWith(`${userId}/`)) {
+          return reply.code(403).send({ error: "Forbidden" });
+        }
+        await deleteAudioFile(path);
+        return reply.code(204).send();
       } catch (error) {
         return handleControllerError(error, reply);
       }
