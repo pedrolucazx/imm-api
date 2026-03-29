@@ -79,10 +79,12 @@ export function createJournalService({
       }
 
       const audioPath = new URL(input.audioUrl).pathname;
-      const ownerSegment = audioPath.split("/").find((_, i, arr) => {
-        const bucketIndex = arr.indexOf("audio-entries");
-        return bucketIndex !== -1 && i === bucketIndex + 1;
-      });
+      const segments = audioPath.split("/").filter(Boolean);
+      const bucketIndex = segments.indexOf("audio-entries");
+      if (bucketIndex === -1 || bucketIndex + 1 >= segments.length) {
+        throw new BadRequestError("Invalid audio URL format");
+      }
+      const ownerSegment = segments[bucketIndex + 1];
       if (ownerSegment !== userId) {
         throw new BadRequestError("Audio file does not belong to the authenticated user");
       }

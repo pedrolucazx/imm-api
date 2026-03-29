@@ -171,6 +171,16 @@ describe("JournalService — transcribe", () => {
         service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
       ).rejects.toThrow(BadRequestError);
     });
+
+    it("throws BadRequestError when audioUrl belongs to another user", async () => {
+      const { service } = makeService(mockLanguageHabit);
+      const otherUserAudioUrl =
+        "https://fake.supabase.co/storage/v1/object/public/audio-entries/other-user-uuid/file.webm";
+
+      await expect(
+        service.transcribe("user-uuid-1", { audioUrl: otherUserAudioUrl, habitId: "habit-uuid-1" })
+      ).rejects.toThrow(BadRequestError);
+    });
   });
 
   describe("happy path — language habits", () => {

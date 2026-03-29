@@ -4,9 +4,20 @@ const httpsStorageUrl = z
   .string()
   .url()
   .refine((val) => val.startsWith("https://"), { message: "Audio URL must use HTTPS" })
-  .refine((val) => /\/storage\/v1\/object\/public\/audio-entries\//.test(val), {
-    message: "Audio URL must point to the project audio storage",
-  });
+  .refine(
+    (val) => {
+      try {
+        const url = new URL(val);
+        return (
+          url.hostname.endsWith(".supabase.co") &&
+          url.pathname.startsWith("/storage/v1/object/public/audio-entries/")
+        );
+      } catch {
+        return false;
+      }
+    },
+    { message: "Audio URL must point to the project audio storage" }
+  );
 
 export const createJournalEntrySchema = z.object({
   habitId: z.uuid(),

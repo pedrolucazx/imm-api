@@ -9,7 +9,14 @@ import {
 } from "../../core/storage/supabase-storage.js";
 import { z } from "zod";
 
-const deleteAudioSchema = z.object({ path: z.string().min(1) });
+const deleteAudioSchema = z.object({
+  path: z
+    .string()
+    .min(1)
+    .refine((val) => !val.includes("..") && /^[\w\-./]+$/.test(val), {
+      message: "Invalid path format",
+    }),
+});
 
 export function createPronunciationController(service: PronunciationService) {
   return {
@@ -53,10 +60,11 @@ export function createPronunciationController(service: PronunciationService) {
       try {
         const { id: userId } = request.user;
         const { path } = deleteAudioSchema.parse(request.body);
-        if (!path.startsWith(`${userId}/`)) {
+        const normalizedPath = path.split("/").filter(Boolean).join("/");
+        if (path.includes("..") || !normalizedPath.startsWith(`${userId}/`)) {
           return reply.code(403).send({ error: "Forbidden" });
         }
-        await deleteAudioFile(path);
+        await deleteAudioFile(normalizedPath);
         return reply.code(204).send();
       } catch (error) {
         return handleControllerError(error, reply);
