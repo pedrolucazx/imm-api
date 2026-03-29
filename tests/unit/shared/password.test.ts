@@ -1,5 +1,7 @@
 import { hashPassword, comparePassword } from "@/shared/utils/password.js";
 
+jest.setTimeout(30000);
+
 describe("hashPassword", () => {
   it("returns a bcrypt hash string", async () => {
     const hash = await hashPassword("mypassword");

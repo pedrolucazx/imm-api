@@ -123,6 +123,30 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
     handler: controller.analyze,
   });
 
+  fastify.delete("/pronunciation/audio", {
+    schema: {
+      description: "Delete an orphan audio file from storage (best-effort cleanup on failed save)",
+      tags: ["Pronunciation"],
+      summary: "Delete orphan audio",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["path"],
+        additionalProperties: false,
+        properties: {
+          path: { type: "string", minLength: 1 },
+        },
+      },
+      response: {
+        204: { description: "Deleted", type: "null" },
+        401: errorResponse("Unauthorized"),
+        403: errorResponse("Forbidden"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.deleteOrphanAudio,
+  });
+
   fastify.get("/pronunciation/word-cloud", {
     schema: {
       description: "Get the most frequently missed words for a language habit",

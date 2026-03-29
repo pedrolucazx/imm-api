@@ -1,6 +1,11 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { JournalService } from "./journal.service.js";
-import { createJournalEntrySchema, type CreateJournalEntryInput } from "./journal.types.js";
+import {
+  createJournalEntrySchema,
+  transcribeSchema,
+  type CreateJournalEntryInput,
+  type TranscribeInput,
+} from "./journal.types.js";
 import { handleControllerError } from "../../shared/http/handle-error.js";
 
 export function createJournalController(service: JournalService) {
@@ -41,6 +46,17 @@ export function createJournalController(service: JournalService) {
         const limit = request.query.limit ? parseInt(request.query.limit, 10) : 30;
         const entries = await service.listEntries(userId, habitId!, limit);
         return reply.code(200).send(entries);
+      } catch (error) {
+        return handleControllerError(error, reply);
+      }
+    },
+
+    async transcribe(request: FastifyRequest<{ Body: TranscribeInput }>, reply: FastifyReply) {
+      try {
+        const { id: userId } = request.user;
+        const data = transcribeSchema.parse(request.body);
+        const result = await service.transcribe(userId, data);
+        return reply.code(200).send(result);
       } catch (error) {
         return handleControllerError(error, reply);
       }

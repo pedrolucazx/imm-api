@@ -20,6 +20,7 @@ const journalEntrySchema = {
     aiAgentType: { anyOf: [{ type: "string" }, { type: "null" }] },
     moodScore: { anyOf: [{ type: "integer" }, { type: "null" }] },
     energyScore: { anyOf: [{ type: "integer" }, { type: "null" }] },
+    audioUrl: { anyOf: [{ type: "string" }, { type: "null" }] },
     createdAt: { type: "string" },
     updatedAt: { type: "string" },
   },
@@ -62,6 +63,13 @@ export async function journalRoutes(fastify: FastifyInstance) {
           },
           moodScore: { type: "integer", minimum: 1, maximum: 5, examples: [4] },
           energyScore: { type: "integer", minimum: 1, maximum: 5, examples: [3] },
+          audioUrl: {
+            type: "string",
+            format: "uri",
+            examples: [
+              "https://project.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm",
+            ],
+          },
         },
       },
       response: {
@@ -125,5 +133,49 @@ export async function journalRoutes(fastify: FastifyInstance) {
     },
     preHandler: authenticate,
     handler: controller.listHistory,
+  });
+
+  fastify.post("/journal/transcribe", {
+    schema: {
+      description: "Transcribe audio via Gemini and return the transcription text",
+      tags: ["Journal"],
+      summary: "Transcribe audio for journal entry",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["audioUrl", "habitId"],
+        additionalProperties: false,
+        properties: {
+          audioUrl: {
+            type: "string",
+            format: "uri",
+            examples: [
+              "https://project.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm",
+            ],
+          },
+          habitId: {
+            type: "string",
+            format: "uuid",
+            examples: ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"],
+          },
+        },
+      },
+      response: {
+        200: {
+          description: "Audio transcribed successfully",
+          type: "object",
+          additionalProperties: false,
+          required: ["transcription"],
+          properties: {
+            transcription: { type: "string" },
+          },
+        },
+        400: errorResponse("Habit is not a language habit"),
+        401: errorResponse("Unauthorized"),
+        404: errorResponse("Habit not found"),
+      },
+    },
+    preHandler: authenticate,
+    handler: controller.transcribe,
   });
 }

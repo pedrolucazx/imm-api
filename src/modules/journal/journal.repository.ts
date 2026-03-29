@@ -79,9 +79,12 @@ export function createJournalRepository(db: DrizzleDb) {
             wordCount: data.wordCount,
             moodScore: data.moodScore,
             energyScore: data.energyScore,
+            audioUrl: data.audioUrl ?? null,
             updatedAt: new Date(),
           })
-          .where(eq(journalEntries.id, data.existingId))
+          .where(
+            and(eq(journalEntries.id, data.existingId), eq(journalEntries.userId, data.userId))
+          )
           .returning();
         return entry;
       }

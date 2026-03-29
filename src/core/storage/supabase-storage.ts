@@ -74,6 +74,14 @@ export async function createAudioSignedUploadUrl(userId: string, contentType: Au
   return { signedUrl: data.signedUrl, publicUrl, path };
 }
 
+export async function deleteAudioFile(path: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.storage.from(env.SUPABASE_AUDIO_BUCKET).remove([path]);
+  if (error) {
+    throw new Error(`Failed to delete audio file: ${error.message}`);
+  }
+}
+
 export async function downloadAudioAsBase64(
   audioUrl: string
 ): Promise<{ base64: string; mimeType: string }> {

@@ -32,6 +32,7 @@ export const journalEntries = pgTable(
     aiAgentType: varchar("ai_agent_type", { length: 30 }),
     moodScore: smallint("mood_score"),
     energyScore: smallint("energy_score"),
+    audioUrl: text("audio_url"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },

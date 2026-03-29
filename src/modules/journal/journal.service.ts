@@ -4,8 +4,11 @@ import type { UserProfilesRepository } from "../users/user-profiles.repository.j
 import { getTodayUTCString } from "../../shared/utils/date.js";
 import type { CreateJournalEntryInput } from "./journal.types.js";
 import type { JournalEntry } from "../../core/database/schema/index.js";
-import { NotFoundError } from "../../shared/errors/index.js";
+import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 import { countWords } from "../../shared/utils/string.js";
+import { downloadAudioAsBase64 } from "../../core/storage/supabase-storage.js";
+import { callGeminiMultimodal } from "../ai-agents/gemini-client.js";
+import { SKILL_BUILDING_LOCALE_SET } from "../../shared/schemas/habit-mode.js";
 
 type JournalServiceDeps = {
   journalRepo: JournalRepository;
@@ -44,6 +47,7 @@ export function createJournalService({
         targetSkillSnap,
         moodScore: input.moodScore ?? null,
         energyScore: input.energyScore ?? null,
+        audioUrl: input.audioUrl ?? null,
         existingId: existing?.id,
       });
     },
@@ -61,6 +65,35 @@ export function createJournalService({
 
     async listEntriesByDate(userId: string, date: string): Promise<JournalEntry[]> {
       return journalRepo.findAllByDate(userId, date);
+    },
+
+    async transcribe(
+      userId: string,
+      input: { audioUrl: string; habitId: string }
+    ): Promise<{ transcription: string }> {
+      const habit = await habitsRepo.findById(input.habitId, userId);
+      if (!habit) throw new NotFoundError("Habit not found");
+
+      if (!habit.targetSkill || !SKILL_BUILDING_LOCALE_SET.has(habit.targetSkill)) {
+        throw new BadRequestError("Transcription is only available for language habits");
+      }
+
+      const audioPath = new URL(input.audioUrl).pathname;
+      const segments = audioPath.split("/").filter(Boolean);
+      const bucketIndex = segments.indexOf("audio-entries");
+      if (bucketIndex === -1 || bucketIndex + 1 >= segments.length) {
+        throw new BadRequestError("Invalid audio URL format");
+      }
+      const ownerSegment = segments[bucketIndex + 1];
+      if (ownerSegment !== userId) {
+        throw new BadRequestError("Audio file does not belong to the authenticated user");
+      }
+
+      const { base64, mimeType } = await downloadAudioAsBase64(input.audioUrl);
+      const prompt = `Transcribe the following audio exactly as spoken in ${habit.targetSkill}. Return only the transcription text, no punctuation corrections, no commentary. Verbatim only.`;
+      const transcription = await callGeminiMultimodal(base64, mimeType, prompt, 500);
+
+      return { transcription };
     },
 
     async listHistory(
