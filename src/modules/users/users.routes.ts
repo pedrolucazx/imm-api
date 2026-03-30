@@ -3,6 +3,7 @@ import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
 import { createUsersModule } from "./users.module.js";
 import { ALLOWED_UI_LANGUAGES } from "./users.types.js";
+import { MAX_ONBOARDING_STEP } from "./onboarding.types.js";
 
 const userMeResponse = {
   type: "object",
@@ -201,7 +202,7 @@ export async function usersRoutes(fastify: FastifyInstance) {
         type: "object",
         additionalProperties: false,
         properties: {
-          currentStep: { type: "integer", minimum: 0, maximum: 5, examples: [1] },
+          currentStep: { type: "integer", minimum: 0, maximum: MAX_ONBOARDING_STEP, examples: [1] },
           skipped: { type: "boolean", examples: [true] },
           completed: { type: "boolean", examples: [true] },
         },

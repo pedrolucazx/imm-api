@@ -297,6 +297,50 @@ describe("AuthService", () => {
       );
       expect(mocks.mockDb.transaction).toHaveBeenCalled();
       expect(mocks.mockTx.insert).toHaveBeenCalledTimes(2);
+      expect(mocks.mockOnboardingRepo.create).toHaveBeenCalledWith(newUser.id, expect.anything());
+    });
+
+    it("does not create onboarding session when email already exists", async () => {
+      mocks.mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([mockUser]),
+          }),
+        }),
+      });
+
+      await expect(
+        authService.register({ email: mockUser.email, password: "password123", name: "Dup" })
+      ).rejects.toThrow();
+
+      expect(mocks.mockOnboardingRepo.create).not.toHaveBeenCalled();
+    });
+
+    it("propagates error if onboarding session creation fails", async () => {
+      mocks.mockTx.select = jest.fn().mockReturnValue({
+        from: jest.fn().mockReturnValue({
+          where: jest.fn().mockReturnValue({
+            limit: jest.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
+      const newUser = { ...mockUser, email: "new2@example.com" };
+      const mockInsert = mocks.mockTx.insert as jest.Mock;
+      mockInsert.mockReturnValue({
+        values: jest.fn().mockReturnValue({
+          returning: jest
+            .fn()
+            .mockResolvedValueOnce([newUser])
+            .mockResolvedValueOnce([mockProfile]),
+        }),
+      });
+
+      mocks.mockOnboardingRepo.create.mockRejectedValue(new Error("DB error"));
+
+      await expect(
+        authService.register({ email: "new2@example.com", password: "password123", name: "New" })
+      ).rejects.toThrow("DB error");
     });
   });
 

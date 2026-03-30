@@ -59,7 +59,8 @@ Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o
 
 ```text
 imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
-                                       └──► Google Gemini Flash (agentes de IA)
+                                       ├──► Google Gemini Flash (agentes de IA)
+                                       └──► Supabase Storage (avatares + áudios)
 ```
 
 `imm-api` é o backend da plataforma **Inside My Mind**. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Segue um monolito modular organizado por domínio — cada módulo em `src/modules/` possui suas próprias routes, controller, service e repository. A API é documentada via Swagger UI em `/docs`.
@@ -97,8 +98,12 @@ imm-api/
 │   │   │   ├── auth.routes.ts
 │   │   │   ├── auth.service.ts
 │   │   │   └── auth.types.ts
-│   │   ├── users/                # Gerenciamento de usuários
-│   │   │   └── users.repository.ts
+│   │   ├── users/                # Gerenciamento de usuários e onboarding
+│   │   │   ├── users.repository.ts
+│   │   │   ├── onboarding.controller.ts
+│   │   │   ├── onboarding.repository.ts
+│   │   │   ├── onboarding.service.ts
+│   │   │   └── onboarding.types.ts
 │   │   ├── habits/               # Rastreamento de hábitos
 │   │   ├── journal/              # Sistema de journaling
 │   │   ├── ai-agents/            # Orquestração de agentes de IA
@@ -115,6 +120,7 @@ imm-api/
 │   │   │       ├── index.ts
 │   │   │       ├── users.schema.ts
 │   │   │       ├── journal-entries.schema.ts
+│   │   │       ├── onboarding-sessions.schema.ts
 │   │   │       └── pronunciation.schema.ts
 │   │   └── plugins/              # Plugins Fastify (cors, jwt, swagger)
 │   ├── shared/

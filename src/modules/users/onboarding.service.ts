@@ -1,12 +1,12 @@
 import type { OnboardingRepository } from "./onboarding.repository.js";
 import type { UpdateOnboardingInput, OnboardingStatusResponse } from "./onboarding.types.js";
 
-const DEFAULT_STATUS: OnboardingStatusResponse = {
+const DEFAULT_STATUS = {
   currentStep: 0,
   skipped: false,
   completed: false,
   completedAt: null,
-};
+} as const satisfies OnboardingStatusResponse;
 
 function toResponse(session: {
   currentStep: number;

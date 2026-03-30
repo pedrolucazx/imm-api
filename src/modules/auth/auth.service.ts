@@ -265,6 +265,7 @@ export function createAuthService({
 
     async forgotPassword(input: ForgotPasswordInput): Promise<void> {
       const user = await usersRepo.findByEmail(input.email);
+      // Return silently whether user exists or not (prevent email enumeration)
       if (!user || !user.emailVerifiedAt) return;
 
       const rawToken = randomBytes(32).toString("hex");
