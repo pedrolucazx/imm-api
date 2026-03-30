@@ -131,6 +131,21 @@ function makeMocks() {
     deleteExpired: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockOnboardingRepo = {
+    create: jest.fn().mockResolvedValue({
+      id: "onboarding-id",
+      userId: mockUser.id,
+      completed: false,
+      skipped: false,
+      currentStep: 0,
+      completedAt: null,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    }),
+    findByUserId: jest.fn(),
+    upsert: jest.fn(),
+  };
+
   return {
     mockDb,
     mockTx,
@@ -139,6 +154,7 @@ function makeMocks() {
     mockRefreshTokensRepo,
     mockEmailVerificationTokensRepo,
     mockPasswordResetTokensRepo,
+    mockOnboardingRepo,
   };
 }
 
@@ -154,6 +170,7 @@ describe("AuthService", () => {
       db: mocks.mockDb,
       usersRepo: mocks.mockUsersRepo,
       profilesRepo: mocks.mockProfilesRepo,
+      onboardingRepo: mocks.mockOnboardingRepo,
       refreshTokensRepo: mocks.mockRefreshTokensRepo,
       emailVerificationTokensRepo: mocks.mockEmailVerificationTokensRepo,
       passwordResetTokensRepo: mocks.mockPasswordResetTokensRepo,

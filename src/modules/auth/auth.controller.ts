@@ -21,12 +21,23 @@ import { env } from "../../core/config/env.js";
 
 export function createAuthController(service: AuthService) {
   const isProduction = env.NODE_ENV === "production";
+  const isLocalDev = env.NODE_ENV === "development";
+
+  const getCookieDomain = () => {
+    if (isProduction) return undefined;
+    if (isLocalDev) {
+      const origin = new URL(env.CORS_ORIGIN);
+      return origin.hostname;
+    }
+    return undefined;
+  };
 
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
     sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
     path: "/",
+    domain: getCookieDomain(),
   };
 
   function setRefreshTokenCookie(reply: FastifyReply, token: string) {

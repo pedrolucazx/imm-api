@@ -35,8 +35,23 @@ const errorResponse = (description: string) => ({
   },
 });
 
+const onboardingStatusResponse = {
+  type: "object",
+  additionalProperties: false,
+  required: ["currentStep", "skipped", "completed", "completedAt"],
+  properties: {
+    currentStep: { type: "integer", minimum: 0, maximum: 5, examples: [0] },
+    skipped: { type: "boolean", examples: [false] },
+    completed: { type: "boolean", examples: [false] },
+    completedAt: {
+      anyOf: [{ type: "string", format: "date-time" }, { type: "null" }],
+      examples: [null],
+    },
+  },
+};
+
 export async function usersRoutes(fastify: FastifyInstance) {
-  const { controller } = createUsersModule(getDb());
+  const { controller, onboardingController } = createUsersModule(getDb());
 
   fastify.get("/users/me", {
     schema: {
@@ -159,5 +174,45 @@ export async function usersRoutes(fastify: FastifyInstance) {
     },
     preHandler: authenticate,
     handler: controller.delete,
+  });
+
+  fastify.get("/users/me/onboarding", {
+    schema: {
+      description: "Get the authenticated user's onboarding status",
+      tags: ["Users"],
+      summary: "Get onboarding status",
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: { description: "Onboarding status retrieved", ...onboardingStatusResponse },
+        401: errorResponse("Unauthorized - invalid or missing token"),
+      },
+    },
+    preHandler: authenticate,
+    handler: onboardingController.getStatus,
+  });
+
+  fastify.put("/users/me/onboarding", {
+    schema: {
+      description: "Update the authenticated user's onboarding progress",
+      tags: ["Users"],
+      summary: "Update onboarding progress",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          currentStep: { type: "integer", minimum: 0, maximum: 5, examples: [1] },
+          skipped: { type: "boolean", examples: [true] },
+          completed: { type: "boolean", examples: [true] },
+        },
+      },
+      response: {
+        200: { description: "Onboarding progress updated", ...onboardingStatusResponse },
+        401: errorResponse("Unauthorized - invalid or missing token"),
+        422: errorResponse("Validation failed"),
+      },
+    },
+    preHandler: authenticate,
+    handler: onboardingController.update,
   });
 }

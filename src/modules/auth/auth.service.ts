@@ -7,6 +7,7 @@ import * as usersSchema from "../../core/database/schema/users.schema.js";
 import * as userProfilesSchema from "../../core/database/schema/user-profiles.schema.js";
 import type { UsersRepository } from "../users/users.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
+import type { OnboardingRepository } from "../users/onboarding.repository.js";
 import type { RefreshTokensRepository } from "./refresh-tokens.repository.js";
 import type { EmailVerificationTokensRepository } from "./email-verification-tokens.repository.js";
 import type { PasswordResetTokensRepository } from "./password-reset-tokens.repository.js";
@@ -42,6 +43,7 @@ type AuthServiceDeps = {
   db: DrizzleDb;
   usersRepo: UsersRepository;
   profilesRepo: UserProfilesRepository;
+  onboardingRepo: OnboardingRepository;
   refreshTokensRepo: RefreshTokensRepository;
   emailVerificationTokensRepo: EmailVerificationTokensRepository;
   passwordResetTokensRepo: PasswordResetTokensRepository;
@@ -51,6 +53,7 @@ export function createAuthService({
   db,
   usersRepo,
   profilesRepo,
+  onboardingRepo,
   refreshTokensRepo,
   emailVerificationTokensRepo,
   passwordResetTokensRepo,
@@ -96,6 +99,8 @@ export function createAuthService({
             { userId: user.id, tokenHash, expiresAt: tokenExpiresAt },
             tx
           );
+
+          await onboardingRepo.create(user.id, tx);
 
           return { user, profile };
         } catch (error: unknown) {
@@ -260,7 +265,6 @@ export function createAuthService({
 
     async forgotPassword(input: ForgotPasswordInput): Promise<void> {
       const user = await usersRepo.findByEmail(input.email);
-      // Return silently whether user exists or not (prevent email enumeration)
       if (!user || !user.emailVerifiedAt) return;
 
       const rawToken = randomBytes(32).toString("hex");

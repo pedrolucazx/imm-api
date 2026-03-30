@@ -1,6 +1,7 @@
 import type { DrizzleDb } from "../../core/database/connection.js";
 import { createUsersRepository } from "../users/users.repository.js";
 import { createUserProfilesRepository } from "../users/user-profiles.repository.js";
+import { createOnboardingRepository } from "../users/onboarding.repository.js";
 import { createRefreshTokensRepository } from "./refresh-tokens.repository.js";
 import { createEmailVerificationTokensRepository } from "./email-verification-tokens.repository.js";
 import { createPasswordResetTokensRepository } from "./password-reset-tokens.repository.js";
@@ -10,6 +11,7 @@ import { createAuthController } from "./auth.controller.js";
 export function createAuthModule(db: DrizzleDb) {
   const usersRepo = createUsersRepository(db);
   const profilesRepo = createUserProfilesRepository(db);
+  const onboardingRepo = createOnboardingRepository(db);
   const refreshTokensRepo = createRefreshTokensRepository(db);
   const emailVerificationTokensRepo = createEmailVerificationTokensRepository(db);
   const passwordResetTokensRepo = createPasswordResetTokensRepository(db);
@@ -17,6 +19,7 @@ export function createAuthModule(db: DrizzleDb) {
     db,
     usersRepo,
     profilesRepo,
+    onboardingRepo,
     refreshTokensRepo,
     emailVerificationTokensRepo,
     passwordResetTokensRepo,

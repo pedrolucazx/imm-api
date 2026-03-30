@@ -39,12 +39,10 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
     ): Promise<AnalyticsSummary> {
       const today = getTodayUTCString();
 
-      // Fetch active habits
       const allHabits = await analyticsRepo.findActiveHabits(userId);
       const filteredHabits = habitId ? allHabits.filter((h) => h.id === habitId) : allHabits;
       const habitIds = allHabits.map((h) => h.id);
 
-      // Fetch logs for all habits
       const allLogs = await analyticsRepo.findLogsByHabitIds(habitIds);
       const logsByHabit = new Map<string, HabitLog[]>();
       for (const log of allLogs) {
@@ -53,7 +51,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         logsByHabit.set(log.habitId, arr);
       }
 
-      // Fetch score timeline entries for filtered language-skill habits
       const languageHabitIds = filteredHabits
         .filter((h) => h.targetSkill != null && SKILL_BUILDING_LOCALE_SET.has(h.targetSkill))
         .map((h) => h.id);
@@ -62,7 +59,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         analyticsRepo.getWordCloudByHabitIds(userId, languageHabitIds),
       ]);
 
-      // Group timeline rows by habitId
       const timelineByHabit = new Map<
         string,
         Array<{ date: string; grammarScore: number; vocabularyScore: number; fluencyScore: number }>
@@ -87,7 +83,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         timelineByHabit.set(row.habitId, arr);
       }
 
-      // Compute per-habit stats (filtered)
       const habits: HabitStat[] = filteredHabits.map((habit) => {
         const logs = logsByHabit.get(habit.id) ?? [];
         const isLanguageHabit =
@@ -123,7 +118,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
             ) / 1000
           : 0;
 
-      // Global stats
       const [
         journalCount,
         wordStats,
@@ -142,7 +136,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         analyticsRepo.getBestPerformanceHour(userId, timezone),
       ]);
 
-      // Compute mood consistency correlation
       const highRows = moodCorrelationRows.filter((r) => r.mood >= 4);
       const lowRows = moodCorrelationRows.filter((r) => r.mood <= 3);
       const moodConsistencyCorrelation =
@@ -163,7 +156,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
             }
           : null;
 
-      // Format best performance hour
       const bestPerformanceHour =
         bestHour != null ? `${String(bestHour).padStart(2, "0")}:00` : null;
 
@@ -181,7 +173,6 @@ export function createAnalyticsService({ analyticsRepo }: AnalyticsServiceDeps) 
         bestPerformanceHour,
       };
 
-      // Mood timeline (last 30 days with mood data)
       const moodTimeline = await analyticsRepo.getMoodTimeline(userId);
 
       return { habits, global, moodTimeline };

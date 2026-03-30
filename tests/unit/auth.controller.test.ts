@@ -142,6 +142,7 @@ describe("AuthController.login", () => {
       secure: false,
       sameSite: "lax",
       path: "/",
+      domain: expect.anything(),
       maxAge: expect.any(Number),
     });
   });
@@ -197,6 +198,7 @@ describe("AuthController.refresh", () => {
       secure: false,
       sameSite: "lax",
       path: "/",
+      domain: expect.anything(),
       maxAge: expect.any(Number),
     });
   });
@@ -225,6 +227,7 @@ describe("AuthController.refresh", () => {
       secure: false,
       sameSite: "lax",
       path: "/",
+      domain: expect.anything(),
     });
     expect(reply.code).toHaveBeenCalledWith(401);
   });
@@ -253,6 +256,7 @@ describe("AuthController.logout", () => {
       secure: false,
       sameSite: "lax",
       path: "/",
+      domain: expect.anything(),
     });
   });
 
@@ -269,6 +273,7 @@ describe("AuthController.logout", () => {
       secure: false,
       sameSite: "lax",
       path: "/",
+      domain: expect.anything(),
     });
   });
 
@@ -284,6 +289,7 @@ describe("AuthController.logout", () => {
       secure: false,
       sameSite: "lax",
       path: "/",
+      domain: expect.anything(),
     });
     expect(reply.code).toHaveBeenCalledWith(500);
   });
