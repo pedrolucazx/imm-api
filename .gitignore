@@ -7,8 +7,8 @@ build/
 
 # env — NUNCA commite credenciais reais
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # logs
 *.log

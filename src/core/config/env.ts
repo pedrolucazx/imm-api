@@ -4,13 +4,9 @@ import { logger } from "./logger.js";
 import { existsSync } from "fs";
 import { resolve } from "path";
 
-const envFiles = [".env", ".env.local"];
-for (let index = 0; index < envFiles.length; index += 1) {
-  const file = envFiles[index];
-  const path = resolve(process.cwd(), file);
-  if (existsSync(path)) {
-    config({ path, quiet: true, override: index > 0 });
-  }
+const envPath = resolve(process.cwd(), ".env");
+if (existsSync(envPath)) {
+  config({ path: envPath, quiet: true });
 }
 
 const envSchema = z.object({

@@ -10,24 +10,10 @@ import { hashPassword } from "../src/shared/utils/password.js";
 import { logger } from "../src/core/config/logger.js";
 
 function loadEnvFiles(): void {
-  const selectedEnvFile = process.env.DRIZZLE_ENV_FILE ?? ".env.local";
-  const fallbackEnvFile = ".env";
-  const envFiles = [selectedEnvFile, fallbackEnvFile].filter(
-    (file, index, array) => array.indexOf(file) === index
-  );
-
-  const [primaryEnvFile, ...secondaryEnvFiles] = envFiles;
-
-  const primaryEnvPath = resolve(process.cwd(), primaryEnvFile);
-  if (existsSync(primaryEnvPath)) {
-    config({ path: primaryEnvPath, quiet: true, override: true });
-  }
-
-  for (const file of secondaryEnvFiles) {
-    const envPath = resolve(process.cwd(), file);
-    if (existsSync(envPath)) {
-      config({ path: envPath, quiet: true });
-    }
+  const envFile = process.env.DRIZZLE_ENV_FILE ?? ".env";
+  const envPath = resolve(process.cwd(), envFile);
+  if (existsSync(envPath)) {
+    config({ path: envPath, quiet: true, override: true });
   }
 }
 
@@ -790,7 +776,7 @@ async function main(): Promise<void> {
 
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set. Check .env.local / .env configuration.");
+    throw new Error("DATABASE_URL is not set. Check your .env file.");
   }
 
   const hostname = new URL(databaseUrl).hostname;
