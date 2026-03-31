@@ -172,7 +172,7 @@ cd imm-api
 npm install
 
 # 3. Configure as variáveis de ambiente
-cp .env.example .env.local
+cp .env.example .env
 # Preencha os valores — veja a seção Variáveis de Ambiente
 
 # 4. Suba banco local + migrations + seed de dados de exemplo
@@ -189,12 +189,7 @@ npm run dev
 
 ## Variáveis de Ambiente
 
-Use dois arquivos para separar ambientes:
-
-- `.env`: remoto (Supabase/Railway)
-- `.env.local`: local (Docker)
-
-Copie `.env.example` para `.env.local` e configure os valores:
+Copie `.env.example` para `.env` e configure os valores:
 
 ```env
 # Aplicação
@@ -303,7 +298,7 @@ npm run db:studio
 | `npm run test:coverage`    | Testes com relatório de coverage              |
 | `npm run db:generate`      | Gera migration a partir do schema diff        |
 | `npm run db:migrate`       | Aplica pending migrations (`.env`)            |
-| `npm run db:migrate:local` | Aplica pending migrations (`.env.local`)      |
+| `npm run db:migrate:local` | Aplica pending migrations (`.env`)            |
 | `npm run db:push`          | Push do schema direto (sem migration)         |
 | `npm run db:studio`        | Abre Drizzle Studio GUI                       |
 | `npm run db:seed:local`    | Seed local com dados de exemplo               |
