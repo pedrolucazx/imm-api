@@ -776,7 +776,9 @@ async function main(): Promise<void> {
 
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set. Check your .env file.");
+    throw new Error(
+      `DATABASE_URL is not set. Check your ${process.env.DRIZZLE_ENV_FILE ?? ".env"} file.`
+    );
   }
 
   const hostname = new URL(databaseUrl).hostname;
