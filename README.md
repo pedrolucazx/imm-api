@@ -11,7 +11,7 @@
 ![Drizzle](https://img.shields.io/badge/Drizzle_ORM-C5F74F?style=for-the-badge&logo=drizzle&logoColor=black)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Swagger](https://img.shields.io/badge/Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)
-![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)
+![Railway](https://img.shields.io/badge/Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)
 
 ---
 
@@ -19,7 +19,7 @@
 
 - [O que é Inside My Mind?](#o-que-é-inside-my-mind)
 - [Agentes de IA](#agentes-de-ia)
-- [Arquitetura](#arquitetura)
+- [Arquitetura](#arquitetura) · [Documento completo](docs/architecture.md)
 - [Stack de Tecnologias](#stack-de-tecnologias)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Pré-requisitos](#pré-requisitos)
@@ -39,7 +39,7 @@
 
 **Inside My Mind** é uma aplicação de rastreamento de hábitos que usa IA para gerar feedback personalizado. O usuário registra seu progresso diário, escreve sobre sua experiência e recebe análise de um dos três agentes especializados: um planejador de hábitos, um professor de idiomas ou um coach comportamental.
 
-É um projeto de código aberto, feito para aprendizado e portfólio.
+É um projeto de código aberto, feito para aprendizado e portfólio, 100% gratuito e sem funcionalidades bloqueadas.
 
 ---
 
@@ -47,8 +47,8 @@
 
 A API orquestra três agentes especializados via Google Gemini Flash, cada um ativado por tipo de hábito:
 
-- **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito
-- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; também aceita áudio gravado pelo usuário, transcreve via Gemini e retorna score de acerto com lista de palavras corretas e erradas
+- **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito; suporta regeneração com feedback do usuário
+- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; aceita áudio gravado pelo usuário, transcreve via Gemini e retorna score de pronúncia com lista de palavras corretas e erradas
 - **Behavioral Coach**: identifica padrões de humor e sugere micro-ações para hábitos comportamentais
 
 Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o usuário.
@@ -58,12 +58,13 @@ Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o
 ## Arquitetura
 
 ```text
-imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
+imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16 (Supabase)
                                        ├──► Google Gemini Flash (agentes de IA)
-                                       └──► Supabase Storage (avatares + áudios)
+                                       ├──► Supabase Storage (avatares + áudios)
+                                       └──► Resend (e-mails transacionais)
 ```
 
-`imm-api` é o backend da plataforma **Inside My Mind**. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Segue um monolito modular organizado por domínio — cada módulo em `src/modules/` possui suas próprias routes, controller, service e repository. A API é documentada via Swagger UI em `/docs`.
+`imm-api` é o backend da plataforma. Expõe uma API RESTful consumida exclusivamente por [`imm-web`](https://github.com/pedrolucazx/imm-web). Segue um monolito modular organizado por domínio — cada módulo em `src/modules/` possui suas próprias routes, controller, service e repository. A API é documentada via Swagger UI em `/docs`.
 
 ---
 
@@ -74,16 +75,17 @@ imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
 | Runtime             | Node.js (ESM)                                           |
 | Framework           | Fastify 5                                               |
 | Linguagem           | TypeScript 5                                            |
-| Banco de Dados      | PostgreSQL 16                                           |
+| Banco de Dados      | PostgreSQL 16 (Supabase)                                |
 | ORM                 | Drizzle ORM                                             |
 | Validação           | Zod 4                                                   |
 | Autenticação        | JWT — access + refresh tokens (`@fastify/jwt`)          |
+| E-mail              | Resend                                                  |
 | Documentação da API | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`) |
 | Integração com IA   | Google Gemini Flash                                     |
-| Storage             | Supabase Storage (avatars + audio)                      |
+| Storage             | Supabase Storage (avatares + áudios)                    |
 | Logging             | Pino + pino-pretty                                      |
 | Containerização     | Docker + Docker Compose                                 |
-| Deployment          | Render                                                  |
+| Deployment          | Railway                                                 |
 
 ---
 
@@ -92,56 +94,59 @@ imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16
 ```text
 imm-api/
 ├── src/
-│   ├── modules/                  # Feature modules (uma pasta por domínio)
-│   │   ├── auth/                 # Autenticação (login, register, refresh token)
-│   │   │   ├── auth.controller.ts
-│   │   │   ├── auth.routes.ts
-│   │   │   ├── auth.service.ts
-│   │   │   └── auth.types.ts
-│   │   ├── users/                # Gerenciamento de usuários e onboarding
+│   ├── modules/                          # Feature modules (uma pasta por domínio)
+│   │   ├── auth/                         # Autenticação completa
+│   │   │   ├── auth.controller.ts        # Login, register, refresh, logout
+│   │   │   ├── auth.routes.ts            # Rotas + schemas Zod/Swagger
+│   │   │   ├── auth.service.ts           # Lógica: JWT, hash, verificação
+│   │   │   ├── auth.types.ts
+│   │   │   ├── email.service.ts          # Templates e envio via Resend
+│   │   │   ├── email-verification-tokens.repository.ts
+│   │   │   └── password-reset-tokens.repository.ts
+│   │   ├── users/                        # Perfil, onboarding e exclusão de conta
+│   │   │   ├── users.controller.ts
 │   │   │   ├── users.repository.ts
+│   │   │   ├── users.routes.ts
+│   │   │   ├── users.service.ts
 │   │   │   ├── onboarding.controller.ts
 │   │   │   ├── onboarding.repository.ts
-│   │   │   ├── onboarding.service.ts
-│   │   │   └── onboarding.types.ts
-│   │   ├── habits/               # Rastreamento de hábitos
-│   │   ├── journal/              # Sistema de journaling
-│   │   ├── ai-agents/            # Orquestração de agentes de IA
-│   │   ├── pronunciation/        # Gravação, transcrição e score de pronúncia via Gemini (hábitos de idiomas)
-│   │   └── health/               # Health check endpoint
-│   │       └── health.routes.ts
+│   │   │   └── onboarding.service.ts
+│   │   ├── habits/                       # Criação, listagem, logging diário
+│   │   ├── journal/                      # Entradas de journal + feedback de IA
+│   │   ├── ai-agents/                    # Orquestração dos três agentes Gemini
+│   │   ├── analytics/                    # Métricas de progresso e streaks
+│   │   ├── pronunciation/                # Upload de áudio, transcrição e score
+│   │   └── health/                       # Health check endpoint
 │   ├── core/
-│   │   ├── config/               # Config de ambiente & setup de logger
-│   │   │   ├── env.ts
-│   │   │   └── logger.ts
-│   │   ├── database/             # Drizzle connection & schema definitions
-│   │   │   ├── connection.ts
-│   │   │   └── schema/
-│   │   │       ├── index.ts
-│   │   │       ├── users.schema.ts
-│   │   │       ├── journal-entries.schema.ts
-│   │   │       ├── onboarding-sessions.schema.ts
-│   │   │       └── pronunciation.schema.ts
-│   │   └── plugins/              # Plugins Fastify (cors, jwt, swagger)
+│   │   ├── config/                       # Env validation (Zod) e logger (Pino)
+│   │   ├── database/                     # Drizzle connection e schema definitions
+│   │   │   └── schema/                   # Uma tabela por arquivo
+│   │   └── storage/                      # Cliente Supabase Storage
+│   ├── plugins/                          # Plugins Fastify (cors, jwt, swagger)
 │   ├── shared/
-│   │   └── utils/
-│   │       └── password.ts       # Helpers bcrypt
-│   ├── migrations/               # Drizzle SQL migrations geradas automaticamente
-│   └── index.ts                  # Entry point da aplicação
+│   │   ├── constants.ts
+│   │   ├── errors/                       # Error classes tipadas
+│   │   ├── guards/                       # Rate limit de IA
+│   │   ├── types/
+│   │   └── utils/                        # password hash, date utils
+│   ├── migrations/                       # Drizzle SQL migrations
+│   └── index.ts                          # Entry point
 ├── tests/
-│   ├── __setup__/                # Setup global (env vars, mocks)
-│   ├── unit/                     # Testes unitários puros — sem I/O
-│   ├── integration/              # Testes de integração com DB (TestContainers)
-│   └── e2e/                      # Testes HTTP end-to-end
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                # Pipeline de code quality + testes
-│       └── cd.yml                # Deploy para Render após CI bem-sucedido
+│   ├── __setup__/                        # Setup global (env, mocks)
+│   ├── unit/                             # Testes unitários (sem I/O)
+│   ├── integration/                      # Testes com DB real (TestContainers)
+│   └── e2e/                              # Testes HTTP end-to-end
+├── scripts/
+│   ├── db-wipe.ts                        # Drop e recria o schema público
+│   └── db-seed-local.ts                  # Seed para desenvolvimento local
+├── .github/workflows/
+│   ├── ci.yml                            # Code quality + testes
+│   └── cd-railway.yml                    # Health check pós-deploy Railway
 ├── .env.example
-├── docker-compose.yml            # PostgreSQL local
+├── docker-compose.yml                    # PostgreSQL local
 ├── drizzle.config.ts
 ├── jest.config.cjs
-├── render.yaml                   # Render IaC (homolog + production)
+├── railway.toml                          # Start command Railway
 └── tsconfig.json
 ```
 
@@ -168,9 +173,7 @@ npm install
 
 # 3. Configure as variáveis de ambiente
 cp .env.example .env.local
-# .env = remoto (ex.: Supabase)
-# .env.local = local (Docker)
-# Preencha os valores — veja a seção Variáveis de Ambiente abaixo
+# Preencha os valores — veja a seção Variáveis de Ambiente
 
 # 4. Suba banco local + migrations + seed de dados de exemplo
 npm run db:start
@@ -188,7 +191,7 @@ npm run dev
 
 Use dois arquivos para separar ambientes:
 
-- `.env`: remoto (Supabase/produção)
+- `.env`: remoto (Supabase/Railway)
 - `.env.local`: local (Docker)
 
 Copie `.env.example` para `.env.local` e configure os valores:
@@ -200,7 +203,7 @@ PORT=3001
 API_HOST=localhost:3001
 LOG_LEVEL=info
 
-# CORS — origem(ns) do frontend permitida(s) para chamar esta API
+# CORS
 CORS_ORIGIN=http://localhost:3000
 
 # PostgreSQL
@@ -211,43 +214,41 @@ JWT_SECRET=sua-super-chave-secreta-min-32-chars
 JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
 
-# Integração com IA
+# Integração com IA (Google AI Studio — https://aistudio.google.com/apikey)
 GEMINI_API_KEY=sua-chave-api-gemini
-GEMINI_API_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent
 
-# Supabase Storage
+# Supabase Storage (https://supabase.com/dashboard)
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua-chave-service-role
 SUPABASE_STORAGE_BUCKET=avatars
 SUPABASE_AUDIO_BUCKET=audio-entries
 
+# E-mail (Resend — https://resend.com)
+RESEND_API_KEY=re_your_resend_api_key
+APP_URL=http://localhost:3000
+
 # Rate Limiting (opcional)
 RATE_LIMIT_MAX=100
 RATE_LIMIT_TIMEWINDOW=60000
-
-# Email (Resend — https://resend.com)
-RESEND_API_KEY=re_your_resend_api_key
-APP_URL=http://localhost:3000
 ```
 
-| Variável                    | Obrigatória | Descrição                                                       |
-| --------------------------- | ----------- | --------------------------------------------------------------- |
-| `DATABASE_URL`              | Sim         | String completa de conexão PostgreSQL                           |
-| `JWT_SECRET`                | Sim         | Segredo para assinar JWTs (mín 32 chars)                        |
-| `JWT_ACCESS_EXPIRES`        | Sim         | TTL do access token (ex: `15m`)                                 |
-| `JWT_REFRESH_EXPIRES`       | Sim         | TTL do refresh token (ex: `7d`)                                 |
-| `CORS_ORIGIN`               | Sim         | Origem(ns) do frontend permitida(s)                             |
-| `GEMINI_API_KEY`            | Não\*       | Obrigatória para features de agentes de IA                      |
-| `GEMINI_API_URL`            | Não         | Endpoint Gemini (padrão: gemini-flash-latest)                   |
-| `SUPABASE_URL`              | Sim         | URL do projeto Supabase                                         |
-| `SUPABASE_SERVICE_ROLE_KEY` | Sim         | Chave service role do Supabase                                  |
-| `SUPABASE_STORAGE_BUCKET`   | Não         | Bucket para avatares (padrão: `avatars`)                        |
-| `SUPABASE_AUDIO_BUCKET`     | Não         | Bucket para áudios de pronúncia (padrão: `audio-entries`)       |
-| `RESEND_API_KEY`            | Não\*       | Obrigatória para envio de e-mails (verificação, reset de senha) |
-| `APP_URL`                   | Não\*       | URL base do frontend — usada nos links dos e-mails              |
-| `LOG_LEVEL`                 | Não         | Nível de log Pino (padrão: `info`)                              |
-| `RATE_LIMIT_MAX`            | Não         | Máx requisições por janela (padrão: `100`)                      |
-| `RATE_LIMIT_TIMEWINDOW`     | Não         | Janela de rate limit em ms (padrão: `60000`)                    |
+| Variável                    | Obrigatória | Descrição                                          |
+| --------------------------- | ----------- | -------------------------------------------------- |
+| `DATABASE_URL`              | Sim         | String de conexão PostgreSQL                       |
+| `JWT_SECRET`                | Sim         | Segredo JWT (mín. 32 chars)                        |
+| `JWT_ACCESS_EXPIRES`        | Sim         | TTL do access token (ex: `15m`)                    |
+| `JWT_REFRESH_EXPIRES`       | Sim         | TTL do refresh token (ex: `7d`)                    |
+| `CORS_ORIGIN`               | Sim         | Origem(ns) do frontend permitidas                  |
+| `SUPABASE_URL`              | Sim         | URL do projeto Supabase                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | Sim         | Chave service role do Supabase                     |
+| `RESEND_API_KEY`            | Sim         | API key Resend para e-mails transacionais          |
+| `APP_URL`                   | Sim         | URL base do frontend (usado nos links dos e-mails) |
+| `GEMINI_API_KEY`            | Não\*       | Obrigatória para features de agentes de IA         |
+| `SUPABASE_STORAGE_BUCKET`   | Não         | Bucket para avatares (padrão: `avatars`)           |
+| `SUPABASE_AUDIO_BUCKET`     | Não         | Bucket para áudios (padrão: `audio-entries`)       |
+| `LOG_LEVEL`                 | Não         | Nível de log Pino (padrão: `info`)                 |
+| `RATE_LIMIT_MAX`            | Não         | Máx. requisições por janela (padrão: `100`)        |
+| `RATE_LIMIT_TIMEWINDOW`     | Não         | Janela de rate limit em ms (padrão: `60000`)       |
 
 ---
 
@@ -265,8 +266,11 @@ npm run db:migrate
 # Aplique as migrations no banco local (Docker)
 npm run db:migrate:local
 
-# Popule o banco local com usuário e hábitos de exemplo
+# Popule o banco local com dados de exemplo
 npm run db:seed:local
+
+# Drop completo do schema público e recriação
+npm run db:wipe
 
 # Push do schema diretamente para o DB (dev only, sem arquivo de migration)
 npm run db:push
@@ -282,35 +286,36 @@ npm run db:studio
 
 ## Scripts Disponíveis
 
-| Script                     | Descrição                                      |
-| -------------------------- | ---------------------------------------------- |
-| `npm run dev`              | Inicia dev server com hot reload (`tsx watch`) |
-| `npm run build`            | Compila TypeScript para `dist/`                |
-| `npm start`                | Executa servidor compilado (production)        |
-| `npm run lint`             | Executa ESLint em `src/`                       |
-| `npm run lint:fix`         | Executa ESLint com auto-fix                    |
-| `npm run format`           | Formata todos os arquivos com Prettier         |
-| `npm run format:check`     | Verifica formatação sem escrever               |
-| `npm test`                 | Executa todas as test suites                   |
-| `npm run test:unit`        | Executa apenas testes unitários                |
-| `npm run test:integration` | Executa apenas testes de integração            |
-| `npm run test:e2e`         | Executa apenas testes e2e                      |
-| `npm run test:watch`       | Executa testes em watch mode                   |
-| `npm run test:coverage`    | Executa testes e gera relatório de coverage    |
-| `npm run db:generate`      | Gera Drizzle migration a partir do schema diff |
-| `npm run db:migrate`       | Aplica pending migrations via `.env`           |
-| `npm run db:migrate:local` | Aplica pending migrations via `.env.local`     |
-| `npm run db:push`          | Push do schema direto (sem arquivo migration)  |
-| `npm run db:studio`        | Abre Drizzle Studio GUI                        |
-| `npm run db:seed:local`    | Seed local com usuário e hábitos de exemplo    |
-| `npm run db:start`         | Docker local + migrate local + seed local      |
-| `npm run commit`           | Conventional commit interativo via Commitizen  |
+| Script                     | Descrição                                     |
+| -------------------------- | --------------------------------------------- |
+| `npm run dev`              | Dev server com hot reload (`tsx watch`)       |
+| `npm run build`            | Compila TypeScript para `dist/`               |
+| `npm start`                | Executa servidor compilado (production)       |
+| `npm run lint`             | ESLint em `src/`                              |
+| `npm run lint:fix`         | ESLint com auto-fix                           |
+| `npm run format`           | Prettier em todos os arquivos                 |
+| `npm run format:check`     | Verifica formatação sem escrever              |
+| `npm test`                 | Executa todas as test suites                  |
+| `npm run test:unit`        | Apenas testes unitários                       |
+| `npm run test:integration` | Apenas testes de integração                   |
+| `npm run test:e2e`         | Apenas testes e2e                             |
+| `npm run test:watch`       | Testes em watch mode                          |
+| `npm run test:coverage`    | Testes com relatório de coverage              |
+| `npm run db:generate`      | Gera migration a partir do schema diff        |
+| `npm run db:migrate`       | Aplica pending migrations (`.env`)            |
+| `npm run db:migrate:local` | Aplica pending migrations (`.env.local`)      |
+| `npm run db:push`          | Push do schema direto (sem migration)         |
+| `npm run db:studio`        | Abre Drizzle Studio GUI                       |
+| `npm run db:seed:local`    | Seed local com dados de exemplo               |
+| `npm run db:wipe`          | Drop e recria o schema público                |
+| `npm run db:start`         | Docker + migrate local + seed local           |
+| `npm run commit`           | Conventional commit interativo via Commitizen |
 
 ---
 
 ## Testes
 
-Três projetos Jest isolados, cada um com seu próprio timeout e ambiente:
+Três projetos Jest isolados:
 
 | Suite         | Localização          | Timeout | Descrição                          |
 | ------------- | -------------------- | ------- | ---------------------------------- |
@@ -318,7 +323,7 @@ Três projetos Jest isolados, cada um com seu próprio timeout e ambiente:
 | `integration` | `tests/integration/` | 60s     | PostgreSQL real via TestContainers |
 | `e2e`         | `tests/e2e/`         | 60s     | Requisições HTTP completas         |
 
-Testes de integração disparam um container real de PostgreSQL 16 automaticamente via `@testcontainers/postgresql` — Docker precisa estar rodando.
+Testes de integração disparam um container real de PostgreSQL 16 via `@testcontainers/postgresql` — Docker precisa estar rodando.
 
 ```bash
 npm run test:unit
@@ -331,7 +336,7 @@ npm run test:coverage
 
 ## Pipeline CI/CD
 
-Todo push e pull request para `develop` ou `main` dispara o pipeline definido em `.github/workflows/ci.yml`:
+Todo push e pull request para `develop` ou `main` dispara o pipeline em `.github/workflows/ci.yml`:
 
 ```text
 code_quality ──► tests ──► ai_review ──► quality_gate
@@ -354,38 +359,35 @@ code_quality ──► tests ──► ai_review ──► quality_gate
 
 ## Deployment
 
-Gerenciado via [`render.yaml`](render.yaml) (Infrastructure as Code). O pipeline CD (`.github/workflows/cd.yml`) dispara deployments no Render após CI passar — `autoDeploy: false` está configurado em ambos os serviços para que o Render nunca faça deploy em pushes diretos.
+Deploy automático via Railway. Ao fazer push para `main`, o Railway detecta a mudança e redeploy automaticamente.
 
-| Ambiente    | Branch    | Render Service   |
-| ----------- | --------- | ---------------- |
-| Homologação | `develop` | `imm-homolog`    |
-| Produção    | `main`    | `imm-production` |
+O pipeline CD (`.github/workflows/cd-railway.yml`) executa um health check em `https://api.insidemymind.tech/health` após o deploy.
 
-**Build command:**
+**Start command (`railway.toml`):**
 
 ```bash
-npm ci && npm run db:migrate && npm run build
+npm run db:migrate && npm start
 ```
 
-**Start command:**
+As migrations são aplicadas automaticamente a cada deploy.
 
-```bash
-npm start
-```
+| Ambiente | Branch | URL                             |
+| -------- | ------ | ------------------------------- |
+| Produção | `main` | `https://api.insidemymind.tech` |
 
 ---
 
 ## Estratégia de Branches
 
 ```text
-feature/* ──► develop (homolog) ──► main (production)
-                   │                       │
-             auto-deploys to         admin-only merge
-             imm-homolog             to imm-production
+feature/* ──► develop ──► main (production)
+                │               │
+           CI obrigatório   admin-only merge
+           (Quality Gate)   → redeploy Railway
 ```
 
 - Todo trabalho vai para `develop` via pull requests
-- `main` é protegida — apenas o admin pode fazer merge `develop → main`
+- `main` é protegida — apenas o admin pode fazer merge
 - Branch protection exige que o check **Quality Gate** passe antes de qualquer merge
 
 ---
@@ -395,22 +397,21 @@ feature/* ──► develop (homolog) ──► main (production)
 1. Crie uma branch a partir de `develop`: `git checkout -b feat/sua-feature develop`
 2. Implemente suas mudanças seguindo o padrão de módulos em `src/modules/`
 3. Escreva testes — unitários para lógica, integração para interações com DB
-4. Verifique se tudo passa localmente: `npm test && npm run lint && npm run format:check`
+4. Verifique localmente: `npm test && npm run lint && npm run format:check`
 5. Faça commit com [Conventional Commits](https://www.conventionalcommits.org/):
 
    ```bash
    npm run commit
-   # ou manualmente: git commit -m "feat(habits): adicionar cálculo de streak"
    ```
 
 6. Abra um pull request direcionado para `develop`
 
 **Tipos de commit aceitos:** `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `perf`, `ci`
 
-Pre-commit hooks (Husky + lint-staged) executam checagens de lint e format automaticamente antes de cada commit.
+Pre-commit hooks (Husky + lint-staged) executam lint e format automaticamente antes de cada commit.
 
 ---
 
 ## Licença
 
-Este projeto está licenciado sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+MIT — veja [LICENSE](LICENSE).
