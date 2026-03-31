@@ -137,14 +137,17 @@ describe("AuthController.login", () => {
 
     expect(reply.code).toHaveBeenCalledWith(200);
     expect(reply.send).toHaveBeenCalledWith({ token: "access-token", user: mockUser });
-    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "refresh-token", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      domain: expect.anything(),
-      maxAge: expect.any(Number),
-    });
+    expect(reply.setCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      "refresh-token",
+      expect.objectContaining({
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/",
+        maxAge: expect.any(Number),
+      })
+    );
   });
 
   it("returns 401 when authService throws an Error", async () => {
@@ -193,14 +196,17 @@ describe("AuthController.refresh", () => {
 
     expect(reply.code).toHaveBeenCalledWith(200);
     expect(reply.send).toHaveBeenCalledWith({ token: "new-access", user: mockUser });
-    expect(reply.setCookie).toHaveBeenCalledWith("refreshToken", "new-refresh", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      domain: expect.anything(),
-      maxAge: expect.any(Number),
-    });
+    expect(reply.setCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      "new-refresh",
+      expect.objectContaining({
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        path: "/",
+        maxAge: expect.any(Number),
+      })
+    );
   });
 
   it("returns 401 when refresh token not provided", async () => {
@@ -222,13 +228,10 @@ describe("AuthController.refresh", () => {
 
     await controller.refresh(request as never, reply as never);
 
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      domain: expect.anything(),
-    });
+    expect(reply.clearCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      expect.objectContaining({ httpOnly: true, secure: false, sameSite: "lax", path: "/" })
+    );
     expect(reply.code).toHaveBeenCalledWith(401);
   });
 });
@@ -251,13 +254,10 @@ describe("AuthController.logout", () => {
     await controller.logout(request as never, reply as never);
 
     expect(reply.code).toHaveBeenCalledWith(204);
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      domain: expect.anything(),
-    });
+    expect(reply.clearCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      expect.objectContaining({ httpOnly: true, secure: false, sameSite: "lax", path: "/" })
+    );
   });
 
   it("returns 204 without calling service when no refresh token in cookie", async () => {
@@ -268,13 +268,10 @@ describe("AuthController.logout", () => {
 
     expect(mockService.logout).not.toHaveBeenCalled();
     expect(reply.code).toHaveBeenCalledWith(204);
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      domain: expect.anything(),
-    });
+    expect(reply.clearCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      expect.objectContaining({ httpOnly: true, secure: false, sameSite: "lax", path: "/" })
+    );
   });
 
   it("clears cookie and handles error when service throws", async () => {
@@ -284,13 +281,10 @@ describe("AuthController.logout", () => {
 
     await controller.logout(request as never, reply as never);
 
-    expect(reply.clearCookie).toHaveBeenCalledWith("refreshToken", {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      path: "/",
-      domain: expect.anything(),
-    });
+    expect(reply.clearCookie).toHaveBeenCalledWith(
+      "refreshToken",
+      expect.objectContaining({ httpOnly: true, secure: false, sameSite: "lax", path: "/" })
+    );
     expect(reply.code).toHaveBeenCalledWith(500);
   });
 });

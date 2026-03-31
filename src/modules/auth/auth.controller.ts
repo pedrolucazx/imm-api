@@ -32,12 +32,13 @@ export function createAuthController(service: AuthService) {
     return undefined;
   };
 
+  const domain = getCookieDomain();
   const cookieOptions = {
     httpOnly: true,
     secure: isProduction,
     sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
     path: "/",
-    domain: getCookieDomain(),
+    ...(domain !== undefined && { domain }),
   };
 
   function setRefreshTokenCookie(reply: FastifyReply, token: string) {
