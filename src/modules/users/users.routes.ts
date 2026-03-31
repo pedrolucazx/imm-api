@@ -41,7 +41,7 @@ const onboardingStatusResponse = {
   additionalProperties: false,
   required: ["currentStep", "skipped", "completed", "completedAt"],
   properties: {
-    currentStep: { type: "integer", minimum: 0, maximum: 5, examples: [0] },
+    currentStep: { type: "integer", minimum: 0, maximum: MAX_ONBOARDING_STEP, examples: [0] },
     skipped: { type: "boolean", examples: [false] },
     completed: { type: "boolean", examples: [false] },
     completedAt: {

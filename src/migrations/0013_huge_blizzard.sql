@@ -1,0 +1,1 @@
+ALTER TABLE "onboarding_sessions" ADD CONSTRAINT "onboarding_sessions_current_step_check" CHECK ("onboarding_sessions"."current_step" between 0 and 5);

@@ -13,10 +13,12 @@ describe("Onboarding endpoints", () => {
   let testDb: TestDatabase | undefined;
   let accessToken: string;
   let userId: string;
+  let previousDatabaseUrl: string | undefined;
 
   const uniqueEmail = `onboarding-${Date.now()}-${Math.random().toString(36).slice(2, 11)}@example.com`;
 
   beforeAll(async () => {
+    previousDatabaseUrl = process.env.DATABASE_URL;
     testDb = await setupTestDatabase();
     process.env.DATABASE_URL = testDb.connectionUri;
     app = await buildTestApp();
@@ -41,10 +43,18 @@ describe("Onboarding endpoints", () => {
     try {
       if (app) await app.close();
     } finally {
-      const db = getDb();
-      await db.delete(users);
-      await closeDb();
-      if (testDb) await testDb.teardown();
+      try {
+        const db = getDb();
+        await db.delete(users);
+        await closeDb();
+      } finally {
+        if (previousDatabaseUrl === undefined) {
+          delete process.env.DATABASE_URL;
+        } else {
+          process.env.DATABASE_URL = previousDatabaseUrl;
+        }
+        if (testDb) await testDb.teardown();
+      }
     }
   });
 

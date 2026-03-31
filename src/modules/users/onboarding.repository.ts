@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { DrizzleDb, DbClient } from "../../core/database/connection.js";
 import { onboardingSessions, type OnboardingSession } from "../../core/database/schema/index.js";
 
@@ -31,12 +31,24 @@ export function createOnboardingRepository(db: DrizzleDb) {
       tx?: DbClient
     ): Promise<OnboardingSession> {
       const client = tx ?? db;
+      const { completedAt, ...rest } = data;
+      const conflictSet = {
+        ...rest,
+        updatedAt: new Date(),
+        ...(completedAt !== undefined && {
+          completedAt:
+            completedAt === null
+              ? null
+              : sql<Date | null>`COALESCE("onboarding_sessions"."completed_at", EXCLUDED.completed_at)`,
+        }),
+      };
+
       const [session] = await client
         .insert(onboardingSessions)
         .values({ userId, ...data })
         .onConflictDoUpdate({
           target: onboardingSessions.userId,
-          set: { ...data, updatedAt: new Date() },
+          set: conflictSet,
         })
         .returning();
       return session;

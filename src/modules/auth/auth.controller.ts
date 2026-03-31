@@ -26,8 +26,13 @@ export function createAuthController(service: AuthService) {
   const getCookieDomain = () => {
     if (isProduction) return undefined;
     if (isLocalDev) {
-      const origin = new URL(env.CORS_ORIGIN);
-      return origin.hostname;
+      const firstOrigin = env.CORS_ORIGIN.split(",")[0]?.trim();
+      if (!firstOrigin) return undefined;
+      try {
+        return new URL(firstOrigin).hostname;
+      } catch {
+        return undefined;
+      }
     }
     return undefined;
   };
