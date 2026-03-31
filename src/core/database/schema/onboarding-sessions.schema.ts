@@ -14,8 +14,8 @@ export const onboardingSessions = pgTable(
     skipped: boolean("skipped").notNull().default(false),
     completed: boolean("completed").notNull().default(false),
     completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
     check("onboarding_sessions_current_step_check", sql`${table.currentStep} between 0 and 5`),

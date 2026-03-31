@@ -209,8 +209,8 @@ export async function usersRoutes(fastify: FastifyInstance) {
       },
       response: {
         200: { description: "Onboarding progress updated", ...onboardingStatusResponse },
+        400: errorResponse("Invalid request body"),
         401: errorResponse("Unauthorized - invalid or missing token"),
-        422: errorResponse("Validation failed"),
       },
     },
     preHandler: authenticate,
