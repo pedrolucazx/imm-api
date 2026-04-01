@@ -4,5 +4,4 @@ build
 .next
 coverage
 .env
-.env.local
-.env.*.local
+.env.*

@@ -172,7 +172,7 @@ cd imm-api
 npm install
 
 # 3. Configure as variáveis de ambiente
-cp .env.example .env.local
+cp .env.example .env
 # Preencha os valores — veja a seção Variáveis de Ambiente
 
 # 4. Suba banco local + migrations + seed de dados de exemplo
@@ -189,12 +189,7 @@ npm run dev
 
 ## Variáveis de Ambiente
 
-Use dois arquivos para separar ambientes:
-
-- `.env`: remoto (Supabase/Railway)
-- `.env.local`: local (Docker)
-
-Copie `.env.example` para `.env.local` e configure os valores:
+Copie `.env.example` para `.env` e configure os valores:
 
 ```env
 # Aplicação
@@ -286,30 +281,30 @@ npm run db:studio
 
 ## Scripts Disponíveis
 
-| Script                     | Descrição                                     |
-| -------------------------- | --------------------------------------------- |
-| `npm run dev`              | Dev server com hot reload (`tsx watch`)       |
-| `npm run build`            | Compila TypeScript para `dist/`               |
-| `npm start`                | Executa servidor compilado (production)       |
-| `npm run lint`             | ESLint em `src/`                              |
-| `npm run lint:fix`         | ESLint com auto-fix                           |
-| `npm run format`           | Prettier em todos os arquivos                 |
-| `npm run format:check`     | Verifica formatação sem escrever              |
-| `npm test`                 | Executa todas as test suites                  |
-| `npm run test:unit`        | Apenas testes unitários                       |
-| `npm run test:integration` | Apenas testes de integração                   |
-| `npm run test:e2e`         | Apenas testes e2e                             |
-| `npm run test:watch`       | Testes em watch mode                          |
-| `npm run test:coverage`    | Testes com relatório de coverage              |
-| `npm run db:generate`      | Gera migration a partir do schema diff        |
-| `npm run db:migrate`       | Aplica pending migrations (`.env`)            |
-| `npm run db:migrate:local` | Aplica pending migrations (`.env.local`)      |
-| `npm run db:push`          | Push do schema direto (sem migration)         |
-| `npm run db:studio`        | Abre Drizzle Studio GUI                       |
-| `npm run db:seed:local`    | Seed local com dados de exemplo               |
-| `npm run db:wipe`          | Drop e recria o schema público                |
-| `npm run db:start`         | Docker + migrate local + seed local           |
-| `npm run commit`           | Conventional commit interativo via Commitizen |
+| Script                     | Descrição                                                      |
+| -------------------------- | -------------------------------------------------------------- |
+| `npm run dev`              | Dev server com hot reload (`tsx watch`)                        |
+| `npm run build`            | Compila TypeScript para `dist/`                                |
+| `npm start`                | Executa servidor compilado (production)                        |
+| `npm run lint`             | ESLint em `src/`                                               |
+| `npm run lint:fix`         | ESLint com auto-fix                                            |
+| `npm run format`           | Prettier em todos os arquivos                                  |
+| `npm run format:check`     | Verifica formatação sem escrever                               |
+| `npm test`                 | Executa todas as test suites                                   |
+| `npm run test:unit`        | Apenas testes unitários                                        |
+| `npm run test:integration` | Apenas testes de integração                                    |
+| `npm run test:e2e`         | Apenas testes e2e                                              |
+| `npm run test:watch`       | Testes em watch mode                                           |
+| `npm run test:coverage`    | Testes com relatório de coverage                               |
+| `npm run db:generate`      | Gera migration a partir do schema diff                         |
+| `npm run db:migrate`       | Aplica migrations com `DATABASE_URL` do ambiente (CI/produção) |
+| `npm run db:migrate:local` | Aplica migrations carregando `DATABASE_URL` do arquivo `.env`  |
+| `npm run db:push`          | Push do schema direto (sem migration)                          |
+| `npm run db:studio`        | Abre Drizzle Studio GUI                                        |
+| `npm run db:seed:local`    | Seed local com dados de exemplo                                |
+| `npm run db:wipe`          | Drop e recria o schema público                                 |
+| `npm run db:start`         | Docker + migrate local + seed local                            |
+| `npm run commit`           | Conventional commit interativo via Commitizen                  |
 
 ---
 
