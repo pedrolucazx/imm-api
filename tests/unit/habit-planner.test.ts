@@ -183,6 +183,47 @@ describe("generateHabitPlan — failures", () => {
     expect(mockFetch.mock.calls[1]?.[0]).toBe("https://gemini-fallback.test");
   });
 
+  it("retries rate-limit responses without switching to fallback endpoints", async () => {
+    jest.useFakeTimers();
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 429, statusText: "Too Many Requests" })
+      .mockResolvedValueOnce({ ok: false, status: 500, statusText: "Internal Server Error" });
+
+    try {
+      const planPromise = generateHabitPlan(
+        { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
+        "skill-building"
+      );
+      const rejection = expect(planPromise).rejects.toThrow(
+        "Gemini API error: 500 Internal Server Error"
+      );
+
+      await jest.advanceTimersByTimeAsync(5_000);
+      await rejection;
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls.every((call) => call[0] === "https://gemini.test")).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("falls back when fetch fails before receiving an HTTP response", async () => {
+    mockFetch
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(makeGeminiResponse(FULL_PLAN));
+
+    const plan = await generateHabitPlan(
+      { name: "Inglês", painPoints: ["pronuncia"], availableMinutes: 30, level: "beginner" },
+      "skill-building"
+    );
+
+    expect(plan.plan_type).toBe("full");
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch.mock.calls[0]?.[0]).toBe("https://gemini.test");
+    expect(mockFetch.mock.calls[1]?.[0]).toBe("https://gemini-fallback.test");
+  });
+
   it("throws ZodError when Gemini returns invalid JSON structure", async () => {
     const invalidPlan = JSON.stringify({ schema_version: 2, plan_type: "full" }); // missing required fields
     mockFetch.mockResolvedValue(makeGeminiResponse(invalidPlan));

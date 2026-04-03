@@ -48,10 +48,10 @@ const geminiFallbackUrls = (process.env.GEMINI_API_FALLBACK_URLS ?? "")
   .map((value) => value.trim())
   .filter(Boolean);
 
-for (const url of geminiFallbackUrls) {
+for (const [index, url] of geminiFallbackUrls.entries()) {
   const parsedUrl = z.url().safeParse(url);
   if (!parsedUrl.success) {
-    logger.error(`❌ Invalid GEMINI_API_FALLBACK_URLS entry: ${url}`);
+    logger.error(`❌ Invalid GEMINI_API_FALLBACK_URLS entry at position ${index + 1}`);
     process.exit(1);
   }
 }

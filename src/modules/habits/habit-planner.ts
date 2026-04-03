@@ -26,6 +26,10 @@ function isRetriableGeminiError(error: unknown): boolean {
   return error instanceof GeminiRateLimitError || error instanceof GeminiTemporaryError;
 }
 
+function isFailoverGeminiError(error: unknown): boolean {
+  return error instanceof GeminiTemporaryError;
+}
+
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -194,6 +198,9 @@ async function callGeminiOnce(
     if (error instanceof Error && error.name === "AbortError") {
       throw new GeminiTemporaryError(`Gemini API timeout after ${GEMINI_TIMEOUT_MS}ms`);
     }
+    if (error instanceof TypeError || (error instanceof Error && error.message.includes("fetch"))) {
+      throw new GeminiTemporaryError(`Gemini API request failed: ${getErrorMessage(error)}`);
+    }
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -246,6 +253,10 @@ async function callGemini(
 
         if (!isRetriableGeminiError(error)) {
           throw error;
+        }
+
+        if (!isFailoverGeminiError(error)) {
+          break;
         }
 
         if (urlIndex < apiUrls.length - 1) {

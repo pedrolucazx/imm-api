@@ -127,11 +127,11 @@ describe("previewPlan", () => {
         availableMinutes: 30,
         level: "beginner",
       })
-    ).rejects.toEqual(
-      expect.objectContaining({
-        message: "AI service is temporarily unavailable. Please try again in a moment.",
-      })
-    );
+    ).rejects.toMatchObject({
+      message: "AI service is temporarily unavailable. Please try again in a moment.",
+      statusCode: 503,
+      code: "SERVICE_UNAVAILABLE",
+    });
   });
 
   it("throws ServiceUnavailableError when Gemini times out", async () => {
