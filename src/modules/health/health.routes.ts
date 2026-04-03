@@ -7,8 +7,7 @@ export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
     "/health",
     {
       schema: {
-        description:
-          "Health check endpoint — prevents Render free tier from sleeping and Supabase from pausing",
+        description: "Health check endpoint for API and database readiness",
         tags: ["Health"],
         response: {
           200: {
