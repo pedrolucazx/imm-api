@@ -4,7 +4,9 @@ import type { UserProfilesRepository } from "../users/user-profiles.repository.j
 import type { Habit, HabitLog } from "../../core/database/schema/index.js";
 import { logger } from "../../core/config/logger.js";
 import {
+  AppError,
   NotFoundError,
+  ServiceUnavailableError,
   TooManyRequestsError,
   UnprocessableError,
 } from "../../shared/errors/index.js";
@@ -17,13 +19,14 @@ import type {
   RegeneratePlanInput,
   UpdateHabitInput,
 } from "./habits.types.js";
-import { generateHabitPlan } from "./habit-planner.js";
+import { generateHabitPlan, GeminiTemporaryError } from "./habit-planner.js";
 import type { HabitPlan } from "./habit-plan.schema.js";
 import { MAX_ACTIVE_HABITS } from "../../shared/constants.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
 import { computeCurrentDay, computeStreak } from "../../shared/utils/habit-math.js";
 import { nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 import { assertAiRateLimit } from "../../shared/guards/ai-rate-limit.guard.js";
+import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
 
 export type HabitWithStats = Habit & {
   streak: number;
@@ -39,6 +42,46 @@ function enrichHabit(habit: Habit, logs: HabitLog[]): HabitWithStats {
     currentDay: computeCurrentDay(habit.startDate),
     completedToday: logs.some((l) => l.logDate === todayStr && l.completed),
   };
+}
+
+function toHabitPlannerError(error: unknown): AppError {
+  if (error instanceof AppError) {
+    return error;
+  }
+
+  if (error instanceof GeminiRateLimitError) {
+    return new TooManyRequestsError("AI service is busy. Please wait a moment and try again.");
+  }
+
+  if (error instanceof GeminiTemporaryError) {
+    if (error.reason === "timeout") {
+      return new ServiceUnavailableError("AI request timed out. Please try again.");
+    }
+
+    return new ServiceUnavailableError(
+      "AI service is temporarily unavailable. Please try again in a moment."
+    );
+  }
+
+  if (error instanceof Error) {
+    const normalizedMessage = error.message.toLowerCase();
+
+    if (normalizedMessage.includes("rate limit")) {
+      return new TooManyRequestsError("AI service is busy. Please wait a moment and try again.");
+    }
+
+    if (normalizedMessage.includes("timeout")) {
+      return new ServiceUnavailableError("AI request timed out. Please try again.");
+    }
+
+    if (normalizedMessage.includes("not configured")) {
+      return new ServiceUnavailableError("AI service is not available at the moment.");
+    }
+  }
+
+  return new ServiceUnavailableError(
+    "AI service is temporarily unavailable. Please try again in a moment."
+  );
 }
 
 type HabitsServiceDeps = {
@@ -96,18 +139,23 @@ export function createHabitsService({
         (input.targetSkill as Parameters<typeof deriveHabitMode>[0]) ?? "general"
       );
       const uiLanguage = profile?.uiLanguage ?? "pt-BR";
-      return generateHabitPlan(
-        {
-          name: input.name,
-          targetSkill: input.targetSkill ?? undefined,
-          painPoints: input.painPoints,
-          availableMinutes: input.availableMinutes,
-          level: input.level,
-          uiLanguage,
-          feedbackOnPlan: input.feedbackOnPlan ?? undefined,
-        },
-        mode
-      );
+      try {
+        return await generateHabitPlan(
+          {
+            name: input.name,
+            targetSkill: input.targetSkill ?? undefined,
+            painPoints: input.painPoints,
+            availableMinutes: input.availableMinutes,
+            level: input.level,
+            uiLanguage,
+            feedbackOnPlan: input.feedbackOnPlan ?? undefined,
+          },
+          mode
+        );
+      } catch (err) {
+        logger.error({ err }, "[habit-planner] previewPlan failed");
+        throw toHabitPlannerError(err);
+      }
     },
 
     async create(userId: string, input: CreateHabitInput): Promise<HabitWithStats> {
@@ -179,7 +227,13 @@ export function createHabitsService({
       } catch (err) {
         const updated =
           (await habitsRepo.update(habit.id, userId, { planStatus: "failed" })) ?? habit;
-        if (err instanceof TooManyRequestsError) throw err;
+        const plannerError = toHabitPlannerError(err);
+        if (plannerError instanceof TooManyRequestsError) {
+          // Suppress rate-limit after creation to avoid client retries duplicating habits.
+          // Users can safely retry plan generation later through regeneratePlan.
+          logger.warn({ err }, "[habit-planner] createWithPlan rate-limited after habit creation");
+          return enrichHabit(updated, []);
+        }
         logger.error({ err }, "[habit-planner] generateHabitPlan failed");
         return enrichHabit(updated, []);
       }
@@ -227,7 +281,9 @@ export function createHabitsService({
       } catch (err) {
         const updated =
           (await habitsRepo.update(habitId, userId, { planStatus: "failed" })) ?? habit;
-        if (err instanceof TooManyRequestsError) throw err;
+        const plannerError = toHabitPlannerError(err);
+        if (plannerError instanceof TooManyRequestsError) throw plannerError;
+        logger.error({ err }, "[habit-planner] regeneratePlan failed");
         return enrichHabit(updated, logs);
       }
     },

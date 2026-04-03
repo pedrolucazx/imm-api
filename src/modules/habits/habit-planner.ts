@@ -11,6 +11,36 @@ import { sanitizeJsonString } from "../../shared/utils/json.js";
 import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
 import { langInstruction } from "../../shared/utils/ai-prompt.js";
 
+export type GeminiTemporaryErrorReason = "timeout" | "network" | "upstream";
+
+export class GeminiTemporaryError extends Error {
+  readonly code = "GEMINI_TEMPORARY";
+
+  constructor(
+    message: string,
+    readonly reason: GeminiTemporaryErrorReason
+  ) {
+    super(message);
+    this.name = "GeminiTemporaryError";
+  }
+}
+
+function getGeminiApiUrls(): string[] {
+  return [...new Set([env.GEMINI_API_URL, ...env.GEMINI_API_FALLBACK_URLS])];
+}
+
+function isRetriableGeminiError(error: unknown): boolean {
+  return error instanceof GeminiRateLimitError || error instanceof GeminiTemporaryError;
+}
+
+function isFailoverGeminiError(error: unknown): boolean {
+  return error instanceof GeminiTemporaryError;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 type PlannerInput = {
   name: string;
   targetSkill?: string;
@@ -143,6 +173,7 @@ const LIGHT_PLAN_RESPONSE_SCHEMA = {
 
 async function callGeminiOnce(
   apiKey: string,
+  apiUrl: string,
   prompt: string,
   maxOutputTokens: number,
   isFull: boolean
@@ -152,7 +183,7 @@ async function callGeminiOnce(
 
   let response: Response;
   try {
-    response = await fetch(env.GEMINI_API_URL, {
+    response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -172,7 +203,13 @@ async function callGeminiOnce(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Gemini API timeout after ${GEMINI_TIMEOUT_MS}ms`);
+      throw new GeminiTemporaryError(`Gemini API timeout after ${GEMINI_TIMEOUT_MS}ms`, "timeout");
+    }
+    if (error instanceof TypeError || (error instanceof Error && error.message.includes("fetch"))) {
+      throw new GeminiTemporaryError(
+        `Gemini API request failed: ${getErrorMessage(error)}`,
+        "network"
+      );
     }
     throw error;
   } finally {
@@ -182,6 +219,13 @@ async function callGeminiOnce(
   if (response.status === 429) {
     throw new GeminiRateLimitError(
       `Gemini API rate limit: ${response.status} ${response.statusText}`
+    );
+  }
+
+  if ([502, 503, 504].includes(response.status)) {
+    throw new GeminiTemporaryError(
+      `Gemini API temporary error: ${response.status} ${response.statusText}`,
+      "upstream"
     );
   }
 
@@ -206,22 +250,47 @@ async function callGemini(
 ): Promise<string> {
   const apiKey = env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
+  const apiUrls = getGeminiApiUrls();
+
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= GEMINI_MAX_RETRIES; attempt++) {
-    try {
-      return await callGeminiOnce(apiKey, prompt, maxOutputTokens, isFull);
-    } catch (error) {
-      if (error instanceof GeminiRateLimitError && attempt < GEMINI_MAX_RETRIES) {
-        const delay = GEMINI_RETRY_BASE_MS * 2 ** attempt;
-        logger.warn(
-          `[habit-planner] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES})`
-        );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        continue;
+    for (let urlIndex = 0; urlIndex < apiUrls.length; urlIndex++) {
+      const apiUrl = apiUrls[urlIndex];
+      try {
+        return await callGeminiOnce(apiKey, apiUrl, prompt, maxOutputTokens, isFull);
+      } catch (error) {
+        lastError = error;
+
+        if (!isRetriableGeminiError(error)) {
+          throw error;
+        }
+
+        if (!isFailoverGeminiError(error)) {
+          break;
+        }
+
+        if (urlIndex < apiUrls.length - 1) {
+          logger.warn(
+            `[habit-planner] ${getErrorMessage(error)}; trying fallback Gemini endpoint ${urlIndex + 2}/${apiUrls.length}`
+          );
+        }
       }
-      throw error;
     }
+
+    if (attempt < GEMINI_MAX_RETRIES && isRetriableGeminiError(lastError)) {
+      const delay = GEMINI_RETRY_BASE_MS * 2 ** attempt;
+      logger.warn(
+        `[habit-planner] ${getErrorMessage(lastError)}; retrying in ${delay}ms (attempt ${attempt + 1}/${GEMINI_MAX_RETRIES + 1})`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      continue;
+    }
+
+    throw lastError;
   }
+
+  // Defensive safeguard: the retry loop above should always exit via return or throw.
   throw new Error("callGemini: exhausted retries without result");
 }
 

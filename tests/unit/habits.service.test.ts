@@ -1,6 +1,11 @@
 import { createHabitsService } from "@/modules/habits/habits.service.js";
 import { MAX_ACTIVE_HABITS } from "@/shared/constants.js";
-import { NotFoundError, TooManyRequestsError, UnprocessableError } from "@/shared/errors/index.js";
+import {
+  NotFoundError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+  UnprocessableError,
+} from "@/shared/errors/index.js";
 import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { HabitLogsRepository } from "@/modules/habits/habit-logs.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
@@ -8,9 +13,20 @@ import type { Habit } from "@/core/database/schema/index.js";
 
 jest.mock("@/modules/habits/habit-planner.js", () => ({
   generateHabitPlan: jest.fn(),
+  GeminiTemporaryError: class GeminiTemporaryError extends Error {
+    code = "GEMINI_TEMPORARY";
+
+    constructor(
+      message: string,
+      public reason: "timeout" | "network" | "upstream"
+    ) {
+      super(message);
+      this.name = "GeminiTemporaryError";
+    }
+  },
 }));
 
-import { generateHabitPlan } from "@/modules/habits/habit-planner.js";
+import { generateHabitPlan, GeminiTemporaryError } from "@/modules/habits/habit-planner.js";
 const mockGeneratePlan = generateHabitPlan as jest.MockedFunction<typeof generateHabitPlan>;
 
 const FULL_PLAN = {
@@ -105,6 +121,105 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+describe("previewPlan", () => {
+  it("throws a friendly service-unavailable error when Gemini is down", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new Error("Gemini API temporary error: 503 Service Unavailable")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toMatchObject({
+      message: "AI service is temporarily unavailable. Please try again in a moment.",
+      statusCode: 503,
+      code: "SERVICE_UNAVAILABLE",
+    });
+  });
+
+  it("throws TooManyRequestsError when Gemini is rate-limited", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(TooManyRequestsError);
+  });
+
+  it("throws ServiceUnavailableError when Gemini times out", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new GeminiTemporaryError("Gemini API timeout after 10000ms", "timeout")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(ServiceUnavailableError);
+  });
+
+  it("throws ServiceUnavailableError when Gemini has a network failure", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new GeminiTemporaryError("Gemini API request failed: fetch failed", "network")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(ServiceUnavailableError);
+  });
+
+  it("throws ServiceUnavailableError when Gemini upstream is temporarily unavailable", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new GeminiTemporaryError("Gemini API temporary error: 503 Service Unavailable", "upstream")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(ServiceUnavailableError);
+  });
+});
+
 describe("createWithPlan", () => {
   it("creates habit and returns it with planStatus=ready on success", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
@@ -132,6 +247,22 @@ describe("createWithPlan", () => {
     const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
     const result = await service.createWithPlan("user-id-1", planInput);
 
+    expect(habitsRepo.update).toHaveBeenCalledWith(
+      mockHabit.id,
+      "user-id-1",
+      expect.objectContaining({ planStatus: "failed" })
+    );
+    expect(result.planStatus).toBe("failed");
+  });
+
+  it("returns a failed habit instead of rethrowing when Gemini is rate-limited after creation", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const result = await service.createWithPlan("user-id-1", planInput);
+
+    expect(habitsRepo.create).toHaveBeenCalledTimes(1);
     expect(habitsRepo.update).toHaveBeenCalledWith(
       mockHabit.id,
       "user-id-1",

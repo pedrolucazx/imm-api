@@ -43,4 +43,36 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
-export const env = parsedEnv.data;
+if (
+  !["development", "test"].includes(parsedEnv.data.NODE_ENV) &&
+  new URL(parsedEnv.data.GEMINI_API_URL).protocol !== "https:"
+) {
+  logger.error("❌ GEMINI_API_URL must use HTTPS");
+  process.exit(1);
+}
+
+const geminiFallbackUrls = (process.env.GEMINI_API_FALLBACK_URLS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+for (const [index, url] of geminiFallbackUrls.entries()) {
+  const parsedUrl = z.url().safeParse(url);
+  if (!parsedUrl.success) {
+    logger.error(`❌ Invalid GEMINI_API_FALLBACK_URLS entry at position ${index + 1}`);
+    process.exit(1);
+  }
+
+  if (
+    !["development", "test"].includes(parsedEnv.data.NODE_ENV) &&
+    new URL(url).protocol !== "https:"
+  ) {
+    logger.error(`❌ GEMINI_API_FALLBACK_URLS entry at position ${index + 1} must use HTTPS`);
+    process.exit(1);
+  }
+}
+
+export const env = {
+  ...parsedEnv.data,
+  GEMINI_API_FALLBACK_URLS: geminiFallbackUrls,
+};
