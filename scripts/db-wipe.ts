@@ -10,6 +10,8 @@ if (!url) {
 
 const sql = postgres(url);
 
+// Reset Drizzle's migration history too so a fresh db:migrate can rebuild the schema.
+await sql`DROP SCHEMA IF EXISTS drizzle CASCADE`;
 await sql`DROP SCHEMA public CASCADE`;
 await sql`CREATE SCHEMA public`;
 await sql`GRANT ALL ON SCHEMA public TO PUBLIC`;
