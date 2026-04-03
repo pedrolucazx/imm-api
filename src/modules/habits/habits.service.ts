@@ -229,6 +229,8 @@ export function createHabitsService({
           (await habitsRepo.update(habit.id, userId, { planStatus: "failed" })) ?? habit;
         const plannerError = toHabitPlannerError(err);
         if (plannerError instanceof TooManyRequestsError) {
+          // Suppress rate-limit after creation to avoid client retries duplicating habits.
+          // Users can safely retry plan generation later through regeneratePlan.
           logger.warn({ err }, "[habit-planner] createWithPlan rate-limited after habit creation");
           return enrichHabit(updated, []);
         }

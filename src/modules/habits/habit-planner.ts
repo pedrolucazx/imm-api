@@ -289,6 +289,8 @@ async function callGemini(
 
     throw lastError;
   }
+
+  // Defensive safeguard: the retry loop above should always exit via return or throw.
   throw new Error("callGemini: exhausted retries without result");
 }
 

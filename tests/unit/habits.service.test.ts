@@ -180,6 +180,44 @@ describe("previewPlan", () => {
       })
     ).rejects.toThrow(ServiceUnavailableError);
   });
+
+  it("throws ServiceUnavailableError when Gemini has a network failure", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new GeminiTemporaryError("Gemini API request failed: fetch failed", "network")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(ServiceUnavailableError);
+  });
+
+  it("throws ServiceUnavailableError when Gemini upstream is temporarily unavailable", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new GeminiTemporaryError("Gemini API temporary error: 503 Service Unavailable", "upstream")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(ServiceUnavailableError);
+  });
 });
 
 describe("createWithPlan", () => {
