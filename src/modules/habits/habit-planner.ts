@@ -26,7 +26,7 @@ export class GeminiTemporaryError extends Error {
 }
 
 function getGeminiApiUrls(): string[] {
-  return [env.GEMINI_API_URL, ...env.GEMINI_API_FALLBACK_URLS];
+  return [...new Set([env.GEMINI_API_URL, ...env.GEMINI_API_FALLBACK_URLS])];
 }
 
 function isRetriableGeminiError(error: unknown): boolean {

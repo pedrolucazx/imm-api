@@ -26,7 +26,7 @@ jest.mock("@/modules/habits/habit-planner.js", () => ({
   },
 }));
 
-import { generateHabitPlan } from "@/modules/habits/habit-planner.js";
+import { generateHabitPlan, GeminiTemporaryError } from "@/modules/habits/habit-planner.js";
 const mockGeneratePlan = generateHabitPlan as jest.MockedFunction<typeof generateHabitPlan>;
 
 const FULL_PLAN = {
@@ -164,7 +164,9 @@ describe("previewPlan", () => {
 
   it("throws ServiceUnavailableError when Gemini times out", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
-    mockGeneratePlan.mockRejectedValue(new Error("Gemini API timeout after 10000ms"));
+    mockGeneratePlan.mockRejectedValue(
+      new GeminiTemporaryError("Gemini API timeout after 10000ms", "timeout")
+    );
 
     const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
 
@@ -207,6 +209,22 @@ describe("createWithPlan", () => {
     const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
     const result = await service.createWithPlan("user-id-1", planInput);
 
+    expect(habitsRepo.update).toHaveBeenCalledWith(
+      mockHabit.id,
+      "user-id-1",
+      expect.objectContaining({ planStatus: "failed" })
+    );
+    expect(result.planStatus).toBe("failed");
+  });
+
+  it("returns a failed habit instead of rethrowing when Gemini is rate-limited after creation", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const result = await service.createWithPlan("user-id-1", planInput);
+
+    expect(habitsRepo.create).toHaveBeenCalledTimes(1);
     expect(habitsRepo.update).toHaveBeenCalledWith(
       mockHabit.id,
       "user-id-1",

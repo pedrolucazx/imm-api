@@ -228,7 +228,10 @@ export function createHabitsService({
         const updated =
           (await habitsRepo.update(habit.id, userId, { planStatus: "failed" })) ?? habit;
         const plannerError = toHabitPlannerError(err);
-        if (plannerError instanceof TooManyRequestsError) throw plannerError;
+        if (plannerError instanceof TooManyRequestsError) {
+          logger.warn({ err }, "[habit-planner] createWithPlan rate-limited after habit creation");
+          return enrichHabit(updated, []);
+        }
         logger.error({ err }, "[habit-planner] generateHabitPlan failed");
         return enrichHabit(updated, []);
       }
