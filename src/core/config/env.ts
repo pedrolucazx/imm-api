@@ -43,4 +43,20 @@ if (!parsedEnv.success) {
   process.exit(1);
 }
 
-export const env = parsedEnv.data;
+const geminiFallbackUrls = (process.env.GEMINI_API_FALLBACK_URLS ?? "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+for (const url of geminiFallbackUrls) {
+  const parsedUrl = z.url().safeParse(url);
+  if (!parsedUrl.success) {
+    logger.error(`❌ Invalid GEMINI_API_FALLBACK_URLS entry: ${url}`);
+    process.exit(1);
+  }
+}
+
+export const env = {
+  ...parsedEnv.data,
+  GEMINI_API_FALLBACK_URLS: geminiFallbackUrls,
+};

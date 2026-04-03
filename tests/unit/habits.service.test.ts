@@ -1,6 +1,11 @@
 import { createHabitsService } from "@/modules/habits/habits.service.js";
 import { MAX_ACTIVE_HABITS } from "@/shared/constants.js";
-import { NotFoundError, TooManyRequestsError, UnprocessableError } from "@/shared/errors/index.js";
+import {
+  NotFoundError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+  UnprocessableError,
+} from "@/shared/errors/index.js";
 import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { HabitLogsRepository } from "@/modules/habits/habit-logs.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
@@ -103,6 +108,48 @@ const planInput = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe("previewPlan", () => {
+  it("throws a friendly service-unavailable error when Gemini is down", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(
+      new Error("Gemini API temporary error: 503 Service Unavailable")
+    );
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toEqual(
+      expect.objectContaining({
+        message: "AI service is temporarily unavailable. Please try again in a moment.",
+      })
+    );
+  });
+
+  it("throws ServiceUnavailableError when Gemini times out", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(new Error("Gemini API timeout after 10000ms"));
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(ServiceUnavailableError);
+  });
 });
 
 describe("createWithPlan", () => {
