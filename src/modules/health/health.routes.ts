@@ -40,7 +40,20 @@ export async function healthRoutes(fastify: FastifyInstance): Promise<void> {
       let dbStatus = "ok";
 
       try {
-        await getDb().execute(sql`SELECT 1`);
+        const db = getDb();
+        await db.execute(sql`SELECT 1`);
+
+        const usersTableCheck = await db.execute(
+          sql`
+            SELECT COUNT(*)::int AS table_count
+            FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_name = 'users'
+          `
+        );
+
+        if (Number(usersTableCheck[0]?.table_count ?? 0) === 0) {
+          dbStatus = "error";
+        }
       } catch {
         dbStatus = "error";
       }
