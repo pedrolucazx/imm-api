@@ -13,6 +13,17 @@ import type { Habit } from "@/core/database/schema/index.js";
 
 jest.mock("@/modules/habits/habit-planner.js", () => ({
   generateHabitPlan: jest.fn(),
+  GeminiTemporaryError: class GeminiTemporaryError extends Error {
+    code = "GEMINI_TEMPORARY";
+
+    constructor(
+      message: string,
+      public reason: "timeout" | "network" | "upstream"
+    ) {
+      super(message);
+      this.name = "GeminiTemporaryError";
+    }
+  },
 }));
 
 import { generateHabitPlan } from "@/modules/habits/habit-planner.js";
@@ -132,6 +143,23 @@ describe("previewPlan", () => {
       statusCode: 503,
       code: "SERVICE_UNAVAILABLE",
     });
+  });
+
+  it("throws TooManyRequestsError when Gemini is rate-limited", async () => {
+    const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
+    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+
+    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+
+    await expect(
+      service.previewPlan("user-id-1", {
+        name: "Inglês",
+        targetSkill: "en-US",
+        painPoints: ["pronuncia"],
+        availableMinutes: 30,
+        level: "beginner",
+      })
+    ).rejects.toThrow(TooManyRequestsError);
   });
 
   it("throws ServiceUnavailableError when Gemini times out", async () => {

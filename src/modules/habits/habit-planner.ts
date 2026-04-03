@@ -11,8 +11,15 @@ import { sanitizeJsonString } from "../../shared/utils/json.js";
 import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
 import { langInstruction } from "../../shared/utils/ai-prompt.js";
 
-class GeminiTemporaryError extends Error {
-  constructor(message: string) {
+export type GeminiTemporaryErrorReason = "timeout" | "network" | "upstream";
+
+export class GeminiTemporaryError extends Error {
+  readonly code = "GEMINI_TEMPORARY";
+
+  constructor(
+    message: string,
+    readonly reason: GeminiTemporaryErrorReason
+  ) {
     super(message);
     this.name = "GeminiTemporaryError";
   }
@@ -196,10 +203,13 @@ async function callGeminiOnce(
     });
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new GeminiTemporaryError(`Gemini API timeout after ${GEMINI_TIMEOUT_MS}ms`);
+      throw new GeminiTemporaryError(`Gemini API timeout after ${GEMINI_TIMEOUT_MS}ms`, "timeout");
     }
     if (error instanceof TypeError || (error instanceof Error && error.message.includes("fetch"))) {
-      throw new GeminiTemporaryError(`Gemini API request failed: ${getErrorMessage(error)}`);
+      throw new GeminiTemporaryError(
+        `Gemini API request failed: ${getErrorMessage(error)}`,
+        "network"
+      );
     }
     throw error;
   } finally {
@@ -214,7 +224,8 @@ async function callGeminiOnce(
 
   if ([502, 503, 504].includes(response.status)) {
     throw new GeminiTemporaryError(
-      `Gemini API temporary error: ${response.status} ${response.statusText}`
+      `Gemini API temporary error: ${response.status} ${response.statusText}`,
+      "upstream"
     );
   }
 

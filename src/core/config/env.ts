@@ -54,6 +54,14 @@ for (const [index, url] of geminiFallbackUrls.entries()) {
     logger.error(`❌ Invalid GEMINI_API_FALLBACK_URLS entry at position ${index + 1}`);
     process.exit(1);
   }
+
+  if (
+    !["development", "test"].includes(parsedEnv.data.NODE_ENV) &&
+    new URL(url).protocol !== "https:"
+  ) {
+    logger.error(`❌ GEMINI_API_FALLBACK_URLS entry at position ${index + 1} must use HTTPS`);
+    process.exit(1);
+  }
 }
 
 export const env = {

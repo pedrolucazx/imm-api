@@ -19,13 +19,14 @@ import type {
   RegeneratePlanInput,
   UpdateHabitInput,
 } from "./habits.types.js";
-import { generateHabitPlan } from "./habit-planner.js";
+import { generateHabitPlan, GeminiTemporaryError } from "./habit-planner.js";
 import type { HabitPlan } from "./habit-plan.schema.js";
 import { MAX_ACTIVE_HABITS } from "../../shared/constants.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
 import { computeCurrentDay, computeStreak } from "../../shared/utils/habit-math.js";
 import { nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 import { assertAiRateLimit } from "../../shared/guards/ai-rate-limit.guard.js";
+import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
 
 export type HabitWithStats = Habit & {
   streak: number;
@@ -46,6 +47,20 @@ function enrichHabit(habit: Habit, logs: HabitLog[]): HabitWithStats {
 function toHabitPlannerError(error: unknown): AppError {
   if (error instanceof AppError) {
     return error;
+  }
+
+  if (error instanceof GeminiRateLimitError) {
+    return new TooManyRequestsError("AI service is busy. Please wait a moment and try again.");
+  }
+
+  if (error instanceof GeminiTemporaryError) {
+    if (error.reason === "timeout") {
+      return new ServiceUnavailableError("AI request timed out. Please try again.");
+    }
+
+    return new ServiceUnavailableError(
+      "AI service is temporarily unavailable. Please try again in a moment."
+    );
   }
 
   if (error instanceof Error) {
