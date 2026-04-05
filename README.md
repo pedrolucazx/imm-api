@@ -245,11 +245,11 @@ RATE_LIMIT_TIMEWINDOW=60000
 | `RESEND_API_KEY`            | Sim                                                        | API key Resend para e-mails transacionais          |
 | `APP_URL`                   | Sim                                                        | URL base do frontend (usado nos links dos e-mails) |
 | `AI_PROVIDER`               | Não (padrão: `gemini`)                                     | Provider de IA; lista CSV para fallback            |
-| `TRANSCRIPTION_PROVIDER`    | Não (padrão: `gemini`)                                     | Provider de transcrição de áudio                   |
-| `STORAGE_PROVIDER`          | Não (padrão: `supabase`)                                   | Provider de storage                                |
+| `TRANSCRIPTION_PROVIDER`    | Não (padrão: `gemini`)                                     | Provider de transcrição; lista CSV para fallback   |
+| `STORAGE_PROVIDER`          | Não (padrão: `supabase`)                                   | Provider de storage; lista CSV para fallback       |
 | `GEMINI_API_KEY`            | Se `AI_PROVIDER` ou `TRANSCRIPTION_PROVIDER` inclui gemini | API key do Google Gemini                           |
-| `SUPABASE_URL`              | Se `STORAGE_PROVIDER=supabase`                             | URL do projeto Supabase                            |
-| `SUPABASE_SERVICE_ROLE_KEY` | Se `STORAGE_PROVIDER=supabase`                             | Chave service role do Supabase                     |
+| `SUPABASE_URL`              | Se `STORAGE_PROVIDER` inclui `supabase`                    | URL do projeto Supabase                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | Se `STORAGE_PROVIDER` inclui `supabase`                    | Chave service role do Supabase                     |
 | `SUPABASE_STORAGE_BUCKET`   | Não (padrão: `avatars`)                                    | Bucket para avatares                               |
 | `SUPABASE_AUDIO_BUCKET`     | Não (padrão: `audio-entries`)                              | Bucket para áudios                                 |
 | `LOG_LEVEL`                 | Não (padrão: `info`)                                       | Nível de log Pino                                  |

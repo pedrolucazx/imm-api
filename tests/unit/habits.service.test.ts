@@ -1,4 +1,5 @@
 import { createHabitsService } from "@/modules/habits/habits.service.js";
+import type { TextAIProvider } from "@/core/ai/text-ai.interface.js";
 import { MAX_ACTIVE_HABITS } from "@/shared/constants.js";
 import {
   NotFoundError,
@@ -122,7 +123,7 @@ describe("previewPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(
@@ -150,7 +151,7 @@ describe("previewPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(
@@ -174,7 +175,7 @@ describe("previewPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(
@@ -198,7 +199,7 @@ describe("previewPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(
@@ -222,7 +223,7 @@ describe("previewPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(
@@ -246,7 +247,7 @@ describe("createWithPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
     const result = await service.createWithPlan("user-id-1", planInput);
 
@@ -270,7 +271,7 @@ describe("createWithPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
     const result = await service.createWithPlan("user-id-1", planInput);
 
@@ -292,7 +293,7 @@ describe("createWithPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
     const result = await service.createWithPlan("user-id-1", planInput);
 
@@ -313,7 +314,7 @@ describe("createWithPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(service.createWithPlan("user-id-1", planInput)).rejects.toThrow(
@@ -333,7 +334,7 @@ describe("createWithPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(service.createWithPlan("user-id-1", planInput)).rejects.toThrow(
@@ -350,7 +351,7 @@ describe("createWithPlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
     await service.createWithPlan("user-id-1", planInput);
 
@@ -377,7 +378,7 @@ describe("regeneratePlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
     const result = await service.regeneratePlan("user-id-1", "habit-id-1", regenInput);
 
@@ -397,7 +398,7 @@ describe("regeneratePlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
     const result = await service.regeneratePlan("user-id-1", "habit-id-1", regenInput);
 
@@ -412,7 +413,7 @@ describe("regeneratePlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(service.regeneratePlan("user-id-1", "habit-id-1", regenInput)).rejects.toThrow(
@@ -431,7 +432,7 @@ describe("regeneratePlan", () => {
       habitsRepo,
       habitLogsRepo,
       userProfilesRepo,
-      textAI: { generate: jest.fn() } as never,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
     });
 
     await expect(service.regeneratePlan("user-id-1", "habit-id-1", regenInput)).rejects.toThrow(

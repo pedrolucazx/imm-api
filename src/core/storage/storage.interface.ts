@@ -14,6 +14,8 @@ export interface StorageProvider {
 
   downloadAudioAsBase64(audioUrl: string): Promise<{ base64: string; mimeType: string }>;
 
+  validateAudioOwnership(audioUrl: string, userId: string): void;
+
   deleteAudioFile(path: string): Promise<void>;
 
   isAllowedAvatarContentType(type: string): type is AvatarContentType;

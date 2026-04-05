@@ -144,7 +144,7 @@ pronunciation/
 │                                      # POST /pronunciation/analyze
 │                                      # GET /pronunciation/word-cloud
 ├── pronunciation.controller.ts
-├── pronunciation.service.ts           # Gera URL assinada via Storage Provider → transcreve → calcula score
+├── pronunciation.service.ts           # Baixa áudio via Storage Provider → transcreve → calcula score
 └── pronunciation.repository.ts
 ```
 

@@ -102,7 +102,11 @@ function makeService(
   const journalRepo = makeMockJournalRepo(existing);
   const userProfilesRepo = makeMockUserProfilesRepo(uiLanguage);
   const transcription = { transcribe: mockTranscribe };
-  const storage = { downloadAudioAsBase64: mockDownload } as never;
+  const mockValidateOwnership = jest.fn();
+  const storage = {
+    downloadAudioAsBase64: mockDownload,
+    validateAudioOwnership: mockValidateOwnership,
+  } as never;
   const service = createJournalService({
     journalRepo,
     habitsRepo,
@@ -110,7 +114,7 @@ function makeService(
     transcription,
     storage,
   });
-  return { service, habitsRepo, journalRepo, userProfilesRepo };
+  return { service, habitsRepo, journalRepo, userProfilesRepo, mockValidateOwnership };
 }
 
 // ---------------------------------------------------------------------------
@@ -171,22 +175,31 @@ describe("JournalService — transcribe", () => {
     });
 
     it("throws BadRequestError when audioUrl has invalid storage path format", async () => {
-      const { service } = makeService(mockLanguageHabit);
-      const invalidAudioUrl =
-        "https://fake.supabase.co/storage/v1/object/public/other-bucket/file.webm";
+      const { service, mockValidateOwnership } = makeService(mockLanguageHabit);
+      mockValidateOwnership.mockImplementation(() => {
+        throw new Error("Invalid audio URL format");
+      });
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: invalidAudioUrl, habitId: "habit-uuid-1" })
+        service.transcribe("user-uuid-1", {
+          audioUrl: "https://fake.supabase.co/storage/v1/object/public/other-bucket/file.webm",
+          habitId: "habit-uuid-1",
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
     it("throws BadRequestError when audioUrl belongs to another user", async () => {
-      const { service } = makeService(mockLanguageHabit);
-      const otherUserAudioUrl =
-        "https://fake.supabase.co/storage/v1/object/public/audio-entries/other-user-uuid/file.webm";
+      const { service, mockValidateOwnership } = makeService(mockLanguageHabit);
+      mockValidateOwnership.mockImplementation(() => {
+        throw new Error("Audio file does not belong to the authenticated user");
+      });
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: otherUserAudioUrl, habitId: "habit-uuid-1" })
+        service.transcribe("user-uuid-1", {
+          audioUrl:
+            "https://fake.supabase.co/storage/v1/object/public/audio-entries/other-user-uuid/file.webm",
+          habitId: "habit-uuid-1",
+        })
       ).rejects.toThrow(BadRequestError);
     });
   });

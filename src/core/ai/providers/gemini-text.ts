@@ -33,9 +33,13 @@ async function callOnce(
         generationConfig: {
           temperature: options?.temperature ?? 0.7,
           maxOutputTokens,
-          responseMimeType: "application/json",
           thinkingConfig: { thinkingBudget: 0 },
-          ...(options?.responseSchema ? { responseSchema: options.responseSchema } : {}),
+          ...(options?.responseSchema
+            ? {
+                responseMimeType: "application/json",
+                responseSchema: options.responseSchema,
+              }
+            : {}),
         },
       }),
     });
@@ -44,12 +48,17 @@ async function callOnce(
       throw new AIRateLimitError("Gemini rate limit exceeded");
     }
 
-    if (!response.ok) {
+    if (response.status >= 500) {
       const errorText = await response.text();
       throw new AITemporaryError(
         `Gemini API temporary error: ${response.status} - ${errorText}`,
         "upstream"
       );
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = (await response.json()) as GeminiResponse;

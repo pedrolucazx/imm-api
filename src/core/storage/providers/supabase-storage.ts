@@ -79,6 +79,30 @@ export const supabaseStorageProvider: StorageProvider = {
     return { signedUrl: data.signedUrl, publicUrl, path };
   },
 
+  validateAudioOwnership(audioUrl: string, userId: string): void {
+    const supabaseUrl = env.SUPABASE_URL!;
+    const bucket = env.SUPABASE_AUDIO_BUCKET;
+
+    const url = new URL(audioUrl);
+    const expectedHostname = new URL(supabaseUrl).hostname;
+    if (url.hostname !== expectedHostname) {
+      throw new Error(
+        `Unauthorized audio origin: URL hostname "${url.hostname}" does not match configured Supabase project`
+      );
+    }
+
+    const canonicalPrefix = `/storage/v1/object/public/${bucket}/`;
+    if (!url.pathname.startsWith(canonicalPrefix)) {
+      throw new Error(`Invalid audio URL format`);
+    }
+
+    const filePath = url.pathname.slice(canonicalPrefix.length);
+    const ownerId = filePath.split("/")[0];
+    if (ownerId !== userId) {
+      throw new Error(`Audio file does not belong to the authenticated user`);
+    }
+  },
+
   async deleteAudioFile(path: string) {
     const supabase = getClient();
     const { error } = await supabase.storage.from(env.SUPABASE_AUDIO_BUCKET).remove([path]);
@@ -100,12 +124,13 @@ export const supabaseStorageProvider: StorageProvider = {
       );
     }
 
-    const marker = `/${bucket}/`;
-    const markerIndex = url.pathname.indexOf(marker);
-    if (markerIndex === -1) {
-      throw new Error(`Invalid audio URL: cannot find bucket "${bucket}" in path`);
+    const canonicalPrefix = `/storage/v1/object/public/${bucket}/`;
+    if (!url.pathname.startsWith(canonicalPrefix)) {
+      throw new Error(
+        `Invalid audio URL: path does not match expected format for bucket "${bucket}"`
+      );
     }
-    const filePath = url.pathname.slice(markerIndex + marker.length);
+    const filePath = url.pathname.slice(canonicalPrefix.length);
 
     const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, 60);
     if (error || !data) {

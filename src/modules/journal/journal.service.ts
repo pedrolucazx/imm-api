@@ -7,7 +7,6 @@ import type { JournalEntry } from "../../core/database/schema/index.js";
 import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 import { countWords } from "../../shared/utils/string.js";
 import { SKILL_BUILDING_LOCALE_SET } from "../../shared/schemas/habit-mode.js";
-import { env } from "../../core/config/env.js";
 import type { TranscriptionProvider } from "../../core/ai/transcription.interface.js";
 import type { StorageProvider } from "../../core/storage/storage.interface.js";
 
@@ -16,7 +15,7 @@ type JournalServiceDeps = {
   habitsRepo: HabitsRepository;
   userProfilesRepo: UserProfilesRepository;
   transcription: Pick<TranscriptionProvider, "transcribe">;
-  storage: Pick<StorageProvider, "downloadAudioAsBase64">;
+  storage: Pick<StorageProvider, "downloadAudioAsBase64" | "validateAudioOwnership">;
 };
 
 const DEFAULT_HISTORY_LIMIT = 100;
@@ -83,16 +82,10 @@ export function createJournalService({
         throw new BadRequestError("Transcription is only available for language habits");
       }
 
-      const audioPath = new URL(input.audioUrl).pathname;
-      const segments = audioPath.split("/").filter(Boolean);
-      const audioBucket = env.SUPABASE_AUDIO_BUCKET;
-      const bucketIndex = segments.indexOf(audioBucket);
-      if (bucketIndex === -1 || bucketIndex + 1 >= segments.length) {
-        throw new BadRequestError("Invalid audio URL format");
-      }
-      const ownerSegment = segments[bucketIndex + 1];
-      if (ownerSegment !== userId) {
-        throw new BadRequestError("Audio file does not belong to the authenticated user");
+      try {
+        storage.validateAudioOwnership(input.audioUrl, userId);
+      } catch (err) {
+        throw new BadRequestError(err instanceof Error ? err.message : "Invalid audio URL");
       }
 
       const { base64, mimeType } = await storage.downloadAudioAsBase64(input.audioUrl);
