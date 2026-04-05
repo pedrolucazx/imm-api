@@ -15,7 +15,8 @@ let _storageInstance: StorageProvider | null = null;
 
 export function getStorageProvider(): StorageProvider {
   if (!_storageInstance) {
-    _storageInstance = createStorageProvider(env.STORAGE_PROVIDER);
+    const [first] = env.STORAGE_PROVIDER.split(",").map((p) => p.trim());
+    _storageInstance = createStorageProvider(first);
   }
   return _storageInstance;
 }

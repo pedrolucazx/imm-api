@@ -190,7 +190,7 @@ core/database/
 
 ### ai
 
-```
+```text
 core/ai/
 ├── text-ai.interface.ts               # Interface TextAIProvider (generate)
 ├── transcription.interface.ts         # Interface TranscriptionProvider (transcribe)
@@ -205,7 +205,7 @@ core/ai/
 
 ### storage
 
-```
+```text
 core/storage/
 ├── storage.interface.ts               # Interface StorageProvider (upload, download, delete)
 ├── storage.factory.ts                 # createStorageProvider / getStorageProvider (singleton lazy)

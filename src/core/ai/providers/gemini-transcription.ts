@@ -1,6 +1,6 @@
 import { env } from "../../config/env.js";
 import { logger } from "../../config/logger.js";
-import { AIRateLimitError } from "../errors.js";
+import { AIRateLimitError, AITemporaryError } from "../errors.js";
 import type { TranscriptionProvider } from "../transcription.interface.js";
 
 const TIMEOUT_MS = 30_000;
@@ -49,7 +49,10 @@ async function callOnce(
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+      throw new AITemporaryError(
+        `Gemini API temporary error: ${response.status} - ${errorText}`,
+        "upstream"
+      );
     }
 
     const data = (await response.json()) as GeminiResponse;
@@ -57,6 +60,17 @@ async function callOnce(
     if (!text) throw new Error("Gemini returned empty transcription response");
 
     return text.trim();
+  } catch (error) {
+    if (error instanceof AIRateLimitError || error instanceof AITemporaryError) {
+      throw error;
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new AITemporaryError(`Gemini API timeout after ${TIMEOUT_MS}ms`, "timeout");
+    }
+    if (error instanceof TypeError) {
+      throw new AITemporaryError(`Gemini API request failed: ${error.message}`, "network");
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

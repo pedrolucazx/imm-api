@@ -235,26 +235,26 @@ RATE_LIMIT_MAX=100
 RATE_LIMIT_TIMEWINDOW=60000
 ```
 
-| Variável                    | Obrigatória                    | Descrição                                          |
-| --------------------------- | ------------------------------ | -------------------------------------------------- |
-| `DATABASE_URL`              | Sim                            | String de conexão PostgreSQL                       |
-| `JWT_SECRET`                | Sim                            | Segredo JWT (mín. 32 chars)                        |
-| `JWT_ACCESS_EXPIRES`        | Sim                            | TTL do access token (ex: `15m`)                    |
-| `JWT_REFRESH_EXPIRES`       | Sim                            | TTL do refresh token (ex: `7d`)                    |
-| `CORS_ORIGIN`               | Sim                            | Origem(ns) do frontend permitidas                  |
-| `RESEND_API_KEY`            | Sim                            | API key Resend para e-mails transacionais          |
-| `APP_URL`                   | Sim                            | URL base do frontend (usado nos links dos e-mails) |
-| `AI_PROVIDER`               | Não (padrão: `gemini`)         | Provider de IA; lista CSV para fallback            |
-| `TRANSCRIPTION_PROVIDER`    | Não (padrão: `gemini`)         | Provider de transcrição de áudio                   |
-| `STORAGE_PROVIDER`          | Não (padrão: `supabase`)       | Provider de storage                                |
-| `GEMINI_API_KEY`            | Se `AI_PROVIDER` inclui gemini | API key do Google Gemini                           |
-| `SUPABASE_URL`              | Se `STORAGE_PROVIDER=supabase` | URL do projeto Supabase                            |
-| `SUPABASE_SERVICE_ROLE_KEY` | Se `STORAGE_PROVIDER=supabase` | Chave service role do Supabase                     |
-| `SUPABASE_STORAGE_BUCKET`   | Não (padrão: `avatars`)        | Bucket para avatares                               |
-| `SUPABASE_AUDIO_BUCKET`     | Não (padrão: `audio-entries`)  | Bucket para áudios                                 |
-| `LOG_LEVEL`                 | Não (padrão: `info`)           | Nível de log Pino                                  |
-| `RATE_LIMIT_MAX`            | Não (padrão: `100`)            | Máx. requisições por janela                        |
-| `RATE_LIMIT_TIMEWINDOW`     | Não (padrão: `60000`)          | Janela de rate limit em ms                         |
+| Variável                    | Obrigatória                                                | Descrição                                          |
+| --------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| `DATABASE_URL`              | Sim                                                        | String de conexão PostgreSQL                       |
+| `JWT_SECRET`                | Sim                                                        | Segredo JWT (mín. 32 chars)                        |
+| `JWT_ACCESS_EXPIRES`        | Sim                                                        | TTL do access token (ex: `15m`)                    |
+| `JWT_REFRESH_EXPIRES`       | Sim                                                        | TTL do refresh token (ex: `7d`)                    |
+| `CORS_ORIGIN`               | Sim                                                        | Origem(ns) do frontend permitidas                  |
+| `RESEND_API_KEY`            | Sim                                                        | API key Resend para e-mails transacionais          |
+| `APP_URL`                   | Sim                                                        | URL base do frontend (usado nos links dos e-mails) |
+| `AI_PROVIDER`               | Não (padrão: `gemini`)                                     | Provider de IA; lista CSV para fallback            |
+| `TRANSCRIPTION_PROVIDER`    | Não (padrão: `gemini`)                                     | Provider de transcrição de áudio                   |
+| `STORAGE_PROVIDER`          | Não (padrão: `supabase`)                                   | Provider de storage                                |
+| `GEMINI_API_KEY`            | Se `AI_PROVIDER` ou `TRANSCRIPTION_PROVIDER` inclui gemini | API key do Google Gemini                           |
+| `SUPABASE_URL`              | Se `STORAGE_PROVIDER=supabase`                             | URL do projeto Supabase                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | Se `STORAGE_PROVIDER=supabase`                             | Chave service role do Supabase                     |
+| `SUPABASE_STORAGE_BUCKET`   | Não (padrão: `avatars`)                                    | Bucket para avatares                               |
+| `SUPABASE_AUDIO_BUCKET`     | Não (padrão: `audio-entries`)                              | Bucket para áudios                                 |
+| `LOG_LEVEL`                 | Não (padrão: `info`)                                       | Nível de log Pino                                  |
+| `RATE_LIMIT_MAX`            | Não (padrão: `100`)                                        | Máx. requisições por janela                        |
+| `RATE_LIMIT_TIMEWINDOW`     | Não (padrão: `60000`)                                      | Janela de rate limit em ms                         |
 
 ---
 

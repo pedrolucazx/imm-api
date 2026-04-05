@@ -112,13 +112,24 @@ export const supabaseStorageProvider: StorageProvider = {
       throw new Error(`Failed to create signed download URL: ${error?.message}`);
     }
 
-    const response = await fetch(data.signedUrl);
+    const downloadController = new AbortController();
+    const downloadTimeout = setTimeout(() => downloadController.abort(), 30_000);
+    let response: Response;
+    try {
+      response = await fetch(data.signedUrl, { signal: downloadController.signal });
+    } finally {
+      clearTimeout(downloadTimeout);
+    }
+
     if (!response.ok) {
       throw new Error(`Failed to download audio: ${response.status} ${response.statusText}`);
     }
 
-    const contentType = response.headers.get("content-type") ?? "audio/webm";
-    const mimeType = contentType.split(";")[0].trim();
+    const rawContentType = response.headers.get("content-type");
+    if (!rawContentType) {
+      throw new Error("Failed to download audio: content-type header is missing");
+    }
+    const mimeType = rawContentType.split(";")[0].trim();
     if (!this.isAllowedAudioContentType(mimeType)) {
       throw new Error(`Unsupported audio mimeType: ${mimeType}`);
     }

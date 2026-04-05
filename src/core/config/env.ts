@@ -21,9 +21,39 @@ const envSchema = z
     JWT_REFRESH_EXPIRES: z.string().default("7d"),
 
     // Provider selection
-    AI_PROVIDER: z.string().default("gemini"),
-    TRANSCRIPTION_PROVIDER: z.string().default("gemini"),
-    STORAGE_PROVIDER: z.string().default("supabase"),
+    AI_PROVIDER: z
+      .string()
+      .default("gemini")
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((p) => p.trim())
+            .every((p) => ["gemini"].includes(p)),
+        "AI_PROVIDER must be one of: gemini"
+      ),
+    TRANSCRIPTION_PROVIDER: z
+      .string()
+      .default("gemini")
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((p) => p.trim())
+            .every((p) => ["gemini"].includes(p)),
+        "TRANSCRIPTION_PROVIDER must be one of: gemini"
+      ),
+    STORAGE_PROVIDER: z
+      .string()
+      .default("supabase")
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((p) => p.trim())
+            .every((p) => ["supabase"].includes(p)),
+        "STORAGE_PROVIDER must be one of: supabase"
+      ),
 
     // Gemini (required if AI_PROVIDER or TRANSCRIPTION_PROVIDER includes "gemini")
     GEMINI_API_KEY: z.string().optional(),

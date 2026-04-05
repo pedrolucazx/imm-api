@@ -113,7 +113,7 @@ export function createPronunciationService({
       logger.info({ habitId: input.habitId }, "[pronunciation] Calling transcription provider");
       const transcriptionText = await transcription.transcribe(base64, mimeType, prompt, 500);
       logger.info(
-        { habitId: input.habitId, transcription: transcriptionText },
+        { habitId: input.habitId, transcriptionLength: transcriptionText.length },
         "[pronunciation] Transcription complete"
       );
 

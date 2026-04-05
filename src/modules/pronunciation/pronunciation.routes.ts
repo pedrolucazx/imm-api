@@ -96,9 +96,7 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
           audioUrl: {
             type: "string",
             format: "uri",
-            examples: [
-              "https://project.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm",
-            ],
+            examples: ["https://storage.example.com/audio-entries/user-id/file.webm"],
           },
           originalText: {
             type: "string",

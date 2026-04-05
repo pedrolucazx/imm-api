@@ -16,7 +16,7 @@ jest.mock("@/modules/habits/habit-planner.js", () => ({
 }));
 
 import { generateHabitPlan } from "@/modules/habits/habit-planner.js";
-import { AITemporaryError } from "@/core/ai/errors.js";
+import { AIRateLimitError, AITemporaryError } from "@/core/ai/errors.js";
 const mockGeneratePlan = generateHabitPlan as jest.MockedFunction<typeof generateHabitPlan>;
 
 const FULL_PLAN = {
@@ -142,7 +142,9 @@ describe("previewPlan", () => {
 
   it("throws TooManyRequestsError when Gemini is rate-limited", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
-    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+    mockGeneratePlan.mockRejectedValue(
+      new AIRateLimitError("Gemini API rate limit: 429 Too Many Requests")
+    );
 
     const service = createHabitsService({
       habitsRepo,
@@ -282,7 +284,9 @@ describe("createWithPlan", () => {
 
   it("returns a failed habit instead of rethrowing when Gemini is rate-limited after creation", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
-    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+    mockGeneratePlan.mockRejectedValue(
+      new AIRateLimitError("Gemini API rate limit: 429 Too Many Requests")
+    );
 
     const service = createHabitsService({
       habitsRepo,
