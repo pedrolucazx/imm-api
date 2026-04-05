@@ -7,22 +7,30 @@ import { pronunciationEntries } from "@/core/database/schema/pronunciation.schem
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
 import { verifyEmailInDb } from "./helpers/db.js";
 
-jest.mock("@/core/storage/supabase-storage.js", () => ({
-  ...jest.requireActual("@/core/storage/supabase-storage.js"),
-  downloadAudioAsBase64: jest.fn(),
-  createAvatarSignedUploadUrl: jest.fn(),
-}));
-jest.mock("@/modules/ai-agents/gemini-client.js", () => ({
-  ...jest.requireActual("@/modules/ai-agents/gemini-client.js"),
-  callGeminiMultimodal: jest.fn(),
-  callGemini: jest.fn(),
+const mockDownload = jest.fn();
+const mockTranscribe = jest.fn();
+
+jest.mock("@/core/storage/storage.factory.js", () => ({
+  getStorageProvider: jest.fn(() => ({
+    downloadAudioAsBase64: mockDownload,
+    createAvatarUploadUrl: jest
+      .fn()
+      .mockResolvedValue({ signedUrl: "url", publicUrl: "pub", path: "p" }),
+    createAudioUploadUrl: jest
+      .fn()
+      .mockResolvedValue({ signedUrl: "url", publicUrl: "pub", path: "p" }),
+    deleteAudioFile: jest.fn().mockResolvedValue(undefined),
+    isAllowedAvatarContentType: jest.fn().mockReturnValue(true),
+    isAllowedAudioContentType: jest.fn().mockReturnValue(true),
+    allowedAudioContentTypes: ["audio/webm", "audio/mp4", "audio/ogg"],
+  })),
 }));
 
-import { downloadAudioAsBase64 } from "@/core/storage/supabase-storage.js";
-import { callGeminiMultimodal } from "@/modules/ai-agents/gemini-client.js";
-
-const mockDownload = downloadAudioAsBase64 as jest.MockedFunction<typeof downloadAudioAsBase64>;
-const mockGemini = callGeminiMultimodal as jest.MockedFunction<typeof callGeminiMultimodal>;
+jest.mock("@/core/ai/transcription.factory.js", () => ({
+  getTranscriptionProvider: jest.fn(() => ({
+    transcribe: mockTranscribe,
+  })),
+}));
 
 const AUDIO_URL =
   "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm";
@@ -92,7 +100,7 @@ describe("Pronunciation API — E2E", () => {
 
   beforeEach(async () => {
     mockDownload.mockResolvedValue({ base64: "fakebase64==", mimeType: "audio/webm" });
-    mockGemini.mockResolvedValue(ORIGINAL_TEXT);
+    mockTranscribe.mockResolvedValue(ORIGINAL_TEXT);
 
     const db = getDb();
     await db.delete(pronunciationEntries);
@@ -156,7 +164,7 @@ describe("Pronunciation API — E2E", () => {
       const { token } = await registerAndLogin(app!, "analyze-201");
       const habitId = await createLanguageHabit(app!, token);
 
-      mockGemini.mockResolvedValue("the quick brown fox jumps over the lazy dog");
+      mockTranscribe.mockResolvedValue("the quick brown fox jumps over the lazy dog");
 
       const res = await request(app!.server)
         .post("/api/pronunciation/analyze")
@@ -176,7 +184,7 @@ describe("Pronunciation API — E2E", () => {
       const { token, userId } = await registerAndLogin(app!, "analyze-persist");
       const habitId = await createLanguageHabit(app!, token);
 
-      mockGemini.mockResolvedValue("the quick brown fox");
+      mockTranscribe.mockResolvedValue("the quick brown fox");
 
       await request(app!.server)
         .post("/api/pronunciation/analyze")
@@ -243,7 +251,7 @@ describe("Pronunciation API — E2E", () => {
       const habitId = await createLanguageHabit(app!, token);
 
       // First entry: misses "jumps", "over", "the", "lazy", "dog"
-      mockGemini.mockResolvedValueOnce("the quick brown fox");
+      mockTranscribe.mockResolvedValueOnce("the quick brown fox");
       await request(app!.server)
         .post("/api/pronunciation/analyze")
         .set("Authorization", `Bearer ${token}`)
@@ -251,7 +259,7 @@ describe("Pronunciation API — E2E", () => {
         .expect(201);
 
       // Second entry: misses "jumps", "over", "lazy", "dog" — "jumps" missed twice
-      mockGemini.mockResolvedValueOnce("the quick brown fox the");
+      mockTranscribe.mockResolvedValueOnce("the quick brown fox the");
       await request(app!.server)
         .post("/api/pronunciation/analyze")
         .set("Authorization", `Bearer ${token}`)
@@ -313,7 +321,7 @@ describe("Pronunciation API — E2E", () => {
       const { token } = await registerAndLogin(app!, "analytics-wc-data");
       const habitId = await createLanguageHabit(app!, token);
 
-      mockGemini.mockResolvedValue("the quick brown fox");
+      mockTranscribe.mockResolvedValue("the quick brown fox");
       await request(app!.server)
         .post("/api/pronunciation/analyze")
         .set("Authorization", `Bearer ${token}`)

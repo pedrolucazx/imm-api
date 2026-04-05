@@ -2,12 +2,9 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import type { UsersService } from "./users.service.js";
 import { updateProfileSchema, type UpdateProfileInput } from "./users.types.js";
 import { handleControllerError } from "../../shared/http/handle-error.js";
-import {
-  createAvatarSignedUploadUrl,
-  isAllowedContentType,
-} from "../../core/storage/supabase-storage.js";
+import type { StorageProvider } from "../../core/storage/storage.interface.js";
 
-export function createUsersController(service: UsersService) {
+export function createUsersController(service: UsersService, storage: StorageProvider) {
   return {
     async get(request: FastifyRequest, reply: FastifyReply) {
       try {
@@ -38,13 +35,13 @@ export function createUsersController(service: UsersService) {
         const { id } = request.user;
         const { contentType } = request.body;
 
-        if (!isAllowedContentType(contentType)) {
+        if (!storage.isAllowedAvatarContentType(contentType)) {
           return reply
             .code(422)
             .send({ error: "contentType must be image/jpeg, image/png or image/webp" });
         }
 
-        const result = await createAvatarSignedUploadUrl(id, contentType);
+        const result = await storage.createAvatarUploadUrl(id, contentType);
         return reply.code(200).send(result);
       } catch (error) {
         return handleControllerError(error, reply);

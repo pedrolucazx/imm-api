@@ -24,6 +24,18 @@ function makeMockService(): jest.Mocked<UsersService> {
   };
 }
 
+function makeMockStorage() {
+  return {
+    isAllowedAvatarContentType: jest.fn().mockReturnValue(true),
+    createAvatarUploadUrl: jest.fn(),
+    isAllowedAudioContentType: jest.fn().mockReturnValue(true),
+    createAudioUploadUrl: jest.fn(),
+    downloadAudioAsBase64: jest.fn(),
+    deleteAudioFile: jest.fn(),
+    allowedAudioContentTypes: ["audio/webm", "audio/mp4", "audio/ogg"] as const,
+  };
+}
+
 function makeReply() {
   return {
     code: jest.fn().mockReturnThis(),
@@ -45,7 +57,7 @@ describe("UsersController.get", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockService = makeMockService();
-    controller = createUsersController(mockService);
+    controller = createUsersController(mockService, makeMockStorage() as never);
   });
 
   it("returns 200 with profile on success", async () => {
@@ -90,7 +102,7 @@ describe("UsersController.update", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockService = makeMockService();
-    controller = createUsersController(mockService);
+    controller = createUsersController(mockService, makeMockStorage() as never);
   });
 
   it("returns 200 with updated profile on success", async () => {
@@ -187,7 +199,7 @@ describe("UsersController.delete", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockService = makeMockService();
-    controller = createUsersController(mockService);
+    controller = createUsersController(mockService, makeMockStorage() as never);
   });
 
   it("returns 204 on successful account deletion", async () => {

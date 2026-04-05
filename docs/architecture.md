@@ -17,11 +17,11 @@ Backend do Inside My Mind. API RESTful construída como monolito modular em Fast
                           │           │          │          │    │
                           └───────────┼──────────┼──────────┼────┘
                                       │          │          │
-                               PostgreSQL    Supabase    Resend
-                              (Supabase)     Storage    (e-mail)
+                               PostgreSQL    Storage    Resend
+                              (Supabase)    Provider   (e-mail)
                                       │
-                               Google Gemini Flash
-                               (agentes de IA)
+                               AI Provider
+                               (padrão: Gemini Flash)
 ```
 
 ---
@@ -112,12 +112,11 @@ journal/
 
 ### ai-agents
 
-Orquestração dos três agentes Gemini. Não expõe rotas HTTP — é chamado internamente por `habits.service` e `journal.service`.
+Orquestração dos três agentes de IA. Não expõe rotas HTTP — é chamado internamente por `habits.service` e `journal.service`. Recebe `TextAIProvider` e `TranscriptionProvider` via injeção de dependência nos `.module.ts`.
 
 ```
 ai-agents/
 ├── ai.service.ts                      # Roteador: decide qual agente usar por tipo de hábito
-├── gemini-client.ts                   # Client HTTP para Gemini Flash API
 ├── habit-planner.ts                   # Agente de planejamento 66 dias
 ├── language-agent.ts                  # Agente de análise linguística
 └── behavioral-agent.ts                # Agente de comportamento e humor
@@ -145,15 +144,15 @@ pronunciation/
 │                                      # POST /pronunciation/analyze
 │                                      # GET /pronunciation/word-cloud
 ├── pronunciation.controller.ts
-├── pronunciation.service.ts           # Gera URL assinada Supabase → transcreve via Gemini → calcula score
+├── pronunciation.service.ts           # Gera URL assinada via Storage Provider → transcreve → calcula score
 └── pronunciation.repository.ts
 ```
 
 **Fluxo de análise de pronúncia:**
 
-1. `POST /pronunciation/upload-url` → gera URL pré-assinada do Supabase Storage
-2. Frontend faz upload do áudio diretamente para o Supabase
-3. `POST /pronunciation/analyze` → Gemini transcreve o áudio → compara com texto original → calcula score por palavra → persiste entrada
+1. `POST /pronunciation/upload-url` → gera URL pré-assinada via Storage Provider
+2. Frontend faz upload do áudio diretamente para o storage
+3. `POST /pronunciation/analyze` → Transcription Provider transcreve o áudio → compara com texto original → calcula score por palavra → persiste entrada
 
 ---
 
@@ -189,11 +188,29 @@ core/database/
     └── index.ts                       # Re-export de todos os schemas
 ```
 
+### ai
+
+```
+core/ai/
+├── text-ai.interface.ts               # Interface TextAIProvider (generate)
+├── transcription.interface.ts         # Interface TranscriptionProvider (transcribe)
+├── errors.ts                          # AIRateLimitError, AITemporaryError
+├── with-fallback.ts                   # Wrappers de fallback encadeado entre providers
+├── ai.factory.ts                      # createTextAIProvider / getTextAIProvider (singleton lazy)
+├── transcription.factory.ts           # createTranscriptionProvider / getTranscriptionProvider
+└── providers/
+    ├── gemini-text.ts                 # GeminiTextProvider (implementa TextAIProvider)
+    └── gemini-transcription.ts        # GeminiTranscriptionProvider (implementa TranscriptionProvider)
+```
+
 ### storage
 
 ```
 core/storage/
-└── supabase-storage.ts                # Client do Supabase Storage para upload de avatares e áudios
+├── storage.interface.ts               # Interface StorageProvider (upload, download, delete)
+├── storage.factory.ts                 # createStorageProvider / getStorageProvider (singleton lazy)
+└── providers/
+    └── supabase-storage.ts            # supabaseStorageProvider (implementa StorageProvider)
 ```
 
 ---
@@ -253,9 +270,9 @@ Service (service.ts)
     │  Lógica de negócio, orquestra repositories e clients externos
     │
     ├──► Repository (repository.ts)  ──► PostgreSQL (Drizzle)
-    ├──► AI Service                  ──► Google Gemini Flash
+    ├──► AI Service                  ──► AI Provider (padrão: Gemini Flash)
     ├──► Email Service               ──► Resend
-    └──► Storage Client              ──► Supabase Storage
+    └──► Storage Provider            ──► Storage Provider (padrão: Supabase Storage)
     │
     ▼
 Response (JSON)

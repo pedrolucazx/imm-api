@@ -14,6 +14,8 @@ import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
 import { nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 import { assertAiRateLimit } from "../../shared/guards/ai-rate-limit.guard.js";
+import type { TextAIProvider } from "../../core/ai/text-ai.interface.js";
+import { getTextAIProvider } from "../../core/ai/ai.factory.js";
 
 export type AiAnalyzeInput = {
   journalEntryId: string;
@@ -29,10 +31,11 @@ export type AiServiceDeps = {
   journalRepo: JournalRepository;
   habitsRepo: HabitsRepository;
   userProfilesRepo: UserProfilesRepository;
+  textAI: TextAIProvider;
 };
 
 export function createAiService(deps: AiServiceDeps) {
-  const { journalRepo, habitsRepo, userProfilesRepo } = deps;
+  const { journalRepo, habitsRepo, userProfilesRepo, textAI } = deps;
   const orchestrator = createOrchestrator({
     deriveHabitMode: (targetSkill: string) => deriveHabitMode(targetSkill as TargetSkill),
   });
@@ -111,9 +114,9 @@ export function createAiService(deps: AiServiceDeps) {
     let result: LanguageAgentResponse | BehavioralAgentResponse;
 
     if (agent.type === "language-teacher") {
-      result = await analyzeWithLanguageAgent(serviceInput);
+      result = await analyzeWithLanguageAgent(serviceInput, textAI);
     } else {
-      result = await analyzeWithBehavioralAgent(serviceInput);
+      result = await analyzeWithBehavioralAgent(serviceInput, textAI);
     }
 
     await saveAiFeedback(entry.id, userId, result, agent.type);
@@ -132,6 +135,7 @@ export function createAiServiceFromDb(db: DrizzleDb) {
     journalRepo: createJournalRepository(db),
     habitsRepo: createHabitsRepository(db),
     userProfilesRepo: createUserProfilesRepository(db),
+    textAI: getTextAIProvider(),
   });
 }
 

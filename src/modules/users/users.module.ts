@@ -6,6 +6,7 @@ import { createUsersService } from "./users.service.js";
 import { createOnboardingService } from "./onboarding.service.js";
 import { createUsersController } from "./users.controller.js";
 import { createOnboardingController } from "./onboarding.controller.js";
+import { getStorageProvider } from "../../core/storage/storage.factory.js";
 
 export function createUsersModule(db: DrizzleDb) {
   const usersRepo = createUsersRepository(db);
@@ -13,8 +14,9 @@ export function createUsersModule(db: DrizzleDb) {
   const onboardingRepo = createOnboardingRepository(db);
   const service = createUsersService({ usersRepo, userProfilesRepo, db });
   const onboardingService = createOnboardingService({ repo: onboardingRepo });
+  const storage = getStorageProvider();
   return {
-    controller: createUsersController(service),
+    controller: createUsersController(service, storage),
     onboardingController: createOnboardingController(onboardingService),
   };
 }

@@ -6,14 +6,16 @@ import type { CreateJournalEntryInput } from "./journal.types.js";
 import type { JournalEntry } from "../../core/database/schema/index.js";
 import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 import { countWords } from "../../shared/utils/string.js";
-import { downloadAudioAsBase64 } from "../../core/storage/supabase-storage.js";
-import { callGeminiMultimodal } from "../ai-agents/gemini-client.js";
 import { SKILL_BUILDING_LOCALE_SET } from "../../shared/schemas/habit-mode.js";
+import type { TranscriptionProvider } from "../../core/ai/transcription.interface.js";
+import type { StorageProvider } from "../../core/storage/storage.interface.js";
 
 type JournalServiceDeps = {
   journalRepo: JournalRepository;
   habitsRepo: HabitsRepository;
   userProfilesRepo: UserProfilesRepository;
+  transcription: TranscriptionProvider;
+  storage: StorageProvider;
 };
 
 const DEFAULT_HISTORY_LIMIT = 100;
@@ -23,6 +25,8 @@ export function createJournalService({
   journalRepo,
   habitsRepo,
   userProfilesRepo,
+  transcription,
+  storage,
 }: JournalServiceDeps) {
   return {
     async createEntry(userId: string, input: CreateJournalEntryInput): Promise<JournalEntry> {
@@ -89,11 +93,11 @@ export function createJournalService({
         throw new BadRequestError("Audio file does not belong to the authenticated user");
       }
 
-      const { base64, mimeType } = await downloadAudioAsBase64(input.audioUrl);
+      const { base64, mimeType } = await storage.downloadAudioAsBase64(input.audioUrl);
       const prompt = `Transcribe the following audio exactly as spoken in ${habit.targetSkill}. Return only the transcription text, no punctuation corrections, no commentary. Verbatim only.`;
-      const transcription = await callGeminiMultimodal(base64, mimeType, prompt, 500);
+      const transcriptionText = await transcription.transcribe(base64, mimeType, prompt, 500);
 
-      return { transcription };
+      return { transcription: transcriptionText };
     },
 
     async listHistory(

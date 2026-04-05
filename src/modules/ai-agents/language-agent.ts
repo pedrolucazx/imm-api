@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { callGemini, sanitizeJsonString } from "./gemini-client.js";
+import { sanitizeJsonString } from "../../shared/utils/json.js";
 import { langInstruction } from "../../shared/utils/ai-prompt.js";
 import { logger } from "../../core/config/logger.js";
+import type { TextAIProvider } from "../../core/ai/text-ai.interface.js";
 
 export const languageAgentErrorSchema = z.object({
   original: z.string(),
@@ -61,20 +62,18 @@ IMPORTANT: Output must be complete, valid JSON only. No markdown.`;
 }
 
 export async function analyzeWithLanguageAgent(
-  input: LanguageAgentInput
+  input: LanguageAgentInput,
+  textAI: TextAIProvider
 ): Promise<LanguageAgentResponse> {
-  const rawText = await callGemini(buildPrompt(input), 4096);
+  const rawText = await textAI.generate(buildPrompt(input), 4096);
 
   let parsed: unknown;
   try {
     const sanitized = sanitizeJsonString(rawText);
     parsed = JSON.parse(sanitized);
   } catch {
-    logger.error(
-      { rawTextLength: rawText.length },
-      "[language-agent] Failed to parse Gemini response"
-    );
-    throw new Error("Invalid JSON response from Gemini");
+    logger.error({ rawTextLength: rawText.length }, "[language-agent] Failed to parse AI response");
+    throw new Error("Invalid JSON response from AI");
   }
 
   const result = languageAgentResponseSchema.safeParse(parsed);

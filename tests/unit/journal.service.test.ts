@@ -5,18 +5,8 @@ import type { JournalRepository } from "@/modules/journal/journal.repository.js"
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import type { Habit, JournalEntry } from "@/core/database/schema/index.js";
 
-jest.mock("@/core/storage/supabase-storage.js", () => ({
-  downloadAudioAsBase64: jest.fn(),
-}));
-jest.mock("@/modules/ai-agents/gemini-client.js", () => ({
-  callGeminiMultimodal: jest.fn(),
-}));
-
-import { downloadAudioAsBase64 } from "@/core/storage/supabase-storage.js";
-import { callGeminiMultimodal } from "@/modules/ai-agents/gemini-client.js";
-
-const mockDownload = downloadAudioAsBase64 as jest.MockedFunction<typeof downloadAudioAsBase64>;
-const mockGemini = callGeminiMultimodal as jest.MockedFunction<typeof callGeminiMultimodal>;
+const mockDownload = jest.fn();
+const mockTranscribe = jest.fn();
 
 const AUDIO_URL =
   "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm";
@@ -111,7 +101,15 @@ function makeService(
   const habitsRepo = makeMockHabitsRepo(habit);
   const journalRepo = makeMockJournalRepo(existing);
   const userProfilesRepo = makeMockUserProfilesRepo(uiLanguage);
-  const service = createJournalService({ journalRepo, habitsRepo, userProfilesRepo });
+  const transcription = { transcribe: mockTranscribe };
+  const storage = { downloadAudioAsBase64: mockDownload } as never;
+  const service = createJournalService({
+    journalRepo,
+    habitsRepo,
+    userProfilesRepo,
+    transcription,
+    storage,
+  });
   return { service, habitsRepo, journalRepo, userProfilesRepo };
 }
 
@@ -122,7 +120,7 @@ function makeService(
 describe("JournalService — transcribe", () => {
   beforeEach(() => {
     mockDownload.mockResolvedValue({ base64: "fakebase64", mimeType: "audio/webm" });
-    mockGemini.mockResolvedValue("Today I practiced speaking English");
+    mockTranscribe.mockResolvedValue("Today I practiced speaking English");
   });
 
   afterEach(() => {
@@ -262,26 +260,26 @@ describe("JournalService — transcribe", () => {
       expect(mockDownload).toHaveBeenCalledWith(AUDIO_URL);
     });
 
-    it("calls callGeminiMultimodal with base64 and mimeType returned by storage", async () => {
+    it("calls transcription provider with base64 and mimeType returned by storage", async () => {
       mockDownload.mockResolvedValue({ base64: "abc123", mimeType: "audio/ogg" });
       const { service } = makeService(mockLanguageHabit);
 
       await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
 
-      expect(mockGemini).toHaveBeenCalledWith("abc123", "audio/ogg", expect.any(String), 500);
+      expect(mockTranscribe).toHaveBeenCalledWith("abc123", "audio/ogg", expect.any(String), 500);
     });
 
-    it("includes the habit targetSkill in the Gemini prompt", async () => {
+    it("includes the habit targetSkill in the transcription prompt", async () => {
       const { service } = makeService(mockLanguageHabit);
 
       await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
 
-      const promptArg = mockGemini.mock.calls[0][2] as string;
+      const promptArg = mockTranscribe.mock.calls[0][2] as string;
       expect(promptArg).toContain("en-US");
     });
 
-    it("returns the raw Gemini output as transcription (verbatim)", async () => {
-      mockGemini.mockResolvedValue("  Hello world  ");
+    it("returns the raw transcription output verbatim", async () => {
+      mockTranscribe.mockResolvedValue("  Hello world  ");
       const { service } = makeService(mockLanguageHabit);
 
       const result = await service.transcribe("user-uuid-1", {
@@ -301,13 +299,13 @@ describe("JournalService — transcribe", () => {
       ).rejects.toThrow("Storage unreachable");
     });
 
-    it("propagates errors thrown by callGeminiMultimodal", async () => {
-      mockGemini.mockRejectedValue(new Error("Gemini API error: 500"));
+    it("propagates errors thrown by the transcription provider", async () => {
+      mockTranscribe.mockRejectedValue(new Error("Transcription provider error: 500"));
       const { service } = makeService(mockLanguageHabit);
 
       await expect(
         service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
-      ).rejects.toThrow("Gemini API error: 500");
+      ).rejects.toThrow("Transcription provider error: 500");
     });
   });
 });

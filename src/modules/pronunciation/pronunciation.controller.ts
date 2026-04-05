@@ -2,11 +2,7 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import type { PronunciationService } from "./pronunciation.service.js";
 import { analyzePronunciationSchema, wordCloudQuerySchema } from "./pronunciation.types.js";
 import { handleControllerError } from "../../shared/http/handle-error.js";
-import {
-  createAudioSignedUploadUrl,
-  deleteAudioFile,
-  isAllowedAudioContentType,
-} from "../../core/storage/supabase-storage.js";
+import type { StorageProvider } from "../../core/storage/storage.interface.js";
 import { z } from "zod";
 
 const deleteAudioSchema = z.object({
@@ -18,7 +14,10 @@ const deleteAudioSchema = z.object({
     }),
 });
 
-export function createPronunciationController(service: PronunciationService) {
+export function createPronunciationController(
+  service: PronunciationService,
+  storage: StorageProvider
+) {
   return {
     async analyze(request: FastifyRequest, reply: FastifyReply) {
       try {
@@ -46,10 +45,10 @@ export function createPronunciationController(service: PronunciationService) {
       try {
         const { id: userId } = request.user;
         const { contentType } = request.body as { contentType: string };
-        if (!isAllowedAudioContentType(contentType)) {
+        if (!storage.isAllowedAudioContentType(contentType)) {
           return reply.code(422).send({ error: "Invalid content type" });
         }
-        const result = await createAudioSignedUploadUrl(userId, contentType);
+        const result = await storage.createAudioUploadUrl(userId, contentType);
         return reply.code(200).send(result);
       } catch (error) {
         return handleControllerError(error, reply);
@@ -64,7 +63,7 @@ export function createPronunciationController(service: PronunciationService) {
         if (normalizedPath.includes("..") || !normalizedPath.startsWith(`${userId}/`)) {
           return reply.code(403).send({ error: "Forbidden" });
         }
-        await deleteAudioFile(normalizedPath);
+        await storage.deleteAudioFile(normalizedPath);
         return reply.code(204).send();
       } catch (error) {
         return handleControllerError(error, reply);
