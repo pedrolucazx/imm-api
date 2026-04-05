@@ -16,3 +16,4 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || "https://fake.supabase.co
 process.env.SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || "fake-service-role-key";
 process.env.RESEND_API_KEY = process.env.RESEND_API_KEY || "re_test_fake_key_for_unit_tests";
+process.env.GEMINI_API_KEY = process.env.GEMINI_API_KEY || "fake-gemini-api-key-for-tests";
