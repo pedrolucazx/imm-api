@@ -33,6 +33,23 @@ function getClient() {
   return supabaseClient;
 }
 
+function extractAudioFilePath(audioUrl: string, supabaseUrl: string, bucket: string): string {
+  const url = new URL(audioUrl);
+  const expectedHostname = new URL(supabaseUrl).hostname;
+  if (url.hostname !== expectedHostname) {
+    throw new Error(
+      `Unauthorized audio origin: URL hostname "${url.hostname}" does not match configured Supabase project`
+    );
+  }
+
+  const canonicalPrefix = `/storage/v1/object/public/${bucket}/`;
+  if (!url.pathname.startsWith(canonicalPrefix)) {
+    throw new Error(`Invalid audio URL format`);
+  }
+
+  return url.pathname.slice(canonicalPrefix.length);
+}
+
 export const supabaseStorageProvider: StorageProvider = {
   allowedAudioContentTypes: ALLOWED_AUDIO_CONTENT_TYPES,
 
@@ -80,23 +97,7 @@ export const supabaseStorageProvider: StorageProvider = {
   },
 
   validateAudioOwnership(audioUrl: string, userId: string): void {
-    const supabaseUrl = env.SUPABASE_URL!;
-    const bucket = env.SUPABASE_AUDIO_BUCKET;
-
-    const url = new URL(audioUrl);
-    const expectedHostname = new URL(supabaseUrl).hostname;
-    if (url.hostname !== expectedHostname) {
-      throw new Error(
-        `Unauthorized audio origin: URL hostname "${url.hostname}" does not match configured Supabase project`
-      );
-    }
-
-    const canonicalPrefix = `/storage/v1/object/public/${bucket}/`;
-    if (!url.pathname.startsWith(canonicalPrefix)) {
-      throw new Error(`Invalid audio URL format`);
-    }
-
-    const filePath = url.pathname.slice(canonicalPrefix.length);
+    const filePath = extractAudioFilePath(audioUrl, env.SUPABASE_URL!, env.SUPABASE_AUDIO_BUCKET);
     const ownerId = filePath.split("/")[0];
     if (ownerId !== userId) {
       throw new Error(`Audio file does not belong to the authenticated user`);
@@ -113,26 +114,11 @@ export const supabaseStorageProvider: StorageProvider = {
 
   async downloadAudioAsBase64(audioUrl: string) {
     const supabase = getClient();
-    const bucket = env.SUPABASE_AUDIO_BUCKET;
-    const supabaseUrl = env.SUPABASE_URL!;
+    const filePath = extractAudioFilePath(audioUrl, env.SUPABASE_URL!, env.SUPABASE_AUDIO_BUCKET);
 
-    const url = new URL(audioUrl);
-    const expectedHostname = new URL(supabaseUrl).hostname;
-    if (url.hostname !== expectedHostname) {
-      throw new Error(
-        `Unauthorized audio origin: URL hostname "${url.hostname}" does not match configured Supabase project`
-      );
-    }
-
-    const canonicalPrefix = `/storage/v1/object/public/${bucket}/`;
-    if (!url.pathname.startsWith(canonicalPrefix)) {
-      throw new Error(
-        `Invalid audio URL: path does not match expected format for bucket "${bucket}"`
-      );
-    }
-    const filePath = url.pathname.slice(canonicalPrefix.length);
-
-    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(filePath, 60);
+    const { data, error } = await supabase.storage
+      .from(env.SUPABASE_AUDIO_BUCKET)
+      .createSignedUrl(filePath, 60);
     if (error || !data) {
       throw new Error(`Failed to create signed download URL: ${error?.message}`);
     }

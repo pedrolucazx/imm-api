@@ -4,6 +4,7 @@ import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { JournalRepository } from "@/modules/journal/journal.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import type { Habit, JournalEntry } from "@/core/database/schema/index.js";
+import type { StorageProvider } from "@/core/storage/storage.interface.js";
 
 const mockDownload = jest.fn();
 const mockTranscribe = jest.fn();
@@ -103,10 +104,10 @@ function makeService(
   const userProfilesRepo = makeMockUserProfilesRepo(uiLanguage);
   const transcription = { transcribe: mockTranscribe };
   const mockValidateOwnership = jest.fn();
-  const storage = {
+  const storage: Pick<StorageProvider, "downloadAudioAsBase64" | "validateAudioOwnership"> = {
     downloadAudioAsBase64: mockDownload,
     validateAudioOwnership: mockValidateOwnership,
-  } as never;
+  };
   const service = createJournalService({
     journalRepo,
     habitsRepo,

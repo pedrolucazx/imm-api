@@ -1,11 +1,8 @@
 import { env } from "../../config/env.js";
-import { logger } from "../../config/logger.js";
 import { AIRateLimitError, AITemporaryError } from "../errors.js";
 import type { TextAIProvider, AIGenerateOptions } from "../text-ai.interface.js";
 
 const TIMEOUT_MS = 30_000;
-const MAX_RETRIES = 3;
-const RETRY_BASE_MS = 5_000;
 
 type GeminiResponse = {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -90,22 +87,6 @@ export class GeminiTextProvider implements TextAIProvider {
   ): Promise<string> {
     const apiKey = env.GEMINI_API_KEY;
     if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
-
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        return await callOnce(apiKey, prompt, maxOutputTokens, options);
-      } catch (error) {
-        if (error instanceof AIRateLimitError && attempt < MAX_RETRIES - 1) {
-          const delay = RETRY_BASE_MS * 2 ** attempt;
-          logger.warn(
-            `[gemini-text] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
-      }
-    }
-    throw new Error("GeminiTextProvider: exhausted retries without result");
+    return callOnce(apiKey, prompt, maxOutputTokens, options);
   }
 }
