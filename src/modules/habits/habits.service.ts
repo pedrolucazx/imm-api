@@ -19,14 +19,15 @@ import type {
   RegeneratePlanInput,
   UpdateHabitInput,
 } from "./habits.types.js";
-import { generateHabitPlan, GeminiTemporaryError } from "./habit-planner.js";
+import { generateHabitPlan } from "./habit-planner.js";
 import type { HabitPlan } from "./habit-plan.schema.js";
 import { MAX_ACTIVE_HABITS } from "../../shared/constants.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
 import { computeCurrentDay, computeStreak } from "../../shared/utils/habit-math.js";
 import { nextAiRequestCount } from "../../shared/utils/ai-rate-limit.js";
 import { assertAiRateLimit } from "../../shared/guards/ai-rate-limit.guard.js";
-import { GeminiRateLimitError } from "../ai-agents/gemini-client.js";
+import { AIRateLimitError, AITemporaryError } from "../../core/ai/errors.js";
+import type { TextAIProvider } from "../../core/ai/text-ai.interface.js";
 
 export type HabitWithStats = Habit & {
   streak: number;
@@ -49,11 +50,11 @@ function toHabitPlannerError(error: unknown): AppError {
     return error;
   }
 
-  if (error instanceof GeminiRateLimitError) {
+  if (error instanceof AIRateLimitError) {
     return new TooManyRequestsError("AI service is busy. Please wait a moment and try again.");
   }
 
-  if (error instanceof GeminiTemporaryError) {
+  if (error instanceof AITemporaryError) {
     if (error.reason === "timeout") {
       return new ServiceUnavailableError("AI request timed out. Please try again.");
     }
@@ -88,12 +89,14 @@ type HabitsServiceDeps = {
   habitsRepo: HabitsRepository;
   habitLogsRepo: HabitLogsRepository;
   userProfilesRepo: UserProfilesRepository;
+  textAI: TextAIProvider;
 };
 
 export function createHabitsService({
   habitsRepo,
   habitLogsRepo,
   userProfilesRepo,
+  textAI,
 }: HabitsServiceDeps) {
   async function checkAndIncrementAiUsage(userId: string): Promise<void> {
     const profile = await userProfilesRepo.findByUserId(userId);
@@ -150,7 +153,8 @@ export function createHabitsService({
             uiLanguage,
             feedbackOnPlan: input.feedbackOnPlan ?? undefined,
           },
-          mode
+          mode,
+          textAI
         );
       } catch (err) {
         logger.error({ err }, "[habit-planner] previewPlan failed");
@@ -218,7 +222,8 @@ export function createHabitsService({
             level,
             uiLanguage,
           },
-          mode
+          mode,
+          textAI
         );
         const updated =
           (await habitsRepo.update(habit.id, userId, { habitPlan: plan, planStatus: "ready" })) ??
@@ -272,7 +277,8 @@ export function createHabitsService({
             level,
             uiLanguage,
           },
-          mode
+          mode,
+          textAI
         );
         const updated =
           (await habitsRepo.update(habitId, userId, { habitPlan: plan, planStatus: "ready" })) ??

@@ -254,7 +254,7 @@ export async function habitsRoutes(fastify: FastifyInstance) {
 
   fastify.post("/habits/create-with-plan", {
     schema: {
-      description: "Create a habit and generate a 66-day AI plan via Gemini",
+      description: "Create a habit and generate a 66-day AI plan",
       tags: ["Habits"],
       summary: "Create habit with AI plan",
       security: [{ bearerAuth: [] }],

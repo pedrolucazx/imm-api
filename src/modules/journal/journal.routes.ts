@@ -137,7 +137,7 @@ export async function journalRoutes(fastify: FastifyInstance) {
 
   fastify.post("/journal/transcribe", {
     schema: {
-      description: "Transcribe audio via Gemini and return the transcription text",
+      description: "Transcribe audio and return the transcription text",
       tags: ["Journal"],
       summary: "Transcribe audio for journal entry",
       security: [{ bearerAuth: [] }],

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { getDb } from "../../core/database/connection.js";
 import { authenticate } from "../../core/hooks/authenticate.js";
-import { ALLOWED_AUDIO_CONTENT_TYPES } from "../../core/storage/supabase-storage.js";
+import { getStorageProvider } from "../../core/storage/storage.factory.js";
 import { createPronunciationModule } from "./pronunciation.module.js";
 
 const errorResponse = (description: string) => ({
@@ -37,12 +37,12 @@ const wordCloudItemSchema = {
 };
 
 export async function pronunciationRoutes(fastify: FastifyInstance) {
+  const storage = getStorageProvider();
   const { controller } = createPronunciationModule(getDb());
 
   fastify.post("/pronunciation/upload-url", {
     schema: {
-      description:
-        "Generate a signed URL to upload pronunciation audio directly to Supabase Storage",
+      description: "Generate a signed URL to upload pronunciation audio directly to storage",
       tags: ["Pronunciation"],
       summary: "Get audio upload URL",
       security: [{ bearerAuth: [] }],
@@ -53,7 +53,7 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
         properties: {
           contentType: {
             type: "string",
-            examples: [...ALLOWED_AUDIO_CONTENT_TYPES],
+            examples: [...storage.allowedAudioContentTypes],
           },
         },
       },
@@ -79,7 +79,7 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
 
   fastify.post("/pronunciation/analyze", {
     schema: {
-      description: "Transcribe pronunciation audio via Gemini and return comparison score",
+      description: "Transcribe pronunciation audio and return comparison score",
       tags: ["Pronunciation"],
       summary: "Analyze pronunciation",
       security: [{ bearerAuth: [] }],
@@ -96,9 +96,7 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
           audioUrl: {
             type: "string",
             format: "uri",
-            examples: [
-              "https://project.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm",
-            ],
+            examples: ["https://storage.example.com/audio-entries/user-id/file.webm"],
           },
           originalText: {
             type: "string",

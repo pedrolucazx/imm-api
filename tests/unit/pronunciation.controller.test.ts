@@ -22,7 +22,15 @@ describe("PronunciationController", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    controller = createPronunciationController(mockService);
+    controller = createPronunciationController(mockService, {
+      isAllowedAudioContentType: jest.fn().mockReturnValue(true),
+      createAudioUploadUrl: jest.fn(),
+      deleteAudioFile: jest.fn(),
+      downloadAudioAsBase64: jest.fn(),
+      isAllowedAvatarContentType: jest.fn(),
+      createAvatarUploadUrl: jest.fn(),
+      allowedAudioContentTypes: ["audio/webm", "audio/mp4", "audio/ogg"] as never,
+    } as never);
 
     mockReply = {
       code: jest.fn().mockReturnThis(),

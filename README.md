@@ -45,13 +45,13 @@
 
 ## Agentes de IA
 
-A API orquestra três agentes especializados via Google Gemini Flash, cada um ativado por tipo de hábito:
+A API orquestra três agentes especializados, cada um ativado por tipo de hábito. O provider de IA é configurável via `AI_PROVIDER` (padrão: Google Gemini Flash):
 
 - **Habit Planner**: gera um plano de 66 dias com fases progressivas ao criar um novo hábito; suporta regeneração com feedback do usuário
-- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; aceita áudio gravado pelo usuário, transcreve via Gemini e retorna score de pronúncia com lista de palavras corretas e erradas
+- **Language Teacher**: avalia gramática, vocabulário e fluência nas entradas de hábitos de idiomas; aceita áudio gravado pelo usuário, transcreve via provider configurável (`TRANSCRIPTION_PROVIDER`) e retorna score de pronúncia com lista de palavras corretas e erradas
 - **Behavioral Coach**: identifica padrões de humor e sugere micro-ações para hábitos comportamentais
 
-Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o usuário.
+Usando o Gemini Flash como provider padrão, todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o usuário.
 
 ---
 
@@ -59,8 +59,8 @@ Todos os agentes rodam dentro das cotas gratuitas do modelo — sem custo para o
 
 ```text
 imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16 (Supabase)
-                                       ├──► Google Gemini Flash (agentes de IA)
-                                       ├──► Supabase Storage (avatares + áudios)
+                                       ├──► AI Provider (padrão: Google Gemini Flash)
+                                       ├──► Storage Provider (padrão: Supabase Storage)
                                        └──► Resend (e-mails transacionais)
 ```
 
@@ -70,22 +70,22 @@ imm-web (Next.js) ──► imm-api (Fastify) ──► PostgreSQL 16 (Supabase)
 
 ## Stack de Tecnologias
 
-| Camada              | Tecnologia                                              |
-| ------------------- | ------------------------------------------------------- |
-| Runtime             | Node.js (ESM)                                           |
-| Framework           | Fastify 5                                               |
-| Linguagem           | TypeScript 5                                            |
-| Banco de Dados      | PostgreSQL 16 (Supabase)                                |
-| ORM                 | Drizzle ORM                                             |
-| Validação           | Zod 4                                                   |
-| Autenticação        | JWT — access + refresh tokens (`@fastify/jwt`)          |
-| E-mail              | Resend                                                  |
-| Documentação da API | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`) |
-| Integração com IA   | Google Gemini Flash                                     |
-| Storage             | Supabase Storage (avatares + áudios)                    |
-| Logging             | Pino + pino-pretty                                      |
-| Containerização     | Docker + Docker Compose                                 |
-| Deployment          | Railway                                                 |
+| Camada              | Tecnologia                                                          |
+| ------------------- | ------------------------------------------------------------------- |
+| Runtime             | Node.js (ESM)                                                       |
+| Framework           | Fastify 5                                                           |
+| Linguagem           | TypeScript 5                                                        |
+| Banco de Dados      | PostgreSQL 16 (Supabase)                                            |
+| ORM                 | Drizzle ORM                                                         |
+| Validação           | Zod 4                                                               |
+| Autenticação        | JWT — access + refresh tokens (`@fastify/jwt`)                      |
+| E-mail              | Resend                                                              |
+| Documentação da API | Swagger UI (`@fastify/swagger` + `@fastify/swagger-ui`)             |
+| Integração com IA   | Provider plugável via `AI_PROVIDER` (padrão: Google Gemini Flash)   |
+| Storage             | Provider plugável via `STORAGE_PROVIDER` (padrão: Supabase Storage) |
+| Logging             | Pino + pino-pretty                                                  |
+| Containerização     | Docker + Docker Compose                                             |
+| Deployment          | Railway                                                             |
 
 ---
 
@@ -113,7 +113,7 @@ imm-api/
 │   │   │   └── onboarding.service.ts
 │   │   ├── habits/                       # Criação, listagem, logging diário
 │   │   ├── journal/                      # Entradas de journal + feedback de IA
-│   │   ├── ai-agents/                    # Orquestração dos três agentes Gemini
+│   │   ├── ai-agents/                    # Orquestração dos três agentes de IA
 │   │   ├── analytics/                    # Métricas de progresso e streaks
 │   │   ├── pronunciation/                # Upload de áudio, transcrição e score
 │   │   └── health/                       # Health check endpoint
@@ -121,7 +121,8 @@ imm-api/
 │   │   ├── config/                       # Env validation (Zod) e logger (Pino)
 │   │   ├── database/                     # Drizzle connection e schema definitions
 │   │   │   └── schema/                   # Uma tabela por arquivo
-│   │   └── storage/                      # Cliente Supabase Storage
+│   │   ├── ai/                           # Interfaces, factories e providers de IA
+│   │   └── storage/                      # Interface, factory e providers de storage
 │   ├── plugins/                          # Plugins Fastify (cors, jwt, swagger)
 │   ├── shared/
 │   │   ├── constants.ts
@@ -209,10 +210,17 @@ JWT_SECRET=sua-super-chave-secreta-min-32-chars
 JWT_ACCESS_EXPIRES=15m
 JWT_REFRESH_EXPIRES=7d
 
-# Integração com IA (Google AI Studio — https://aistudio.google.com/apikey)
+# Seleção de providers (suportam lista separada por vírgula para fallback)
+AI_PROVIDER=gemini                # gemini | (futuros: openai, anthropic)
+TRANSCRIPTION_PROVIDER=gemini     # gemini | (futuros: whisper)
+STORAGE_PROVIDER=supabase         # supabase | (futuros: s3, r2)
+
+# Gemini (obrigatório se AI_PROVIDER ou TRANSCRIPTION_PROVIDER inclui "gemini")
+# Google AI Studio — https://aistudio.google.com/apikey
 GEMINI_API_KEY=sua-chave-api-gemini
 
-# Supabase Storage (https://supabase.com/dashboard)
+# Supabase Storage (obrigatório se STORAGE_PROVIDER inclui "supabase")
+# https://supabase.com/dashboard
 SUPABASE_URL=https://seu-projeto.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=sua-chave-service-role
 SUPABASE_STORAGE_BUCKET=avatars
@@ -227,23 +235,26 @@ RATE_LIMIT_MAX=100
 RATE_LIMIT_TIMEWINDOW=60000
 ```
 
-| Variável                    | Obrigatória | Descrição                                          |
-| --------------------------- | ----------- | -------------------------------------------------- |
-| `DATABASE_URL`              | Sim         | String de conexão PostgreSQL                       |
-| `JWT_SECRET`                | Sim         | Segredo JWT (mín. 32 chars)                        |
-| `JWT_ACCESS_EXPIRES`        | Sim         | TTL do access token (ex: `15m`)                    |
-| `JWT_REFRESH_EXPIRES`       | Sim         | TTL do refresh token (ex: `7d`)                    |
-| `CORS_ORIGIN`               | Sim         | Origem(ns) do frontend permitidas                  |
-| `SUPABASE_URL`              | Sim         | URL do projeto Supabase                            |
-| `SUPABASE_SERVICE_ROLE_KEY` | Sim         | Chave service role do Supabase                     |
-| `RESEND_API_KEY`            | Sim         | API key Resend para e-mails transacionais          |
-| `APP_URL`                   | Sim         | URL base do frontend (usado nos links dos e-mails) |
-| `GEMINI_API_KEY`            | Não\*       | Obrigatória para features de agentes de IA         |
-| `SUPABASE_STORAGE_BUCKET`   | Não         | Bucket para avatares (padrão: `avatars`)           |
-| `SUPABASE_AUDIO_BUCKET`     | Não         | Bucket para áudios (padrão: `audio-entries`)       |
-| `LOG_LEVEL`                 | Não         | Nível de log Pino (padrão: `info`)                 |
-| `RATE_LIMIT_MAX`            | Não         | Máx. requisições por janela (padrão: `100`)        |
-| `RATE_LIMIT_TIMEWINDOW`     | Não         | Janela de rate limit em ms (padrão: `60000`)       |
+| Variável                    | Obrigatória                                                | Descrição                                          |
+| --------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| `DATABASE_URL`              | Sim                                                        | String de conexão PostgreSQL                       |
+| `JWT_SECRET`                | Sim                                                        | Segredo JWT (mín. 32 chars)                        |
+| `JWT_ACCESS_EXPIRES`        | Sim                                                        | TTL do access token (ex: `15m`)                    |
+| `JWT_REFRESH_EXPIRES`       | Sim                                                        | TTL do refresh token (ex: `7d`)                    |
+| `CORS_ORIGIN`               | Sim                                                        | Origem(ns) do frontend permitidas                  |
+| `RESEND_API_KEY`            | Sim                                                        | API key Resend para e-mails transacionais          |
+| `APP_URL`                   | Sim                                                        | URL base do frontend (usado nos links dos e-mails) |
+| `AI_PROVIDER`               | Não (padrão: `gemini`)                                     | Provider de IA; lista CSV para fallback            |
+| `TRANSCRIPTION_PROVIDER`    | Não (padrão: `gemini`)                                     | Provider de transcrição; lista CSV para fallback   |
+| `STORAGE_PROVIDER`          | Não (padrão: `supabase`)                                   | Provider de storage; lista CSV para fallback       |
+| `GEMINI_API_KEY`            | Se `AI_PROVIDER` ou `TRANSCRIPTION_PROVIDER` inclui gemini | API key do Google Gemini                           |
+| `SUPABASE_URL`              | Se `STORAGE_PROVIDER` inclui `supabase`                    | URL do projeto Supabase                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | Se `STORAGE_PROVIDER` inclui `supabase`                    | Chave service role do Supabase                     |
+| `SUPABASE_STORAGE_BUCKET`   | Não (padrão: `avatars`)                                    | Bucket para avatares                               |
+| `SUPABASE_AUDIO_BUCKET`     | Não (padrão: `audio-entries`)                              | Bucket para áudios                                 |
+| `LOG_LEVEL`                 | Não (padrão: `info`)                                       | Nível de log Pino                                  |
+| `RATE_LIMIT_MAX`            | Não (padrão: `100`)                                        | Máx. requisições por janela                        |
+| `RATE_LIMIT_TIMEWINDOW`     | Não (padrão: `60000`)                                      | Janela de rate limit em ms                         |
 
 ---
 

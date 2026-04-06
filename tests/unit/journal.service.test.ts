@@ -4,19 +4,10 @@ import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { JournalRepository } from "@/modules/journal/journal.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import type { Habit, JournalEntry } from "@/core/database/schema/index.js";
+import type { StorageProvider } from "@/core/storage/storage.interface.js";
 
-jest.mock("@/core/storage/supabase-storage.js", () => ({
-  downloadAudioAsBase64: jest.fn(),
-}));
-jest.mock("@/modules/ai-agents/gemini-client.js", () => ({
-  callGeminiMultimodal: jest.fn(),
-}));
-
-import { downloadAudioAsBase64 } from "@/core/storage/supabase-storage.js";
-import { callGeminiMultimodal } from "@/modules/ai-agents/gemini-client.js";
-
-const mockDownload = downloadAudioAsBase64 as jest.MockedFunction<typeof downloadAudioAsBase64>;
-const mockGemini = callGeminiMultimodal as jest.MockedFunction<typeof callGeminiMultimodal>;
+const mockDownload = jest.fn();
+const mockTranscribe = jest.fn();
 
 const AUDIO_URL =
   "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm";
@@ -111,8 +102,20 @@ function makeService(
   const habitsRepo = makeMockHabitsRepo(habit);
   const journalRepo = makeMockJournalRepo(existing);
   const userProfilesRepo = makeMockUserProfilesRepo(uiLanguage);
-  const service = createJournalService({ journalRepo, habitsRepo, userProfilesRepo });
-  return { service, habitsRepo, journalRepo, userProfilesRepo };
+  const transcription = { transcribe: mockTranscribe };
+  const mockValidateOwnership = jest.fn();
+  const storage: Pick<StorageProvider, "downloadAudioAsBase64" | "validateAudioOwnership"> = {
+    downloadAudioAsBase64: mockDownload,
+    validateAudioOwnership: mockValidateOwnership,
+  };
+  const service = createJournalService({
+    journalRepo,
+    habitsRepo,
+    userProfilesRepo,
+    transcription,
+    storage,
+  });
+  return { service, habitsRepo, journalRepo, userProfilesRepo, mockValidateOwnership };
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +125,7 @@ function makeService(
 describe("JournalService — transcribe", () => {
   beforeEach(() => {
     mockDownload.mockResolvedValue({ base64: "fakebase64", mimeType: "audio/webm" });
-    mockGemini.mockResolvedValue("Today I practiced speaking English");
+    mockTranscribe.mockResolvedValue("Today I practiced speaking English");
   });
 
   afterEach(() => {
@@ -173,22 +176,31 @@ describe("JournalService — transcribe", () => {
     });
 
     it("throws BadRequestError when audioUrl has invalid storage path format", async () => {
-      const { service } = makeService(mockLanguageHabit);
-      const invalidAudioUrl =
-        "https://fake.supabase.co/storage/v1/object/public/other-bucket/file.webm";
+      const { service, mockValidateOwnership } = makeService(mockLanguageHabit);
+      mockValidateOwnership.mockImplementation(() => {
+        throw new Error("Invalid audio URL format");
+      });
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: invalidAudioUrl, habitId: "habit-uuid-1" })
+        service.transcribe("user-uuid-1", {
+          audioUrl: "https://fake.supabase.co/storage/v1/object/public/other-bucket/file.webm",
+          habitId: "habit-uuid-1",
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
     it("throws BadRequestError when audioUrl belongs to another user", async () => {
-      const { service } = makeService(mockLanguageHabit);
-      const otherUserAudioUrl =
-        "https://fake.supabase.co/storage/v1/object/public/audio-entries/other-user-uuid/file.webm";
+      const { service, mockValidateOwnership } = makeService(mockLanguageHabit);
+      mockValidateOwnership.mockImplementation(() => {
+        throw new Error("Audio file does not belong to the authenticated user");
+      });
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: otherUserAudioUrl, habitId: "habit-uuid-1" })
+        service.transcribe("user-uuid-1", {
+          audioUrl:
+            "https://fake.supabase.co/storage/v1/object/public/audio-entries/other-user-uuid/file.webm",
+          habitId: "habit-uuid-1",
+        })
       ).rejects.toThrow(BadRequestError);
     });
   });
@@ -262,26 +274,26 @@ describe("JournalService — transcribe", () => {
       expect(mockDownload).toHaveBeenCalledWith(AUDIO_URL);
     });
 
-    it("calls callGeminiMultimodal with base64 and mimeType returned by storage", async () => {
+    it("calls transcription provider with base64 and mimeType returned by storage", async () => {
       mockDownload.mockResolvedValue({ base64: "abc123", mimeType: "audio/ogg" });
       const { service } = makeService(mockLanguageHabit);
 
       await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
 
-      expect(mockGemini).toHaveBeenCalledWith("abc123", "audio/ogg", expect.any(String), 500);
+      expect(mockTranscribe).toHaveBeenCalledWith("abc123", "audio/ogg", expect.any(String), 500);
     });
 
-    it("includes the habit targetSkill in the Gemini prompt", async () => {
+    it("includes the habit targetSkill in the transcription prompt", async () => {
       const { service } = makeService(mockLanguageHabit);
 
       await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
 
-      const promptArg = mockGemini.mock.calls[0][2] as string;
+      const promptArg = mockTranscribe.mock.calls[0][2] as string;
       expect(promptArg).toContain("en-US");
     });
 
-    it("returns the raw Gemini output as transcription (verbatim)", async () => {
-      mockGemini.mockResolvedValue("  Hello world  ");
+    it("returns the raw transcription output verbatim", async () => {
+      mockTranscribe.mockResolvedValue("  Hello world  ");
       const { service } = makeService(mockLanguageHabit);
 
       const result = await service.transcribe("user-uuid-1", {
@@ -301,13 +313,13 @@ describe("JournalService — transcribe", () => {
       ).rejects.toThrow("Storage unreachable");
     });
 
-    it("propagates errors thrown by callGeminiMultimodal", async () => {
-      mockGemini.mockRejectedValue(new Error("Gemini API error: 500"));
+    it("propagates errors thrown by the transcription provider", async () => {
+      mockTranscribe.mockRejectedValue(new Error("Transcription provider error: 500"));
       const { service } = makeService(mockLanguageHabit);
 
       await expect(
         service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
-      ).rejects.toThrow("Gemini API error: 500");
+      ).rejects.toThrow("Transcription provider error: 500");
     });
   });
 });

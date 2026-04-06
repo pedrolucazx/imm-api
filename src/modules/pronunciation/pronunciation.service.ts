@@ -1,7 +1,7 @@
 import type { PronunciationRepository } from "./pronunciation.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
-import { downloadAudioAsBase64 } from "../../core/storage/supabase-storage.js";
-import { callGeminiMultimodal } from "../ai-agents/gemini-client.js";
+import type { TranscriptionProvider } from "../../core/ai/transcription.interface.js";
+import type { StorageProvider } from "../../core/storage/storage.interface.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
 import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 import { SKILL_BUILDING_LOCALE_SET } from "../../shared/schemas/habit-mode.js";
@@ -82,11 +82,15 @@ function buildTranscriptionPrompt(targetSkill: string): string {
 type PronunciationServiceDeps = {
   pronunciationRepo: PronunciationRepository;
   habitsRepo: HabitsRepository;
+  transcription: TranscriptionProvider;
+  storage: StorageProvider;
 };
 
 export function createPronunciationService({
   pronunciationRepo,
   habitsRepo,
+  transcription,
+  storage,
 }: PronunciationServiceDeps) {
   return {
     async analyze(
@@ -103,19 +107,19 @@ export function createPronunciationService({
       const entryDate = input.entryDate ?? getTodayUTCString();
 
       logger.info({ habitId: input.habitId, userId }, "[pronunciation] Downloading audio");
-      const { base64, mimeType } = await downloadAudioAsBase64(input.audioUrl);
+      const { base64, mimeType } = await storage.downloadAudioAsBase64(input.audioUrl);
 
       const prompt = buildTranscriptionPrompt(habit.targetSkill);
-      logger.info({ habitId: input.habitId }, "[pronunciation] Calling Gemini for transcription");
-      const transcription = await callGeminiMultimodal(base64, mimeType, prompt, 500);
+      logger.info({ habitId: input.habitId }, "[pronunciation] Calling transcription provider");
+      const transcriptionText = await transcription.transcribe(base64, mimeType, prompt, 500);
       logger.info(
-        { habitId: input.habitId, transcription },
+        { habitId: input.habitId, transcriptionLength: transcriptionText.length },
         "[pronunciation] Transcription complete"
       );
 
       const { score, missedWords, correctWords, extraWords } = compareTexts(
         input.originalText,
-        transcription
+        transcriptionText
       );
 
       const entry = await pronunciationRepo.create({
@@ -123,7 +127,7 @@ export function createPronunciationService({
         habitId: input.habitId,
         entryDate,
         originalText: input.originalText,
-        transcription,
+        transcription: transcriptionText,
         score: String(score),
         missedWords,
         correctWords,

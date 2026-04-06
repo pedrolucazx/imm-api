@@ -86,7 +86,8 @@ function makeService() {
     upsert: jest.fn(),
   } as unknown as jest.Mocked<UserProfilesRepository>;
 
-  const deps: AiServiceDeps = { journalRepo, habitsRepo, userProfilesRepo };
+  const textAI = { generate: jest.fn() };
+  const deps: AiServiceDeps = { journalRepo, habitsRepo, userProfilesRepo, textAI };
   const service = createAiService(deps);
 
   return { service, journalRepo, habitsRepo, userProfilesRepo };
@@ -170,13 +171,16 @@ describe("ai service", () => {
         "user-id-1"
       );
 
-      expect(mockLanguageAgent).toHaveBeenCalledWith({
-        targetSkill: "en-US",
-        uiLanguage: "pt-BR",
-        journalContent: mockJournalEntry.content,
-        habitName: mockHabit.name,
-        targetFrequency: mockHabit.frequency,
-      });
+      expect(mockLanguageAgent).toHaveBeenCalledWith(
+        {
+          targetSkill: "en-US",
+          uiLanguage: "pt-BR",
+          journalContent: mockJournalEntry.content,
+          habitName: mockHabit.name,
+          targetFrequency: mockHabit.frequency,
+        },
+        expect.any(Object)
+      );
       expect(mockBehavioralAgent).not.toHaveBeenCalled();
       expect(result.aiAgentType).toBe("language-teacher");
     });
@@ -202,13 +206,16 @@ describe("ai service", () => {
         "user-id-1"
       );
 
-      expect(mockBehavioralAgent).toHaveBeenCalledWith({
-        targetSkill: "fitness",
-        uiLanguage: "pt-BR",
-        journalContent: mockJournalEntry.content,
-        habitName: mockHabit.name,
-        targetFrequency: mockHabit.frequency,
-      });
+      expect(mockBehavioralAgent).toHaveBeenCalledWith(
+        {
+          targetSkill: "fitness",
+          uiLanguage: "pt-BR",
+          journalContent: mockJournalEntry.content,
+          habitName: mockHabit.name,
+          targetFrequency: mockHabit.frequency,
+        },
+        expect.any(Object)
+      );
       expect(mockLanguageAgent).not.toHaveBeenCalled();
       expect(result.aiAgentType).toBe("behavioral-coach");
     });

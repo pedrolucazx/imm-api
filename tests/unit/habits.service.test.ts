@@ -1,4 +1,5 @@
 import { createHabitsService } from "@/modules/habits/habits.service.js";
+import type { TextAIProvider } from "@/core/ai/text-ai.interface.js";
 import { MAX_ACTIVE_HABITS } from "@/shared/constants.js";
 import {
   NotFoundError,
@@ -13,20 +14,10 @@ import type { Habit } from "@/core/database/schema/index.js";
 
 jest.mock("@/modules/habits/habit-planner.js", () => ({
   generateHabitPlan: jest.fn(),
-  GeminiTemporaryError: class GeminiTemporaryError extends Error {
-    code = "GEMINI_TEMPORARY";
-
-    constructor(
-      message: string,
-      public reason: "timeout" | "network" | "upstream"
-    ) {
-      super(message);
-      this.name = "GeminiTemporaryError";
-    }
-  },
 }));
 
-import { generateHabitPlan, GeminiTemporaryError } from "@/modules/habits/habit-planner.js";
+import { generateHabitPlan } from "@/modules/habits/habit-planner.js";
+import { AIRateLimitError, AITemporaryError } from "@/core/ai/errors.js";
 const mockGeneratePlan = generateHabitPlan as jest.MockedFunction<typeof generateHabitPlan>;
 
 const FULL_PLAN = {
@@ -128,7 +119,12 @@ describe("previewPlan", () => {
       new Error("Gemini API temporary error: 503 Service Unavailable")
     );
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(
       service.previewPlan("user-id-1", {
@@ -147,9 +143,16 @@ describe("previewPlan", () => {
 
   it("throws TooManyRequestsError when Gemini is rate-limited", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
-    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+    mockGeneratePlan.mockRejectedValue(
+      new AIRateLimitError("Gemini API rate limit: 429 Too Many Requests")
+    );
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(
       service.previewPlan("user-id-1", {
@@ -165,10 +168,15 @@ describe("previewPlan", () => {
   it("throws ServiceUnavailableError when Gemini times out", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     mockGeneratePlan.mockRejectedValue(
-      new GeminiTemporaryError("Gemini API timeout after 10000ms", "timeout")
+      new AITemporaryError("Gemini API timeout after 10000ms", "timeout")
     );
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(
       service.previewPlan("user-id-1", {
@@ -184,10 +192,15 @@ describe("previewPlan", () => {
   it("throws ServiceUnavailableError when Gemini has a network failure", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     mockGeneratePlan.mockRejectedValue(
-      new GeminiTemporaryError("Gemini API request failed: fetch failed", "network")
+      new AITemporaryError("Gemini API request failed: fetch failed", "network")
     );
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(
       service.previewPlan("user-id-1", {
@@ -203,10 +216,15 @@ describe("previewPlan", () => {
   it("throws ServiceUnavailableError when Gemini upstream is temporarily unavailable", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     mockGeneratePlan.mockRejectedValue(
-      new GeminiTemporaryError("Gemini API temporary error: 503 Service Unavailable", "upstream")
+      new AITemporaryError("Gemini API temporary error: 503 Service Unavailable", "upstream")
     );
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(
       service.previewPlan("user-id-1", {
@@ -225,7 +243,12 @@ describe("createWithPlan", () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     mockGeneratePlan.mockResolvedValue(FULL_PLAN);
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
     const result = await service.createWithPlan("user-id-1", planInput);
 
     expect(habitsRepo.create).toHaveBeenCalledWith(
@@ -244,7 +267,12 @@ describe("createWithPlan", () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     mockGeneratePlan.mockRejectedValue(new Error("Gemini error"));
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
     const result = await service.createWithPlan("user-id-1", planInput);
 
     expect(habitsRepo.update).toHaveBeenCalledWith(
@@ -257,9 +285,16 @@ describe("createWithPlan", () => {
 
   it("returns a failed habit instead of rethrowing when Gemini is rate-limited after creation", async () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
-    mockGeneratePlan.mockRejectedValue(new Error("Gemini API rate limit: 429 Too Many Requests"));
+    mockGeneratePlan.mockRejectedValue(
+      new AIRateLimitError("Gemini API rate limit: 429 Too Many Requests")
+    );
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
     const result = await service.createWithPlan("user-id-1", planInput);
 
     expect(habitsRepo.create).toHaveBeenCalledTimes(1);
@@ -275,7 +310,12 @@ describe("createWithPlan", () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     (habitsRepo.countActiveByUserId as jest.Mock).mockResolvedValue(MAX_ACTIVE_HABITS);
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(service.createWithPlan("user-id-1", planInput)).rejects.toThrow(
       UnprocessableError
@@ -290,7 +330,12 @@ describe("createWithPlan", () => {
       lastAiRequest: new Date(), // now = within 5s
     });
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(service.createWithPlan("user-id-1", planInput)).rejects.toThrow(
       TooManyRequestsError
@@ -302,7 +347,12 @@ describe("createWithPlan", () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     mockGeneratePlan.mockResolvedValue(FULL_PLAN);
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
     await service.createWithPlan("user-id-1", planInput);
 
     expect(userProfilesRepo.upsert).toHaveBeenCalledWith(
@@ -324,7 +374,12 @@ describe("regeneratePlan", () => {
     (habitsRepo.findById as jest.Mock).mockResolvedValue({ ...mockHabit, planStatus: "failed" });
     mockGeneratePlan.mockResolvedValue(FULL_PLAN);
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
     const result = await service.regeneratePlan("user-id-1", "habit-id-1", regenInput);
 
     expect(habitsRepo.update).toHaveBeenCalledWith("habit-id-1", "user-id-1", {
@@ -339,7 +394,12 @@ describe("regeneratePlan", () => {
     (habitsRepo.findById as jest.Mock).mockResolvedValue({ ...mockHabit, planStatus: "ready" });
     mockGeneratePlan.mockRejectedValue(new Error("parse error"));
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
     const result = await service.regeneratePlan("user-id-1", "habit-id-1", regenInput);
 
     expect(result.planStatus).toBe("failed");
@@ -349,7 +409,12 @@ describe("regeneratePlan", () => {
     const { habitsRepo, habitLogsRepo, userProfilesRepo } = makeRepos();
     (habitsRepo.findById as jest.Mock).mockResolvedValue(null);
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(service.regeneratePlan("user-id-1", "habit-id-1", regenInput)).rejects.toThrow(
       NotFoundError
@@ -363,7 +428,12 @@ describe("regeneratePlan", () => {
       planStatus: "generating",
     });
 
-    const service = createHabitsService({ habitsRepo, habitLogsRepo, userProfilesRepo });
+    const service = createHabitsService({
+      habitsRepo,
+      habitLogsRepo,
+      userProfilesRepo,
+      textAI: { generate: jest.fn() } as unknown as TextAIProvider,
+    });
 
     await expect(service.regeneratePlan("user-id-1", "habit-id-1", regenInput)).rejects.toThrow(
       UnprocessableError

@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { callGemini, sanitizeJsonString } from "./gemini-client.js";
+import { sanitizeJsonString } from "../../shared/utils/json.js";
 import { langInstruction } from "../../shared/utils/ai-prompt.js";
 import { logger } from "../../core/config/logger.js";
+import type { TextAIProvider } from "../../core/ai/text-ai.interface.js";
 
 export const behavioralAgentBehavioralSchema = z.object({
   moodDetected: z.enum(["motivated", "fatigued", "neutral", "stressed", "relaxed", "anxious"]),
@@ -56,9 +57,10 @@ IMPORTANT: Output must be complete, valid JSON only. No markdown.`;
 }
 
 export async function analyzeWithBehavioralAgent(
-  input: BehavioralAgentInput
+  input: BehavioralAgentInput,
+  textAI: TextAIProvider
 ): Promise<BehavioralAgentResponse> {
-  const rawText = await callGemini(buildPrompt(input), 4096);
+  const rawText = await textAI.generate(buildPrompt(input), 4096);
 
   let parsed: unknown;
   try {
@@ -67,9 +69,9 @@ export async function analyzeWithBehavioralAgent(
   } catch {
     logger.error(
       { rawTextLength: rawText.length },
-      "[behavioral-agent] Failed to parse Gemini response"
+      "[behavioral-agent] Failed to parse AI response"
     );
-    throw new Error("Invalid JSON response from Gemini");
+    throw new Error("Invalid JSON response from AI");
   }
 
   const result = behavioralAgentResponseSchema.safeParse(parsed);
