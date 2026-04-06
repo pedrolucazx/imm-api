@@ -97,7 +97,10 @@ export const supabaseStorageProvider: StorageProvider = {
   },
 
   validateAudioOwnership(audioUrl: string, userId: string): void {
-    const filePath = extractAudioFilePath(audioUrl, env.SUPABASE_URL!, env.SUPABASE_AUDIO_BUCKET);
+    if (!env.SUPABASE_URL) {
+      throw new Error("SUPABASE_URL is required when STORAGE_PROVIDER=supabase");
+    }
+    const filePath = extractAudioFilePath(audioUrl, env.SUPABASE_URL, env.SUPABASE_AUDIO_BUCKET);
     const ownerId = filePath.split("/")[0];
     if (ownerId !== userId) {
       throw new Error(`Audio file does not belong to the authenticated user`);

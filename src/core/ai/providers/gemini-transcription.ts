@@ -15,6 +15,19 @@ async function callOnce(
   prompt: string,
   maxOutputTokens: number
 ): Promise<string> {
+  const requestBody = JSON.stringify({
+    contents: [
+      {
+        parts: [{ inlineData: { mimeType, data: audioBase64 } }, { text: prompt }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  });
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -26,18 +39,7 @@ async function callOnce(
         "x-goog-api-key": apiKey,
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ inlineData: { mimeType, data: audioBase64 } }, { text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      }),
+      body: requestBody,
     });
 
     if (response.status === 429) {
