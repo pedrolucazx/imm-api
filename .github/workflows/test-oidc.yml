@@ -1,0 +1,14 @@
+name: test-oidc
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::<account-id>:role/imm-github-oidc-role
+          aws-region: us-east-1
+      - run: aws sts get-caller-identity
