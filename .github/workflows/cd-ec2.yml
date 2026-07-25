@@ -39,7 +39,7 @@ jobs:
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "imm-api deploy from ${{ github.sha }}" \
-            --parameters "commands=[\"sudo -u ec2-user bash -lc 'cd /home/ec2-user/imm-api && git fetch --quiet && git reset --hard origin/main && npm ci && npm run build && pm2 restart imm-api'\"]" \
+            --parameters "commands=[\"sudo -u ec2-user bash -lc 'cd /home/ec2-user/imm-api && git fetch --quiet && git reset --hard origin/main && npm ci && npm run build && (pm2 describe imm-api >/dev/null && pm2 restart imm-api || pm2 start dist/index.js --name imm-api) && pm2 save'\"]" \
             --query "Command.CommandId" --output text)
           echo "Command ID: $COMMAND_ID"
 
