@@ -8,10 +8,8 @@ process.env.LOG_LEVEL = process.env.LOG_LEVEL || "error";
 process.env.JWT_SECRET =
   process.env.JWT_SECRET || "test-jwt-secret-that-is-at-least-32-characters-long!!";
 process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
-// DATABASE_URL will be set by CI environment or use local fallback
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/inside_my_mind_dev";
-}
+// DATABASE_URL fica sem fallback de propósito: se não vier setada (CI secret ou
+// override manual do dev), o helper de integração sobe um testcontainer real.
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || "https://fake.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY || "fake-service-role-key";
