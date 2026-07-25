@@ -18,9 +18,11 @@ jobs:
   deploy:
     name: "Deploy to EC2 via SSM"
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://api.insidemymind.tech
+    # Sem "environment:" de propósito — isso muda o claim `sub` do token OIDC
+    # de repo:OWNER/REPO:ref:refs/heads/main para
+    # repo:OWNER/REPO:environment:<nome>, o que não bate com o trust policy
+    # do imm-github-oidc-role (escopado por branch/ref) e derruba o
+    # sts:AssumeRoleWithWebIdentity com AccessDenied.
 
     steps:
       - name: Configure AWS credentials (OIDC)
