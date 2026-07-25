@@ -1,0 +1,76 @@
+name: CD — Deploy (EC2)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api-ec2
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: "Deploy to EC2 via SSM"
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://api.insidemymind.tech
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::431715654897:role/imm-github-oidc-role
+          aws-region: us-east-1
+
+      - name: Deploy via SSM Run Command
+        env:
+          INSTANCE_ID: i-0e7e7c8d5567ab76a
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "imm-api deploy from ${{ github.sha }}" \
+            --parameters 'commands=["cd /home/ec2-user/imm-api", "git fetch --quiet", "git reset --hard origin/main", "npm ci", "npm run build", "pm2 restart imm-api"]' \
+            --query "Command.CommandId" --output text)
+          echo "Command ID: $COMMAND_ID"
+
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" || true
+
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+            --query "Status" --output text)
+
+          echo "--- stdout ---"
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+            --query "StandardOutputContent" --output text
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "--- stderr ---"
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+              --query "StandardErrorContent" --output text
+            echo "Deploy failed with status: $STATUS"
+            exit 1
+          fi
+
+      - name: Health check
+        run: |
+          for i in 1 2 3 4 5; do
+            HEALTH=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://api.insidemymind.tech/health || echo "000")
+            if [ "$HEALTH" = "200" ]; then
+              echo "Health check passed (HTTP $HEALTH)"
+              exit 0
+            fi
+            echo "Attempt $i failed (HTTP $HEALTH), retrying in 15s..."
+            sleep 15
+          done
+          echo "Health check failed after 5 attempts"
+          exit 1
