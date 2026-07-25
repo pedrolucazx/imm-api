@@ -27,7 +27,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(jwtPlugin);
   await fastify.register(rateLimitPlugin);
   await fastify.register(cookiePlugin);
-  await fastify.register(swaggerPlugin);
+  if (env.NODE_ENV !== "production") {
+    await fastify.register(swaggerPlugin);
+  }
 
   await fastify.register(healthRoutes);
   await fastify.register(authRoutes, { prefix: "/api" });
