@@ -39,17 +39,27 @@ jobs:
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --comment "imm-api deploy from ${{ github.sha }}" \
-            --parameters "commands=[\"sudo -u ec2-user bash -lc 'cd /home/ec2-user/imm-api && git fetch --quiet && git reset --hard origin/main && npm ci && npm run build && pm2 restart imm-api'\"]" \
+            --parameters "commands=[\"sudo -u ec2-user bash -lc 'cd /home/ec2-user/imm-api && git fetch --quiet && git reset --hard origin/main && npm ci && npm run build && if pm2 describe imm-api >/dev/null 2>&1; then pm2 restart imm-api; else pm2 start dist/index.js --name imm-api; fi && pm2 save'\"]" \
             --query "Command.CommandId" --output text)
           echo "Command ID: $COMMAND_ID"
 
           # aws ssm wait command-executed desiste em ~100s (5s x 20 tentativas,
           # fixo no botocore) — npm ci + build numa t3.micro pode levar mais
           # que isso. Polling próprio, até 8 min.
+          STATUS=""
           for i in $(seq 1 48); do
-            STATUS=$(aws ssm get-command-invocation \
+            if ! STATUS_OUTPUT=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
-              --query "Status" --output text)
+              --query "Status" --output text 2>&1); then
+              if [[ "$STATUS_OUTPUT" == *"InvocationDoesNotExist"* ]]; then
+                echo "Status ($i/48): Pending (invocation not ready)"
+                sleep 10
+                continue
+              fi
+              echo "$STATUS_OUTPUT" >&2
+              exit 1
+            fi
+            STATUS="$STATUS_OUTPUT"
             echo "Status ($i/48): $STATUS"
             case "$STATUS" in
               Success|Failed|Cancelled|TimedOut) break ;;
@@ -57,16 +67,25 @@ jobs:
             sleep 10
           done
 
+          case "$STATUS" in
+            Success|Failed|Cancelled|TimedOut) ;;
+            *)
+              echo "SSM command still running after 8 minutes; cancelling..."
+              aws ssm cancel-command --command-id "$COMMAND_ID" --instance-ids "$INSTANCE_ID"
+              STATUS="Cancelled"
+              ;;
+          esac
+
           echo "--- stdout ---"
           aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
-            --query "StandardOutputContent" --output text
+            --query "StandardOutputContent" --output text || true
 
           if [ "$STATUS" != "Success" ]; then
             echo "--- stderr ---"
             aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
-              --query "StandardErrorContent" --output text
+              --query "StandardErrorContent" --output text || true
             echo "Deploy failed with status: $STATUS"
             exit 1
           fi
