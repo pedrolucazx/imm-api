@@ -26,6 +26,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
       .withUsername("postgres")
       .withPassword("postgres")
       .withStartupTimeout(120000) // 2 minutes timeout for CI
+      .withReuse() // local: mantém o container vivo entre runs, evita cold start toda hora
       .start();
 
     connectionUri = container.getConnectionUri();
