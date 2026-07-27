@@ -100,6 +100,32 @@ jobs:
         run: npm run test:integration
 
   # ─────────────────────────────────────────────────────────────
+  # Lambda presigned-url — pasta própria, package.json próprio, fora do
+  # escopo de lint/test do imm-api raiz. Sem isso, index.test.mjs só roda
+  # se alguém lembrar de rodar à mão.
+  # ─────────────────────────────────────────────────────────────
+  lambda_presigned_url_tests:
+    name: "Lambda: presigned-url tests"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lambda/presigned-url
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+  # ─────────────────────────────────────────────────────────────
   # CodeRabbit já roda sozinho via GitHub App instalado no repo —
   # não precisa de step aqui. (Removido: job "ai_review" chamava a
   # action coderabbitai/ai-pr-reviewer, descontinuada pela CodeRabbit.)
@@ -108,7 +134,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   quality_gate:
     name: "Quality Gate"
-    needs: [code_quality, tests]
+    needs: [code_quality, tests, lambda_presigned_url_tests]
     runs-on: ubuntu-latest
     if: always()
 
@@ -116,10 +142,12 @@ jobs:
       - name: Evaluate required checks
         run: |
           if [ "${{ needs.code_quality.result }}" != "success" ] || \
-             [ "${{ needs.tests.result }}" != "success" ]; then
+             [ "${{ needs.tests.result }}" != "success" ] || \
+             [ "${{ needs.lambda_presigned_url_tests.result }}" != "success" ]; then
             echo "❌ Required checks failed."
-            echo "  code_quality : ${{ needs.code_quality.result }}"
-            echo "  tests        : ${{ needs.tests.result }}"
+            echo "  code_quality               : ${{ needs.code_quality.result }}"
+            echo "  tests                      : ${{ needs.tests.result }}"
+            echo "  lambda_presigned_url_tests : ${{ needs.lambda_presigned_url_tests.result }}"
             exit 1
           fi
           echo "✅ All required checks passed."
