@@ -10,6 +10,10 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: deploy-lambda-presigned-url
+  cancel-in-progress: false
+
 defaults:
   run:
     working-directory: lambda/presigned-url
@@ -18,24 +22,39 @@ jobs:
   deploy:
     name: "Deploy Lambda (imm-presigned-url)"
     runs-on: ubuntu-latest
+    # workflow_dispatch não restringe branch por padrão — sem essa guarda,
+    # um disparo manual a partir de qualquer branch (inclusive não revisada)
+    # subiria pra produção pulando o PR inteiro.
+    if: github.ref == 'refs/heads/main'
     # Sem "environment:" de propósito — muda o claim sub do token OIDC e
     # quebra o trust policy do imm-github-oidc-role (mesmo motivo do cd-ec2.yml).
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::431715654897:role/imm-github-oidc-role
-          aws-region: us-east-1
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Install deps and package
         run: |
           npm ci --omit=dev
           zip -r function.zip .
 
+      # Credenciais AWS entram só agora — depois do npm ci, não antes.
+      # npm ci roda scripts de terceiros; não faz sentido ter credencial
+      # AWS viva no ambiente enquanto isso acontece.
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::431715654897:role/imm-github-oidc-role
+          aws-region: us-east-1
+
       - name: Deploy to Lambda
         run: |
           aws lambda update-function-code \
             --function-name imm-presigned-url \
             --zip-file fileb://function.zip
+          aws lambda wait function-updated \
+            --function-name imm-presigned-url
