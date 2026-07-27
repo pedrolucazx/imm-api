@@ -1,0 +1,41 @@
+name: CD Lambda — presigned-url
+
+on:
+  push:
+    branches: [main]
+    paths: ["lambda/presigned-url/**"]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    working-directory: lambda/presigned-url
+
+jobs:
+  deploy:
+    name: "Deploy Lambda (imm-presigned-url)"
+    runs-on: ubuntu-latest
+    # Sem "environment:" de propósito — muda o claim sub do token OIDC e
+    # quebra o trust policy do imm-github-oidc-role (mesmo motivo do cd-ec2.yml).
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::431715654897:role/imm-github-oidc-role
+          aws-region: us-east-1
+
+      - name: Install deps and package
+        run: |
+          npm ci --omit=dev
+          zip -r function.zip .
+
+      - name: Deploy to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name imm-presigned-url \
+            --zip-file fileb://function.zip
