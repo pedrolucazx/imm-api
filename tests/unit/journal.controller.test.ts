@@ -17,10 +17,31 @@ const mockEntry = {
   aiAgentType: null,
   moodScore: 4,
   energyScore: 3,
-  audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm",
   createdAt: new Date("2026-03-28"),
   updatedAt: new Date("2026-03-28"),
 };
+
+const VALID_HABIT_ID = "550e8400-e29b-41d4-a716-446655440000";
+const VALID_WEBM_BUFFER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+
+function makeMockMultipartFile(overrides: Record<string, unknown> = {}) {
+  return {
+    fieldname: "audio",
+    mimetype: "audio/webm",
+    toBuffer: jest.fn().mockResolvedValue(VALID_WEBM_BUFFER),
+    fields: {
+      habitId: { type: "field", value: VALID_HABIT_ID },
+    },
+    ...overrides,
+  };
+}
+
+function makeMockRequest(fileResult: unknown) {
+  return {
+    user: { id: "user-uuid-1", email: "user@example.com" },
+    file: jest.fn().mockResolvedValue(fileResult),
+  };
+}
 
 describe("JournalController — transcribe", () => {
   let mockService: jest.Mocked<JournalService>;
@@ -48,18 +69,10 @@ describe("JournalController — transcribe", () => {
 
   it("returns 200 with transcription on success", async () => {
     mockService.transcribe.mockResolvedValue({ transcription: "Hello world" });
-
-    const mockRequest = {
-      user: { id: "user-uuid-1", email: "user@example.com" },
-      body: {
-        audioUrl:
-          "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm",
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
-      },
-    };
+    const mockRequest = makeMockRequest(makeMockMultipartFile());
 
     await controller.transcribe(
-      mockRequest as FastifyRequest<{ Body: { audioUrl: string; habitId: string } }>,
+      mockRequest as unknown as FastifyRequest,
       mockReply as FastifyReply
     );
 
@@ -67,39 +80,81 @@ describe("JournalController — transcribe", () => {
     expect(mockReply.send).toHaveBeenCalledWith({ transcription: "Hello world" });
   });
 
-  it("delegates to service.transcribe with correct userId and body", async () => {
+  it("delegates to service.transcribe with userId, habitId and decoded audio buffer/mimeType", async () => {
     mockService.transcribe.mockResolvedValue({ transcription: "Hello world" });
-
-    const audioUrl =
-      "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm";
-    const habitId = "550e8400-e29b-41d4-a716-446655440000";
-
-    const mockRequest = {
-      user: { id: "user-uuid-1", email: "user@example.com" },
-      body: { audioUrl, habitId },
-    };
+    const mockRequest = makeMockRequest(makeMockMultipartFile());
 
     await controller.transcribe(
-      mockRequest as FastifyRequest<{ Body: { audioUrl: string; habitId: string } }>,
+      mockRequest as unknown as FastifyRequest,
       mockReply as FastifyReply
     );
 
-    expect(mockService.transcribe).toHaveBeenCalledWith("user-uuid-1", { audioUrl, habitId });
+    expect(mockService.transcribe).toHaveBeenCalledWith("user-uuid-1", {
+      habitId: VALID_HABIT_ID,
+      audioBuffer: VALID_WEBM_BUFFER,
+      mimeType: "audio/webm",
+    });
+  });
+
+  it("returns 400 when no file part is present", async () => {
+    const mockRequest = makeMockRequest(undefined);
+
+    await controller.transcribe(
+      mockRequest as unknown as FastifyRequest,
+      mockReply as FastifyReply
+    );
+
+    expect(mockReply.code).toHaveBeenCalledWith(400);
+    expect(mockService.transcribe).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an unsupported audio mimetype", async () => {
+    const mockRequest = makeMockRequest(makeMockMultipartFile({ mimetype: "video/mp4" }));
+
+    await controller.transcribe(
+      mockRequest as unknown as FastifyRequest,
+      mockReply as FastifyReply
+    );
+
+    expect(mockReply.code).toHaveBeenCalledWith(400);
+    expect(mockService.transcribe).not.toHaveBeenCalled();
+  });
+
+  it("returns 413 when the audio exceeds the multipart limit", async () => {
+    const error = Object.assign(new Error("too large"), { code: "FST_REQ_FILE_TOO_LARGE" });
+    const mockRequest = makeMockRequest(
+      makeMockMultipartFile({ toBuffer: jest.fn().mockRejectedValue(error) })
+    );
+
+    await controller.transcribe(
+      mockRequest as unknown as FastifyRequest,
+      mockReply as FastifyReply
+    );
+
+    expect(mockReply.code).toHaveBeenCalledWith(413);
+    expect(mockService.transcribe).not.toHaveBeenCalled();
+  });
+
+  it("returns 422 when habitId field is missing or not a UUID", async () => {
+    const mockRequest = makeMockRequest(
+      makeMockMultipartFile({ fields: { habitId: { type: "field", value: "not-a-uuid" } } })
+    );
+
+    await controller.transcribe(
+      mockRequest as unknown as FastifyRequest,
+      mockReply as FastifyReply
+    );
+
+    expect(mockReply.code).toHaveBeenCalledWith(422);
+    expect(mockService.transcribe).not.toHaveBeenCalled();
   });
 
   it("returns 404 when service throws NotFoundError", async () => {
     mockService.transcribe.mockRejectedValue(new NotFoundError("Habit not found"));
-
-    const mockRequest = {
-      user: { id: "user-uuid-1", email: "user@example.com" },
-      body: {
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/f.webm",
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
-      },
-    };
+    const mockRequest = makeMockRequest(makeMockMultipartFile());
 
     await controller.transcribe(
-      mockRequest as FastifyRequest<{ Body: { audioUrl: string; habitId: string } }>,
+      mockRequest as unknown as FastifyRequest,
       mockReply as FastifyReply
     );
 
@@ -110,17 +165,10 @@ describe("JournalController — transcribe", () => {
     mockService.transcribe.mockRejectedValue(
       new BadRequestError("Transcription is only available for language habits")
     );
-
-    const mockRequest = {
-      user: { id: "user-uuid-1", email: "user@example.com" },
-      body: {
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/f.webm",
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
-      },
-    };
+    const mockRequest = makeMockRequest(makeMockMultipartFile());
 
     await controller.transcribe(
-      mockRequest as FastifyRequest<{ Body: { audioUrl: string; habitId: string } }>,
+      mockRequest as unknown as FastifyRequest,
       mockReply as FastifyReply
     );
 
@@ -128,18 +176,11 @@ describe("JournalController — transcribe", () => {
   });
 
   it("returns 500 for unexpected errors", async () => {
-    mockService.transcribe.mockRejectedValue(new Error("Storage unreachable"));
-
-    const mockRequest = {
-      user: { id: "user-uuid-1", email: "user@example.com" },
-      body: {
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/f.webm",
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
-      },
-    };
+    mockService.transcribe.mockRejectedValue(new Error("Unexpected failure"));
+    const mockRequest = makeMockRequest(makeMockMultipartFile());
 
     await controller.transcribe(
-      mockRequest as FastifyRequest<{ Body: { audioUrl: string; habitId: string } }>,
+      mockRequest as unknown as FastifyRequest,
       mockReply as FastifyReply
     );
 
@@ -148,10 +189,10 @@ describe("JournalController — transcribe", () => {
 });
 
 // ---------------------------------------------------------------------------
-// createEntry — existing handler, now with audioUrl in body
+// createEntry
 // ---------------------------------------------------------------------------
 
-describe("JournalController — createEntry (with audioUrl)", () => {
+describe("JournalController — createEntry", () => {
   let mockService: jest.Mocked<JournalService>;
   let controller: ReturnType<typeof createJournalController>;
   let mockReply: Partial<FastifyReply>;
@@ -175,16 +216,12 @@ describe("JournalController — createEntry (with audioUrl)", () => {
     };
   });
 
-  it("forwards audioUrl to service.createEntry when present in body", async () => {
-    const audioUrl =
-      "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm";
-
+  it("creates entry from content, mood and energy scores", async () => {
     const mockRequest = {
       user: { id: "user-uuid-1", email: "user@example.com" },
       body: {
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
+        habitId: VALID_HABIT_ID,
         content: "Today I recorded an audio entry.",
-        audioUrl,
         moodScore: 4,
         energyScore: 3,
       },
@@ -195,31 +232,12 @@ describe("JournalController — createEntry (with audioUrl)", () => {
       mockReply as FastifyReply
     );
 
-    expect(mockService.createEntry).toHaveBeenCalledWith(
-      "user-uuid-1",
-      expect.objectContaining({ audioUrl })
-    );
-    expect(mockReply.code).toHaveBeenCalledWith(201);
-  });
-
-  it("creates entry without audioUrl when not provided", async () => {
-    const mockRequest = {
-      user: { id: "user-uuid-1", email: "user@example.com" },
-      body: {
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
-        content: "A text-only entry.",
-      },
-    };
-
-    await controller.createEntry(
-      mockRequest as unknown as FastifyRequest<{ Body: CreateJournalEntryInput }>,
-      mockReply as FastifyReply
-    );
-
-    expect(mockService.createEntry).toHaveBeenCalledWith(
-      "user-uuid-1",
-      expect.not.objectContaining({ audioUrl: expect.any(String) })
-    );
+    expect(mockService.createEntry).toHaveBeenCalledWith("user-uuid-1", {
+      habitId: VALID_HABIT_ID,
+      content: "Today I recorded an audio entry.",
+      moodScore: 4,
+      energyScore: 3,
+    });
     expect(mockReply.code).toHaveBeenCalledWith(201);
   });
 });

@@ -2,20 +2,18 @@ import type { JournalRepository } from "./journal.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { UserProfilesRepository } from "../users/user-profiles.repository.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
-import type { CreateJournalEntryInput } from "./journal.types.js";
+import type { CreateJournalEntryInput, TranscribeInput } from "./journal.types.js";
 import type { JournalEntry } from "../../core/database/schema/index.js";
 import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 import { countWords } from "../../shared/utils/string.js";
 import { SKILL_BUILDING_LOCALE_SET } from "../../shared/schemas/habit-mode.js";
 import type { TranscriptionProvider } from "../../core/ai/transcription.interface.js";
-import type { StorageProvider } from "../../core/storage/storage.interface.js";
 
 type JournalServiceDeps = {
   journalRepo: JournalRepository;
   habitsRepo: HabitsRepository;
   userProfilesRepo: UserProfilesRepository;
   transcription: Pick<TranscriptionProvider, "transcribe">;
-  storage: Pick<StorageProvider, "downloadAudioAsBase64" | "validateAudioOwnership">;
 };
 
 const DEFAULT_HISTORY_LIMIT = 100;
@@ -26,7 +24,6 @@ export function createJournalService({
   habitsRepo,
   userProfilesRepo,
   transcription,
-  storage,
 }: JournalServiceDeps) {
   return {
     async createEntry(userId: string, input: CreateJournalEntryInput): Promise<JournalEntry> {
@@ -51,7 +48,6 @@ export function createJournalService({
         targetSkillSnap,
         moodScore: input.moodScore ?? null,
         energyScore: input.energyScore ?? null,
-        audioUrl: input.audioUrl ?? null,
         existingId: existing?.id,
       });
     },
@@ -71,10 +67,7 @@ export function createJournalService({
       return journalRepo.findAllByDate(userId, date);
     },
 
-    async transcribe(
-      userId: string,
-      input: { audioUrl: string; habitId: string }
-    ): Promise<{ transcription: string }> {
+    async transcribe(userId: string, input: TranscribeInput): Promise<{ transcription: string }> {
       const habit = await habitsRepo.findById(input.habitId, userId);
       if (!habit) throw new NotFoundError("Habit not found");
 
@@ -82,15 +75,9 @@ export function createJournalService({
         throw new BadRequestError("Transcription is only available for language habits");
       }
 
-      try {
-        storage.validateAudioOwnership(input.audioUrl, userId);
-      } catch (err) {
-        throw new BadRequestError(err instanceof Error ? err.message : "Invalid audio URL");
-      }
-
-      const { base64, mimeType } = await storage.downloadAudioAsBase64(input.audioUrl);
+      const base64 = input.audioBuffer.toString("base64");
       const prompt = `Transcribe the following audio exactly as spoken in ${habit.targetSkill}. Return only the transcription text, no punctuation corrections, no commentary. Verbatim only.`;
-      const transcriptionText = await transcription.transcribe(base64, mimeType, prompt, 500);
+      const transcriptionText = await transcription.transcribe(base64, input.mimeType, prompt, 500);
 
       return { transcription: transcriptionText };
     },

@@ -20,7 +20,6 @@ const journalEntrySchema = {
     aiAgentType: { anyOf: [{ type: "string" }, { type: "null" }] },
     moodScore: { anyOf: [{ type: "integer" }, { type: "null" }] },
     energyScore: { anyOf: [{ type: "integer" }, { type: "null" }] },
-    audioUrl: { anyOf: [{ type: "string" }, { type: "null" }] },
     createdAt: { type: "string" },
     updatedAt: { type: "string" },
   },
@@ -63,13 +62,6 @@ export async function journalRoutes(fastify: FastifyInstance) {
           },
           moodScore: { type: "integer", minimum: 1, maximum: 5, examples: [4] },
           energyScore: { type: "integer", minimum: 1, maximum: 5, examples: [3] },
-          audioUrl: {
-            type: "string",
-            format: "uri",
-            examples: [
-              "https://project.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm",
-            ],
-          },
         },
       },
       response: {
@@ -137,29 +129,13 @@ export async function journalRoutes(fastify: FastifyInstance) {
 
   fastify.post("/journal/transcribe", {
     schema: {
-      description: "Transcribe audio and return the transcription text",
+      description:
+        "Transcribe audio and return the transcription text. Multipart form-data: " +
+        "'habitId' field must come before the 'audio' file part.",
       tags: ["Journal"],
       summary: "Transcribe audio for journal entry",
       security: [{ bearerAuth: [] }],
-      body: {
-        type: "object",
-        required: ["audioUrl", "habitId"],
-        additionalProperties: false,
-        properties: {
-          audioUrl: {
-            type: "string",
-            format: "uri",
-            examples: [
-              "https://project.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm",
-            ],
-          },
-          habitId: {
-            type: "string",
-            format: "uuid",
-            examples: ["a1b2c3d4-e5f6-7890-abcd-ef1234567890"],
-          },
-        },
-      },
+      consumes: ["multipart/form-data"],
       response: {
         200: {
           description: "Audio transcribed successfully",
@@ -170,8 +146,10 @@ export async function journalRoutes(fastify: FastifyInstance) {
             transcription: { type: "string" },
           },
         },
-        400: errorResponse("Habit is not a language habit"),
+        400: errorResponse("Missing/invalid audio file or habitId"),
         401: errorResponse("Unauthorized"),
+        413: errorResponse("Audio upload exceeds limits"),
+        429: errorResponse("Too many audio uploads in progress"),
         404: errorResponse("Habit not found"),
       },
     },

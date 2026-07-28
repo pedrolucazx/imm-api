@@ -11,6 +11,29 @@ jest.mock("@/modules/pronunciation/pronunciation.types.js", () => ({
   },
 }));
 
+const VALID_HABIT_ID = "550e8400-e29b-41d4-a716-446655440000";
+const VALID_WEBM_BUFFER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+
+function makeMockRequest(fileResult: unknown) {
+  return {
+    user: { id: "user-uuid-1", email: "user@example.com" },
+    file: jest.fn().mockResolvedValue(fileResult),
+  };
+}
+
+function makeMockMultipartFile(overrides: Record<string, unknown> = {}) {
+  return {
+    fieldname: "audio",
+    mimetype: "audio/webm",
+    toBuffer: jest.fn().mockResolvedValue(VALID_WEBM_BUFFER),
+    fields: {
+      habitId: { type: "field", value: VALID_HABIT_ID },
+      originalText: { type: "field", value: "hello world" },
+    },
+    ...overrides,
+  };
+}
+
 describe("PronunciationController", () => {
   const mockService: jest.Mocked<PronunciationService> = {
     analyze: jest.fn(),
@@ -22,15 +45,7 @@ describe("PronunciationController", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    controller = createPronunciationController(mockService, {
-      isAllowedAudioContentType: jest.fn().mockReturnValue(true),
-      createAudioUploadUrl: jest.fn(),
-      deleteAudioFile: jest.fn(),
-      downloadAudioAsBase64: jest.fn(),
-      isAllowedAvatarContentType: jest.fn(),
-      createAvatarUploadUrl: jest.fn(),
-      allowedAudioContentTypes: ["audio/webm", "audio/mp4", "audio/ogg"] as never,
-    } as never);
+    controller = createPronunciationController(mockService);
 
     mockReply = {
       code: jest.fn().mockReturnThis(),
@@ -50,59 +65,56 @@ describe("PronunciationController", () => {
       missedWords: [],
       correctWords: ["hello", "world"],
       extraWords: [],
-      audioUrl: null,
       createdAt: new Date(),
     };
 
     it("returns 201 with analysis result on success", async () => {
       mockService.analyze.mockResolvedValue(mockResult);
-      const mockRequest = {
-        user: { id: "user-uuid-1", email: "user@example.com" },
-        body: {
-          habitId: "550e8400-e29b-41d4-a716-446655440000",
-          audioUrl: "https://example.com/audio.webm",
-          originalText: "hello world",
-        },
-      };
+      const mockRequest = makeMockRequest(makeMockMultipartFile());
 
-      await controller.analyze(mockRequest as FastifyRequest, mockReply as FastifyReply);
+      await controller.analyze(mockRequest as unknown as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.code).toHaveBeenCalledWith(201);
       expect(mockReply.send).toHaveBeenCalledWith(mockResult);
     });
 
-    it("calls service.analyze with correct userId and input", async () => {
+    it("calls service.analyze with userId, decoded audio buffer/mimeType and form fields", async () => {
       mockService.analyze.mockResolvedValue(mockResult);
-      const mockRequest = {
-        user: { id: "user-uuid-1", email: "user@example.com" },
-        body: {
-          habitId: "550e8400-e29b-41d4-a716-446655440000",
-          audioUrl: "https://example.com/audio.webm",
-          originalText: "hello world",
-        },
-      };
+      const mockRequest = makeMockRequest(makeMockMultipartFile());
 
-      await controller.analyze(mockRequest as FastifyRequest, mockReply as FastifyReply);
+      await controller.analyze(mockRequest as unknown as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockService.analyze).toHaveBeenCalledWith("user-uuid-1", {
-        habitId: "550e8400-e29b-41d4-a716-446655440000",
-        audioUrl: "https://example.com/audio.webm",
+        habitId: VALID_HABIT_ID,
         originalText: "hello world",
+        audioBuffer: VALID_WEBM_BUFFER,
+        mimeType: "audio/webm",
       });
+    });
+
+    it("returns 400 when no file part is present", async () => {
+      const mockRequest = makeMockRequest(undefined);
+
+      await controller.analyze(mockRequest as unknown as FastifyRequest, mockReply as FastifyReply);
+
+      expect(mockReply.code).toHaveBeenCalledWith(400);
+      expect(mockService.analyze).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 for an unsupported audio mimetype", async () => {
+      const mockRequest = makeMockRequest(makeMockMultipartFile({ mimetype: "video/mp4" }));
+
+      await controller.analyze(mockRequest as unknown as FastifyRequest, mockReply as FastifyReply);
+
+      expect(mockReply.code).toHaveBeenCalledWith(400);
+      expect(mockService.analyze).not.toHaveBeenCalled();
     });
 
     it("handles service errors via handleControllerError", async () => {
       mockService.analyze.mockRejectedValue(new Error("Service error"));
-      const mockRequest = {
-        user: { id: "user-uuid-1", email: "user@example.com" },
-        body: {
-          habitId: "550e8400-e29b-41d4-a716-446655440000",
-          audioUrl: "https://example.com/audio.webm",
-          originalText: "hello world",
-        },
-      };
+      const mockRequest = makeMockRequest(makeMockMultipartFile());
 
-      await controller.analyze(mockRequest as FastifyRequest, mockReply as FastifyReply);
+      await controller.analyze(mockRequest as unknown as FastifyRequest, mockReply as FastifyReply);
 
       expect(mockReply.code).toHaveBeenCalledWith(500);
     });
@@ -118,7 +130,7 @@ describe("PronunciationController", () => {
       mockService.getWordCloud.mockResolvedValue(mockWordCloud);
       const mockRequest = {
         user: { id: "user-uuid-1", email: "user@example.com" },
-        query: { habitId: "550e8400-e29b-41d4-a716-446655440000" },
+        query: { habitId: VALID_HABIT_ID },
       };
 
       await controller.getWordCloud(mockRequest as FastifyRequest, mockReply as FastifyReply);
@@ -131,15 +143,12 @@ describe("PronunciationController", () => {
       mockService.getWordCloud.mockResolvedValue([]);
       const mockRequest = {
         user: { id: "user-uuid-1", email: "user@example.com" },
-        query: { habitId: "550e8400-e29b-41d4-a716-446655440000" },
+        query: { habitId: VALID_HABIT_ID },
       };
 
       await controller.getWordCloud(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
-      expect(mockService.getWordCloud).toHaveBeenCalledWith(
-        "user-uuid-1",
-        "550e8400-e29b-41d4-a716-446655440000"
-      );
+      expect(mockService.getWordCloud).toHaveBeenCalledWith("user-uuid-1", VALID_HABIT_ID);
     });
   });
 });
