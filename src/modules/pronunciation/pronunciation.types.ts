@@ -1,9 +1,9 @@
 import { z } from "zod";
 
+// Multipart form fields alongside the audio file part (see parseAudioMultipart).
 export const analyzePronunciationSchema = z.object({
   habitId: z.uuid(),
-  audioUrl: z.url(),
-  originalText: z.string().min(1),
+  originalText: z.string().min(1).max(500),
   entryDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -21,7 +21,10 @@ export const wordCloudQuerySchema = z.object({
   habitId: z.uuid(),
 });
 
-export type AnalyzePronunciationInput = z.infer<typeof analyzePronunciationSchema>;
+export type AnalyzePronunciationInput = z.infer<typeof analyzePronunciationSchema> & {
+  audioBuffer: Buffer;
+  mimeType: string;
+};
 export type WordCloudQuery = z.infer<typeof wordCloudQuerySchema>;
 
 export type WordCloudItem = {
@@ -40,6 +43,5 @@ export type AnalyzePronunciationResult = {
   missedWords: string[];
   correctWords: string[];
   extraWords: string[];
-  audioUrl: string | null;
   createdAt: Date;
 };

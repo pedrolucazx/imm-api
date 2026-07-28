@@ -4,12 +4,12 @@ import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { PronunciationRepository } from "@/modules/pronunciation/pronunciation.repository.js";
 import type { Habit } from "@/core/database/schema/index.js";
 
-const mockDownload = jest.fn();
 const mockTranscribe = jest.fn();
+
+const AUDIO_BUFFER = Buffer.from("fake-audio-bytes");
 
 function makeMockProviders() {
   return {
-    storage: { downloadAudioAsBase64: mockDownload } as never,
     transcription: { transcribe: mockTranscribe },
   };
 }
@@ -63,7 +63,6 @@ function makeMockPronunciationRepo(): PronunciationRepository {
       missedWords: [],
       correctWords: ["the", "quick", "brown", "fox"],
       extraWords: [],
-      audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
       createdAt: new Date("2026-03-27"),
     }),
     getWordCloud: jest.fn().mockResolvedValue([]),
@@ -72,10 +71,6 @@ function makeMockPronunciationRepo(): PronunciationRepository {
 }
 
 describe("PronunciationService — compareTexts (via analyze)", () => {
-  beforeEach(() => {
-    mockDownload.mockResolvedValue({ base64: "fakebase64", mimeType: "audio/webm" });
-  });
-
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -95,16 +90,12 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
 
       mockTranscribe.mockResolvedValue("the quick brown fox");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
       const result = await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         originalText: "the quick brown fox",
       });
 
@@ -119,16 +110,12 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
 
       mockTranscribe.mockResolvedValue("the quick");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
       const result = await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         originalText: "the quick brown fox",
       });
 
@@ -144,16 +131,12 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
 
       mockTranscribe.mockResolvedValue("completely different words here");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
       const result = await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         originalText: "the quick brown fox",
       });
 
@@ -169,16 +152,12 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
 
       mockTranscribe.mockResolvedValue("THE QUICK BROWN FOX");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
       const result = await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         originalText: "the quick brown fox",
       });
 
@@ -192,16 +171,12 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
 
       mockTranscribe.mockResolvedValue("the quick brown fox");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
       const result = await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         originalText: "The quick, brown fox!",
       });
 
@@ -213,18 +188,14 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
     it("throws NotFoundError when habit does not exist", async () => {
       const habitsRepo = makeMockHabitsRepo(null);
       const pronunciationRepo = makeMockPronunciationRepo();
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
 
       await expect(
         service.analyze("user-uuid-1", {
           habitId: "nonexistent-habit",
-          audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/f.webm",
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
           originalText: "hello world",
         })
       ).rejects.toThrow(NotFoundError);
@@ -233,67 +204,60 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
     it("throws BadRequestError when habit is not a language habit", async () => {
       const habitsRepo = makeMockHabitsRepo(mockBehavioralHabit);
       const pronunciationRepo = makeMockPronunciationRepo();
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
 
       await expect(
         service.analyze("user-uuid-1", {
           habitId: "habit-uuid-2",
-          audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/f.webm",
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
           originalText: "hello world",
         })
       ).rejects.toThrow(BadRequestError);
     });
 
-    it("calls downloadAudioAsBase64 with the provided audioUrl", async () => {
+    it("calls transcription provider with base64-encoded audio and the given mimeType", async () => {
       const habitsRepo = makeMockHabitsRepo(mockLanguageHabit);
       const pronunciationRepo = makeMockPronunciationRepo();
       mockTranscribe.mockResolvedValue("hello world");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
-      const audioUrl =
-        "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm";
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
 
       await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl,
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/ogg",
         originalText: "hello world",
       });
 
-      expect(mockDownload).toHaveBeenCalledWith(audioUrl);
+      expect(mockTranscribe).toHaveBeenCalledWith(
+        AUDIO_BUFFER.toString("base64"),
+        "audio/ogg",
+        expect.any(String),
+        500
+      );
     });
 
-    it("calls transcription provider with base64 and mimeType from storage", async () => {
+    it("persists the entry with the transcription result", async () => {
       const habitsRepo = makeMockHabitsRepo(mockLanguageHabit);
       const pronunciationRepo = makeMockPronunciationRepo();
-      mockDownload.mockResolvedValue({ base64: "abc123", mimeType: "audio/ogg" });
       mockTranscribe.mockResolvedValue("hello world");
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
+
       await service.analyze("user-uuid-1", {
         habitId: "habit-uuid-1",
-        audioUrl: "https://fake.supabase.co/storage/v1/object/public/audio-entries/u/file.webm",
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         originalText: "hello world",
       });
 
-      expect(mockTranscribe).toHaveBeenCalledWith("abc123", "audio/ogg", expect.any(String), 500);
+      expect(pronunciationRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ transcription: "hello world" })
+      );
     });
   });
 
@@ -301,13 +265,8 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
     it("throws NotFoundError when habit does not exist", async () => {
       const habitsRepo = makeMockHabitsRepo(null);
       const pronunciationRepo = makeMockPronunciationRepo();
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
 
       await expect(service.getWordCloud("user-uuid-1", "nonexistent")).rejects.toThrow(
         NotFoundError
@@ -322,13 +281,8 @@ describe("PronunciationService — compareTexts (via analyze)", () => {
         { word: "fox", frequency: 3 },
       ]);
 
-      const { storage, transcription } = makeMockProviders();
-      const service = createPronunciationService({
-        pronunciationRepo,
-        habitsRepo,
-        storage,
-        transcription,
-      });
+      const { transcription } = makeMockProviders();
+      const service = createPronunciationService({ pronunciationRepo, habitsRepo, transcription });
       const result = await service.getWordCloud("user-uuid-1", "habit-uuid-1");
 
       expect(pronunciationRepo.getWordCloud).toHaveBeenCalledWith(

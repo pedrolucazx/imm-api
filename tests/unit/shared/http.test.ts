@@ -1,5 +1,6 @@
 import { z, ZodError } from "zod";
 import { handleControllerError } from "@/shared/http/handle-error.js";
+import { parseAudioMultipart } from "@/shared/http/parse-audio-multipart.js";
 import { UnauthorizedError, TooManyRequestsError } from "@/shared/errors/index.js";
 
 function makeReply() {
@@ -61,5 +62,33 @@ describe("handleControllerError", () => {
 
     expect(reply.code).toHaveBeenCalledWith(500);
     expect(reply.send).toHaveBeenCalledWith({ error: "Internal server error" });
+  });
+});
+
+describe("parseAudioMultipart", () => {
+  const validPart = {
+    fieldname: "audio",
+    mimetype: "audio/webm",
+    toBuffer: jest.fn().mockResolvedValue(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])),
+    fields: { habitId: { type: "field", value: "550e8400-e29b-41d4-a716-446655440000" } },
+  };
+
+  it("rejects a file field not named audio", async () => {
+    await expect(
+      parseAudioMultipart({
+        file: jest.fn().mockResolvedValue({ ...validPart, fieldname: "file" }),
+      } as never)
+    ).rejects.toThrow("Audio field must be named audio");
+  });
+
+  it("rejects audio whose bytes do not match its MIME type", async () => {
+    await expect(
+      parseAudioMultipart({
+        file: jest.fn().mockResolvedValue({
+          ...validPart,
+          toBuffer: jest.fn().mockResolvedValue(Buffer.from("not-webm")),
+        }),
+      } as never)
+    ).rejects.toThrow("Invalid audio file");
   });
 });

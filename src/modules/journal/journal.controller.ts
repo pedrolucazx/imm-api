@@ -2,11 +2,11 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import type { JournalService } from "./journal.service.js";
 import {
   createJournalEntrySchema,
-  transcribeSchema,
+  transcribeFieldsSchema,
   type CreateJournalEntryInput,
-  type TranscribeInput,
 } from "./journal.types.js";
 import { handleControllerError } from "../../shared/http/handle-error.js";
+import { parseAudioMultipart, runWithAudioSlot } from "../../shared/http/parse-audio-multipart.js";
 
 export function createJournalController(service: JournalService) {
   return {
@@ -51,11 +51,18 @@ export function createJournalController(service: JournalService) {
       }
     },
 
-    async transcribe(request: FastifyRequest<{ Body: TranscribeInput }>, reply: FastifyReply) {
+    async transcribe(request: FastifyRequest, reply: FastifyReply) {
       try {
         const { id: userId } = request.user;
-        const data = transcribeSchema.parse(request.body);
-        const result = await service.transcribe(userId, data);
+        const result = await runWithAudioSlot(async () => {
+          const { buffer, mimeType, fields } = await parseAudioMultipart(request);
+          const { habitId } = transcribeFieldsSchema.parse(fields);
+          return service.transcribe(userId, {
+            habitId,
+            audioBuffer: buffer,
+            mimeType,
+          });
+        });
         return reply.code(200).send(result);
       } catch (error) {
         return handleControllerError(error, reply);

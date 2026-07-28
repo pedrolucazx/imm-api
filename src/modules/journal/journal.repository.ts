@@ -79,7 +79,6 @@ export function createJournalRepository(db: DrizzleDb) {
             wordCount: data.wordCount,
             moodScore: data.moodScore,
             energyScore: data.energyScore,
-            audioUrl: data.audioUrl ?? null,
             updatedAt: new Date(),
           })
           .where(

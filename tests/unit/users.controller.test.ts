@@ -28,11 +28,6 @@ function makeMockStorage() {
   return {
     isAllowedAvatarContentType: jest.fn().mockReturnValue(true),
     createAvatarUploadUrl: jest.fn(),
-    isAllowedAudioContentType: jest.fn().mockReturnValue(true),
-    createAudioUploadUrl: jest.fn(),
-    downloadAudioAsBase64: jest.fn(),
-    deleteAudioFile: jest.fn(),
-    allowedAudioContentTypes: ["audio/webm", "audio/mp4", "audio/ogg"] as const,
   };
 }
 

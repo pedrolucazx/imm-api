@@ -4,13 +4,10 @@ import type { HabitsRepository } from "@/modules/habits/habits.repository.js";
 import type { JournalRepository } from "@/modules/journal/journal.repository.js";
 import type { UserProfilesRepository } from "@/modules/users/user-profiles.repository.js";
 import type { Habit, JournalEntry } from "@/core/database/schema/index.js";
-import type { StorageProvider } from "@/core/storage/storage.interface.js";
 
-const mockDownload = jest.fn();
 const mockTranscribe = jest.fn();
 
-const AUDIO_URL =
-  "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-uuid-1/file.webm";
+const AUDIO_BUFFER = Buffer.from("fake-audio-bytes");
 
 const mockLanguageHabit: Habit = {
   id: "habit-uuid-1",
@@ -57,7 +54,6 @@ const mockJournalEntry: JournalEntry = {
   aiAgentType: null,
   moodScore: 4,
   energyScore: 3,
-  audioUrl: AUDIO_URL,
   createdAt: new Date("2026-03-28"),
   updatedAt: new Date("2026-03-28"),
 };
@@ -103,19 +99,13 @@ function makeService(
   const journalRepo = makeMockJournalRepo(existing);
   const userProfilesRepo = makeMockUserProfilesRepo(uiLanguage);
   const transcription = { transcribe: mockTranscribe };
-  const mockValidateOwnership = jest.fn();
-  const storage: Pick<StorageProvider, "downloadAudioAsBase64" | "validateAudioOwnership"> = {
-    downloadAudioAsBase64: mockDownload,
-    validateAudioOwnership: mockValidateOwnership,
-  };
   const service = createJournalService({
     journalRepo,
     habitsRepo,
     userProfilesRepo,
     transcription,
-    storage,
   });
-  return { service, habitsRepo, journalRepo, userProfilesRepo, mockValidateOwnership };
+  return { service, habitsRepo, journalRepo, userProfilesRepo };
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +114,6 @@ function makeService(
 
 describe("JournalService — transcribe", () => {
   beforeEach(() => {
-    mockDownload.mockResolvedValue({ base64: "fakebase64", mimeType: "audio/webm" });
     mockTranscribe.mockResolvedValue("Today I practiced speaking English");
   });
 
@@ -137,7 +126,11 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(null);
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "nonexistent" })
+        service.transcribe("user-uuid-1", {
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
+          habitId: "nonexistent",
+        })
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -145,7 +138,11 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(mockHabitNoSkill);
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-3" })
+        service.transcribe("user-uuid-1", {
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
+          habitId: "habit-uuid-3",
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
@@ -153,7 +150,11 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(mockBehavioralHabit);
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-2" })
+        service.transcribe("user-uuid-1", {
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
+          habitId: "habit-uuid-2",
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
@@ -162,7 +163,11 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(generalHabit);
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
+        service.transcribe("user-uuid-1", {
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
+          habitId: "habit-uuid-1",
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
@@ -171,34 +176,9 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(mindfulnessHabit);
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
-      ).rejects.toThrow(BadRequestError);
-    });
-
-    it("throws BadRequestError when audioUrl has invalid storage path format", async () => {
-      const { service, mockValidateOwnership } = makeService(mockLanguageHabit);
-      mockValidateOwnership.mockImplementation(() => {
-        throw new Error("Invalid audio URL format");
-      });
-
-      await expect(
         service.transcribe("user-uuid-1", {
-          audioUrl: "https://fake.supabase.co/storage/v1/object/public/other-bucket/file.webm",
-          habitId: "habit-uuid-1",
-        })
-      ).rejects.toThrow(BadRequestError);
-    });
-
-    it("throws BadRequestError when audioUrl belongs to another user", async () => {
-      const { service, mockValidateOwnership } = makeService(mockLanguageHabit);
-      mockValidateOwnership.mockImplementation(() => {
-        throw new Error("Audio file does not belong to the authenticated user");
-      });
-
-      await expect(
-        service.transcribe("user-uuid-1", {
-          audioUrl:
-            "https://fake.supabase.co/storage/v1/object/public/audio-entries/other-user-uuid/file.webm",
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
           habitId: "habit-uuid-1",
         })
       ).rejects.toThrow(BadRequestError);
@@ -206,52 +186,21 @@ describe("JournalService — transcribe", () => {
   });
 
   describe("happy path — language habits", () => {
-    it("returns transcription for en-US habit", async () => {
-      const { service } = makeService(mockLanguageHabit);
+    it.each(["en-US", "es-ES", "pt-BR", "fr-FR"])(
+      "returns transcription for %s habit",
+      async (targetSkill) => {
+        const habit: Habit = { ...mockLanguageHabit, targetSkill };
+        const { service } = makeService(habit);
 
-      const result = await service.transcribe("user-uuid-1", {
-        audioUrl: AUDIO_URL,
-        habitId: "habit-uuid-1",
-      });
+        const result = await service.transcribe("user-uuid-1", {
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
+          habitId: "habit-uuid-1",
+        });
 
-      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
-    });
-
-    it("returns transcription for es-ES habit", async () => {
-      const esHabit: Habit = { ...mockLanguageHabit, targetSkill: "es-ES" };
-      const { service } = makeService(esHabit);
-
-      const result = await service.transcribe("user-uuid-1", {
-        audioUrl: AUDIO_URL,
-        habitId: "habit-uuid-1",
-      });
-
-      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
-    });
-
-    it("returns transcription for pt-BR habit", async () => {
-      const ptHabit: Habit = { ...mockLanguageHabit, targetSkill: "pt-BR" };
-      const { service } = makeService(ptHabit);
-
-      const result = await service.transcribe("user-uuid-1", {
-        audioUrl: AUDIO_URL,
-        habitId: "habit-uuid-1",
-      });
-
-      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
-    });
-
-    it("returns transcription for fr-FR habit", async () => {
-      const frHabit: Habit = { ...mockLanguageHabit, targetSkill: "fr-FR" };
-      const { service } = makeService(frHabit);
-
-      const result = await service.transcribe("user-uuid-1", {
-        audioUrl: AUDIO_URL,
-        habitId: "habit-uuid-1",
-      });
-
-      expect(result).toEqual({ transcription: "Today I practiced speaking English" });
-    });
+        expect(result).toEqual({ transcription: "Today I practiced speaking English" });
+      }
+    );
   });
 
   describe("dependency integration", () => {
@@ -259,34 +208,39 @@ describe("JournalService — transcribe", () => {
       const { service, habitsRepo } = makeService(mockLanguageHabit);
 
       await service.transcribe("user-uuid-1", {
-        audioUrl: AUDIO_URL,
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         habitId: "habit-uuid-1",
       });
 
       expect(habitsRepo.findById).toHaveBeenCalledWith("habit-uuid-1", "user-uuid-1");
     });
 
-    it("calls downloadAudioAsBase64 with the provided audioUrl", async () => {
+    it("calls transcription provider with base64-encoded audio and mimeType from the request", async () => {
       const { service } = makeService(mockLanguageHabit);
 
-      await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
+      await service.transcribe("user-uuid-1", {
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/ogg",
+        habitId: "habit-uuid-1",
+      });
 
-      expect(mockDownload).toHaveBeenCalledWith(AUDIO_URL);
-    });
-
-    it("calls transcription provider with base64 and mimeType returned by storage", async () => {
-      mockDownload.mockResolvedValue({ base64: "abc123", mimeType: "audio/ogg" });
-      const { service } = makeService(mockLanguageHabit);
-
-      await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
-
-      expect(mockTranscribe).toHaveBeenCalledWith("abc123", "audio/ogg", expect.any(String), 500);
+      expect(mockTranscribe).toHaveBeenCalledWith(
+        AUDIO_BUFFER.toString("base64"),
+        "audio/ogg",
+        expect.any(String),
+        500
+      );
     });
 
     it("includes the habit targetSkill in the transcription prompt", async () => {
       const { service } = makeService(mockLanguageHabit);
 
-      await service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" });
+      await service.transcribe("user-uuid-1", {
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
+        habitId: "habit-uuid-1",
+      });
 
       const promptArg = mockTranscribe.mock.calls[0][2] as string;
       expect(promptArg).toContain("en-US");
@@ -297,20 +251,12 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(mockLanguageHabit);
 
       const result = await service.transcribe("user-uuid-1", {
-        audioUrl: AUDIO_URL,
+        audioBuffer: AUDIO_BUFFER,
+        mimeType: "audio/webm",
         habitId: "habit-uuid-1",
       });
 
       expect(result.transcription).toBe("  Hello world  ");
-    });
-
-    it("propagates errors thrown by downloadAudioAsBase64", async () => {
-      mockDownload.mockRejectedValue(new Error("Storage unreachable"));
-      const { service } = makeService(mockLanguageHabit);
-
-      await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
-      ).rejects.toThrow("Storage unreachable");
     });
 
     it("propagates errors thrown by the transcription provider", async () => {
@@ -318,44 +264,36 @@ describe("JournalService — transcribe", () => {
       const { service } = makeService(mockLanguageHabit);
 
       await expect(
-        service.transcribe("user-uuid-1", { audioUrl: AUDIO_URL, habitId: "habit-uuid-1" })
+        service.transcribe("user-uuid-1", {
+          audioBuffer: AUDIO_BUFFER,
+          mimeType: "audio/webm",
+          habitId: "habit-uuid-1",
+        })
       ).rejects.toThrow("Transcription provider error: 500");
     });
   });
 });
 
 // ---------------------------------------------------------------------------
-// createEntry — audioUrl passthrough (new field)
+// createEntry
 // ---------------------------------------------------------------------------
 
-describe("JournalService — createEntry with audioUrl", () => {
+describe("JournalService — createEntry", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it("passes audioUrl to journalRepo.upsert when provided", async () => {
+  it("upserts journal text and scores", async () => {
     const { service, journalRepo } = makeService(mockLanguageHabit);
 
     await service.createEntry("user-uuid-1", {
       habitId: "habit-uuid-1",
       content: "Today I recorded an audio entry.",
-      audioUrl: AUDIO_URL,
     });
 
     expect(journalRepo.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ audioUrl: AUDIO_URL })
+      expect.objectContaining({ content: "Today I recorded an audio entry." })
     );
-  });
-
-  it("passes audioUrl as null to journalRepo.upsert when not provided", async () => {
-    const { service, journalRepo } = makeService(mockLanguageHabit);
-
-    await service.createEntry("user-uuid-1", {
-      habitId: "habit-uuid-1",
-      content: "A text-only entry.",
-    });
-
-    expect(journalRepo.upsert).toHaveBeenCalledWith(expect.objectContaining({ audioUrl: null }));
   });
 });
 

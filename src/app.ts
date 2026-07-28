@@ -16,6 +16,7 @@ import {
   corsPlugin,
   helmetPlugin,
   jwtPlugin,
+  multipartPlugin,
   rateLimitPlugin,
   swaggerPlugin,
 } from "./plugins/index.js";
@@ -27,6 +28,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await fastify.register(jwtPlugin);
   await fastify.register(rateLimitPlugin);
   await fastify.register(cookiePlugin);
+  await fastify.register(multipartPlugin);
   if (env.NODE_ENV !== "production") {
     await fastify.register(swaggerPlugin);
   }

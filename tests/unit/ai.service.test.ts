@@ -38,7 +38,6 @@ const mockJournalEntry: JournalEntry = {
   aiAgentType: null,
   moodScore: 4,
   energyScore: 3,
-  audioUrl: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
