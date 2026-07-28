@@ -50,6 +50,8 @@ export async function pronunciationRoutes(fastify: FastifyInstance) {
         201: { description: "Pronunciation analyzed", ...pronunciationResultSchema },
         400: errorResponse("Bad request — habit is not a language habit"),
         401: errorResponse("Unauthorized"),
+        413: errorResponse("Audio upload exceeds limits"),
+        429: errorResponse("Too many audio uploads in progress"),
         404: errorResponse("Habit not found"),
       },
     },

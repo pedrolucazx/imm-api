@@ -93,7 +93,7 @@ async function createFitnessHabit(app: FastifyInstance, token: string): Promise<
   return res.body.id;
 }
 
-describe.skip("Pronunciation API — E2E (skipped: Testcontainers setup needs cleanup)", () => {
+describe("Pronunciation API — E2E", () => {
   let app: FastifyInstance | undefined;
   let testDb: TestDatabase | undefined;
 

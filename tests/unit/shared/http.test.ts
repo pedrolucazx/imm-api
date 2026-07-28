@@ -1,6 +1,6 @@
 import { z, ZodError } from "zod";
 import { handleControllerError } from "@/shared/http/handle-error.js";
-import { parseAudioMultipart } from "@/shared/http/parse-audio-multipart.js";
+import { parseAudioMultipart, runWithAudioSlot } from "@/shared/http/parse-audio-multipart.js";
 import { UnauthorizedError, TooManyRequestsError } from "@/shared/errors/index.js";
 
 function makeReply() {
@@ -90,5 +90,32 @@ describe("parseAudioMultipart", () => {
         }),
       } as never)
     ).rejects.toThrow("Invalid audio file");
+  });
+});
+
+describe("runWithAudioSlot", () => {
+  it("runs queued work in FIFO order and rejects work beyond the queue limit", async () => {
+    let release!: () => void;
+    const blocker = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const order: number[] = [];
+    const first = runWithAudioSlot(async () => {
+      order.push(0);
+      await blocker;
+    });
+    const queued = [1, 2, 3, 4].map((value) =>
+      runWithAudioSlot(async () => {
+        order.push(value);
+      })
+    );
+
+    await expect(runWithAudioSlot(async () => undefined)).rejects.toBeInstanceOf(
+      TooManyRequestsError
+    );
+    release();
+    await Promise.all([first, ...queued]);
+
+    expect(order).toEqual([0, 1, 2, 3, 4]);
   });
 });

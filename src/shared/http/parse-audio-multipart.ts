@@ -12,8 +12,14 @@ export type ParsedAudioMultipart = {
   fields: Record<string, string>;
 };
 
-function isFileTooLarge(error: unknown): boolean {
-  return (error as { code?: string })?.code === "FST_REQ_FILE_TOO_LARGE";
+function isPayloadTooLarge(error: unknown): boolean {
+  const { code, statusCode } = error as { code?: string; statusCode?: number };
+  return (
+    statusCode === 413 ||
+    ["FST_REQ_FILE_TOO_LARGE", "FST_FIELDS_LIMIT", "FST_PARTS_LIMIT", "FST_FILES_LIMIT"].includes(
+      code ?? ""
+    )
+  );
 }
 
 function hasAudioSignature(buffer: Buffer, mimeType: string): boolean {
@@ -49,7 +55,7 @@ export async function parseAudioMultipart(request: FastifyRequest): Promise<Pars
   try {
     data = await request.file();
   } catch (error) {
-    if (isFileTooLarge(error)) throw new PayloadTooLargeError("Audio file exceeds maximum size");
+    if (isPayloadTooLarge(error)) throw new PayloadTooLargeError("Audio upload exceeds limits");
     throw new BadRequestError("Multipart audio upload is required");
   }
   if (!data) throw new BadRequestError("Audio file is required");
@@ -62,7 +68,7 @@ export async function parseAudioMultipart(request: FastifyRequest): Promise<Pars
   try {
     buffer = await data.toBuffer();
   } catch (error) {
-    if (isFileTooLarge(error)) throw new PayloadTooLargeError("Audio file exceeds maximum size");
+    if (isPayloadTooLarge(error)) throw new PayloadTooLargeError("Audio upload exceeds limits");
     throw new BadRequestError("Invalid audio file");
   }
   if (!hasAudioSignature(buffer, data.mimetype)) throw new BadRequestError("Invalid audio file");

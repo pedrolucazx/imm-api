@@ -148,6 +148,8 @@ export async function journalRoutes(fastify: FastifyInstance) {
         },
         400: errorResponse("Missing/invalid audio file or habitId"),
         401: errorResponse("Unauthorized"),
+        413: errorResponse("Audio upload exceeds limits"),
+        429: errorResponse("Too many audio uploads in progress"),
         404: errorResponse("Habit not found"),
       },
     },
