@@ -69,31 +69,26 @@ function buildEmailHtml(contentHtml: string): string {
 }
 
 async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
-  if (env.EMAIL_PROVIDER === "resend") {
-    const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html, text });
-    if (error) {
-      logger.error({ msg: "Failed to send email", error, to, subject });
-      throw new Error("Failed to send email");
-    }
-    logger.info({ msg: "Email sent", to, subject, provider: "resend" });
-    return;
-  }
-
   try {
-    await ses.send(
-      new SendEmailCommand({
-        Source: FROM_EMAIL,
-        Destination: { ToAddresses: [to] },
-        Message: {
-          Subject: { Charset: "UTF-8", Data: subject },
-          Body: {
-            Html: { Charset: "UTF-8", Data: html },
-            Text: { Charset: "UTF-8", Data: text },
+    if (env.EMAIL_PROVIDER === "resend") {
+      const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html, text });
+      if (error) throw error;
+    } else {
+      await ses.send(
+        new SendEmailCommand({
+          Source: FROM_EMAIL,
+          Destination: { ToAddresses: [to] },
+          Message: {
+            Subject: { Charset: "UTF-8", Data: subject },
+            Body: {
+              Html: { Charset: "UTF-8", Data: html },
+              Text: { Charset: "UTF-8", Data: text },
+            },
           },
-        },
-      })
-    );
-    logger.info({ msg: "Email sent", to, subject, provider: "ses" });
+        })
+      );
+    }
+    logger.info({ msg: "Email sent", to, subject, provider: env.EMAIL_PROVIDER });
   } catch (error) {
     logger.error({ msg: "Failed to send email", error, to, subject });
     throw new Error("Failed to send email");
