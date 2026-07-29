@@ -51,6 +51,17 @@ describe("email.service — provider switch", () => {
 
     expect(mockSesSend).toHaveBeenCalledTimes(1);
     expect(mockResendSend).not.toHaveBeenCalled();
+    expect(mockSesSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        Source: expect.stringContaining("no-reply@insidemymind.tech"),
+        Destination: { ToAddresses: ["user@example.com"] },
+        Message: expect.objectContaining({
+          Body: expect.objectContaining({
+            Html: { Charset: "UTF-8", Data: expect.stringContaining("<!DOCTYPE html>") },
+          }),
+        }),
+      })
+    );
   });
 
   it("throws when SES send fails", async () => {

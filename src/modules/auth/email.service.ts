@@ -88,11 +88,11 @@ async function sendEmail(to: string, subject: string, html: string, text: string
         })
       );
     }
-    logger.info({ msg: "Email sent", to, subject, provider: env.EMAIL_PROVIDER });
   } catch (error) {
-    logger.error({ msg: "Failed to send email", error, to, subject });
+    logger.error({ err: error, msg: "Failed to send email", to, subject });
     throw new Error("Failed to send email");
   }
+  logger.info({ msg: "Email sent", to, subject, provider: env.EMAIL_PROVIDER });
 }
 
 export interface SendVerificationEmailParams {
