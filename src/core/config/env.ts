@@ -54,6 +54,8 @@ const envSchema = z
             .every((p) => ["supabase"].includes(p)),
         "STORAGE_PROVIDER must be one of: supabase"
       ),
+    EMAIL_PROVIDER: z.enum(["resend", "ses"]).default("ses"),
+    AWS_REGION: z.string().default("us-east-1"),
 
     // Gemini (required if AI_PROVIDER or TRANSCRIPTION_PROVIDER includes "gemini")
     GEMINI_API_KEY: z.string().optional(),
