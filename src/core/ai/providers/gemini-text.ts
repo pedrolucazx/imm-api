@@ -19,7 +19,6 @@ async function callOnce(
     generationConfig: {
       temperature: options?.temperature ?? 0.7,
       maxOutputTokens,
-      thinkingConfig: { thinkingBudget: 0 },
       ...(options?.responseSchema
         ? {
             responseMimeType: "application/json",
