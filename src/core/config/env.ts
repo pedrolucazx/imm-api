@@ -62,7 +62,7 @@ export const envSchema = z
     GEMINI_API_URL: z
       .url()
       .default(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
       ),
 
     // Supabase Storage (required if STORAGE_PROVIDER includes "supabase")

@@ -24,7 +24,6 @@ async function callOnce(
     generationConfig: {
       temperature: 0,
       maxOutputTokens,
-      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 
