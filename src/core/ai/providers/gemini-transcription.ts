@@ -4,6 +4,21 @@ import type { TranscriptionProvider } from "../transcription.interface.js";
 
 const TIMEOUT_MS = 30_000;
 
+// Gemini's inline audio input only accepts wav/mp3/aiff/aac/ogg/flac — webm and
+// the mp4 container MediaRecorder produces (Chrome/Firefox and Safari/iOS,
+// respectively) aren't in that list and get rejected with 400 INVALID_ARGUMENT.
+// Both containers ARE accepted as video mimeTypes though, and Gemini processes
+// the audio track from video input same as from audio input — relabeling here
+// avoids needing a real transcode step.
+const GEMINI_MIME_TYPE_MAP: Record<string, string> = {
+  "audio/webm": "video/webm",
+  "audio/mp4": "video/mp4",
+};
+
+function toGeminiMimeType(mimeType: string): string {
+  return GEMINI_MIME_TYPE_MAP[mimeType] ?? mimeType;
+}
+
 type GeminiResponse = {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
 };
@@ -18,7 +33,10 @@ async function callOnce(
   const requestBody = JSON.stringify({
     contents: [
       {
-        parts: [{ inlineData: { mimeType, data: audioBase64 } }, { text: prompt }],
+        parts: [
+          { inlineData: { mimeType: toGeminiMimeType(mimeType), data: audioBase64 } },
+          { text: prompt },
+        ],
       },
     ],
     generationConfig: {
