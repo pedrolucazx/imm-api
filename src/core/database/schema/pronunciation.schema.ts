@@ -29,7 +29,6 @@ export const pronunciationEntries = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    audioUrl: text("audio_url"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   },
   (table) => [

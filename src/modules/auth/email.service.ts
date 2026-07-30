@@ -1,8 +1,10 @@
 import { Resend } from "resend";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import { env } from "../../core/config/env.js";
 import { logger } from "../../core/config/logger.js";
 
 const resend = new Resend(env.RESEND_API_KEY);
+const ses = new SESClient({ region: env.AWS_REGION });
 
 const FROM_EMAIL = "Inside My Mind <no-reply@insidemymind.tech>";
 
@@ -67,12 +69,30 @@ function buildEmailHtml(contentHtml: string): string {
 }
 
 async function sendEmail(to: string, subject: string, html: string, text: string): Promise<void> {
-  const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html, text });
-  if (error) {
-    logger.error({ msg: "Failed to send email", error, to, subject });
+  try {
+    if (env.EMAIL_PROVIDER === "resend") {
+      const { error } = await resend.emails.send({ from: FROM_EMAIL, to, subject, html, text });
+      if (error) throw error;
+    } else {
+      await ses.send(
+        new SendEmailCommand({
+          Source: FROM_EMAIL,
+          Destination: { ToAddresses: [to] },
+          Message: {
+            Subject: { Charset: "UTF-8", Data: subject },
+            Body: {
+              Html: { Charset: "UTF-8", Data: html },
+              Text: { Charset: "UTF-8", Data: text },
+            },
+          },
+        })
+      );
+    }
+  } catch (error) {
+    logger.error({ err: error, msg: "Failed to send email", to, subject });
     throw new Error("Failed to send email");
   }
-  logger.info({ msg: "Email sent", to, subject });
+  logger.info({ msg: "Email sent", to, subject, provider: env.EMAIL_PROVIDER });
 }
 
 export interface SendVerificationEmailParams {

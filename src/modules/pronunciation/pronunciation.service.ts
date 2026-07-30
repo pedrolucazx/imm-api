@@ -1,7 +1,6 @@
 import type { PronunciationRepository } from "./pronunciation.repository.js";
 import type { HabitsRepository } from "../habits/habits.repository.js";
 import type { TranscriptionProvider } from "../../core/ai/transcription.interface.js";
-import type { StorageProvider } from "../../core/storage/storage.interface.js";
 import { getTodayUTCString } from "../../shared/utils/date.js";
 import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 import { SKILL_BUILDING_LOCALE_SET } from "../../shared/schemas/habit-mode.js";
@@ -76,21 +75,21 @@ function compareTexts(
 }
 
 function buildTranscriptionPrompt(targetSkill: string): string {
-  return `Transcribe the following audio exactly as spoken in ${targetSkill}. Return only the transcription text with no punctuation, no spelling corrections, and no commentary. Verbatim transcription only.`;
+  return `Transcribe the following audio exactly as spoken in ${targetSkill}.
+          Return only the transcription text with no punctuation, no spelling
+          corrections, and no commentary. Verbatim transcription only.`;
 }
 
 type PronunciationServiceDeps = {
   pronunciationRepo: PronunciationRepository;
   habitsRepo: HabitsRepository;
   transcription: TranscriptionProvider;
-  storage: StorageProvider;
 };
 
 export function createPronunciationService({
   pronunciationRepo,
   habitsRepo,
   transcription,
-  storage,
 }: PronunciationServiceDeps) {
   return {
     async analyze(
@@ -105,13 +104,11 @@ export function createPronunciationService({
       }
 
       const entryDate = input.entryDate ?? getTodayUTCString();
-
-      logger.info({ habitId: input.habitId, userId }, "[pronunciation] Downloading audio");
-      const { base64, mimeType } = await storage.downloadAudioAsBase64(input.audioUrl);
+      const base64 = input.audioBuffer.toString("base64");
 
       const prompt = buildTranscriptionPrompt(habit.targetSkill);
       logger.info({ habitId: input.habitId }, "[pronunciation] Calling transcription provider");
-      const transcriptionText = await transcription.transcribe(base64, mimeType, prompt, 500);
+      const transcriptionText = await transcription.transcribe(base64, input.mimeType, prompt, 500);
       logger.info(
         { habitId: input.habitId, transcriptionLength: transcriptionText.length },
         "[pronunciation] Transcription complete"
@@ -132,7 +129,6 @@ export function createPronunciationService({
         missedWords,
         correctWords,
         extraWords,
-        audioUrl: input.audioUrl,
       });
 
       return {
@@ -146,7 +142,6 @@ export function createPronunciationService({
         missedWords,
         correctWords,
         extraWords,
-        audioUrl: entry.audioUrl ?? null,
         createdAt: entry.createdAt,
       };
     },

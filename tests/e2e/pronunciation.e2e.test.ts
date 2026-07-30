@@ -7,22 +7,14 @@ import { pronunciationEntries } from "@/core/database/schema/pronunciation.schem
 import { setupTestDatabase, type TestDatabase } from "../integration/helpers/database.js";
 import { verifyEmailInDb } from "./helpers/db.js";
 
-const mockDownload = jest.fn();
 const mockTranscribe = jest.fn();
 
 jest.mock("@/core/storage/storage.factory.js", () => ({
   getStorageProvider: jest.fn(() => ({
-    downloadAudioAsBase64: mockDownload,
     createAvatarUploadUrl: jest
       .fn()
       .mockResolvedValue({ signedUrl: "url", publicUrl: "pub", path: "p" }),
-    createAudioUploadUrl: jest
-      .fn()
-      .mockResolvedValue({ signedUrl: "url", publicUrl: "pub", path: "p" }),
-    deleteAudioFile: jest.fn().mockResolvedValue(undefined),
     isAllowedAvatarContentType: jest.fn().mockReturnValue(true),
-    isAllowedAudioContentType: jest.fn().mockReturnValue(true),
-    allowedAudioContentTypes: ["audio/webm", "audio/mp4", "audio/ogg"],
   })),
 }));
 
@@ -32,9 +24,22 @@ jest.mock("@/core/ai/transcription.factory.js", () => ({
   })),
 }));
 
-const AUDIO_URL =
-  "https://fake.supabase.co/storage/v1/object/public/audio-entries/user-id/file.webm";
 const ORIGINAL_TEXT = "the quick brown fox jumps over the lazy dog";
+const AUDIO_BUFFER = Buffer.from([0x1a, 0x45, 0xdf, 0xa3]);
+
+jest.setTimeout(30000);
+
+function sendAnalyzeRequest(
+  app: FastifyInstance,
+  token: string | undefined,
+  fields: { habitId: string; originalText: string; entryDate?: string }
+) {
+  const req = request(app.server).post("/api/pronunciation/analyze");
+  if (token) req.set("Authorization", `Bearer ${token}`);
+  req.field("habitId", fields.habitId).field("originalText", fields.originalText);
+  if (fields.entryDate) req.field("entryDate", fields.entryDate);
+  return req.attach("audio", AUDIO_BUFFER, { filename: "test.webm", contentType: "audio/webm" });
+}
 
 async function registerAndLogin(
   app: FastifyInstance,
@@ -99,7 +104,6 @@ describe("Pronunciation API — E2E", () => {
   }, 120000);
 
   beforeEach(async () => {
-    mockDownload.mockResolvedValue({ base64: "fakebase64==", mimeType: "audio/webm" });
     mockTranscribe.mockResolvedValue(ORIGINAL_TEXT);
 
     const db = getDb();
@@ -122,27 +126,18 @@ describe("Pronunciation API — E2E", () => {
 
   describe("POST /api/pronunciation/analyze", () => {
     it("returns 401 without token", async () => {
-      await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .send({
-          habitId: "00000000-0000-0000-0000-000000000000",
-          audioUrl: AUDIO_URL,
-          originalText: ORIGINAL_TEXT,
-        })
-        .expect(401);
+      await sendAnalyzeRequest(app!, undefined, {
+        habitId: "00000000-0000-0000-0000-000000000000",
+        originalText: ORIGINAL_TEXT,
+      }).expect(401);
     });
 
     it("returns 404 when habitId does not exist", async () => {
       const { token } = await registerAndLogin(app!, "analyze-404");
-      const res = await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          habitId: "00000000-0000-0000-0000-000000000000",
-          audioUrl: AUDIO_URL,
-          originalText: ORIGINAL_TEXT,
-        })
-        .expect(404);
+      const res = await sendAnalyzeRequest(app!, token, {
+        habitId: "00000000-0000-0000-0000-000000000000",
+        originalText: ORIGINAL_TEXT,
+      }).expect(404);
 
       expect(res.body.error).toMatch(/not found/i);
     });
@@ -151,11 +146,10 @@ describe("Pronunciation API — E2E", () => {
       const { token } = await registerAndLogin(app!, "analyze-400");
       const habitId = await createFitnessHabit(app!, token);
 
-      const res = await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ habitId, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(400);
+      const res = await sendAnalyzeRequest(app!, token, {
+        habitId,
+        originalText: ORIGINAL_TEXT,
+      }).expect(400);
 
       expect(res.body.error).toMatch(/language/i);
     });
@@ -166,11 +160,10 @@ describe("Pronunciation API — E2E", () => {
 
       mockTranscribe.mockResolvedValue("the quick brown fox jumps over the lazy dog");
 
-      const res = await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ habitId, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(201);
+      const res = await sendAnalyzeRequest(app!, token, {
+        habitId,
+        originalText: ORIGINAL_TEXT,
+      }).expect(201);
 
       expect(res.body.id).toBeDefined();
       expect(res.body.transcription).toBe("the quick brown fox jumps over the lazy dog");
@@ -186,11 +179,7 @@ describe("Pronunciation API — E2E", () => {
 
       mockTranscribe.mockResolvedValue("the quick brown fox");
 
-      await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ habitId, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(201);
+      await sendAnalyzeRequest(app!, token, { habitId, originalText: ORIGINAL_TEXT }).expect(201);
 
       const db = getDb();
       const entries = await db.select().from(pronunciationEntries);
@@ -206,11 +195,10 @@ describe("Pronunciation API — E2E", () => {
       const { token: token2 } = await registerAndLogin(app!, "analyze-owner2");
       const habitIdOfUser1 = await createLanguageHabit(app!, token1);
 
-      await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token2}`)
-        .send({ habitId: habitIdOfUser1, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(404);
+      await sendAnalyzeRequest(app!, token2, {
+        habitId: habitIdOfUser1,
+        originalText: ORIGINAL_TEXT,
+      }).expect(404);
     });
   });
 
@@ -252,19 +240,11 @@ describe("Pronunciation API — E2E", () => {
 
       // First entry: misses "jumps", "over", "the", "lazy", "dog"
       mockTranscribe.mockResolvedValueOnce("the quick brown fox");
-      await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ habitId, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(201);
+      await sendAnalyzeRequest(app!, token, { habitId, originalText: ORIGINAL_TEXT }).expect(201);
 
       // Second entry: misses "jumps", "over", "lazy", "dog" — "jumps" missed twice
       mockTranscribe.mockResolvedValueOnce("the quick brown fox the");
-      await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ habitId, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(201);
+      await sendAnalyzeRequest(app!, token, { habitId, originalText: ORIGINAL_TEXT }).expect(201);
 
       const res = await request(app!.server)
         .get(`/api/pronunciation/word-cloud?habitId=${habitId}`)
@@ -322,11 +302,7 @@ describe("Pronunciation API — E2E", () => {
       const habitId = await createLanguageHabit(app!, token);
 
       mockTranscribe.mockResolvedValue("the quick brown fox");
-      await request(app!.server)
-        .post("/api/pronunciation/analyze")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ habitId, audioUrl: AUDIO_URL, originalText: ORIGINAL_TEXT })
-        .expect(201);
+      await sendAnalyzeRequest(app!, token, { habitId, originalText: ORIGINAL_TEXT }).expect(201);
 
       const res = await request(app!.server)
         .get("/api/analytics/summary")

@@ -38,10 +38,15 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install deps and package
+      - name: Install and test
+        run: |
+          npm ci
+          npm test
+
+      - name: Package
         run: |
           npm ci --omit=dev
-          zip -r function.zip .
+          zip -r function.zip . -x "*.test.mjs"
 
       # Credenciais AWS entram só agora — depois do npm ci, não antes.
       # npm ci roda scripts de terceiros; não faz sentido ter credencial

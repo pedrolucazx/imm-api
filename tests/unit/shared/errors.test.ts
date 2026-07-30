@@ -1,6 +1,7 @@
 import {
   AppError,
   ConflictError,
+  PayloadTooLargeError,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -34,6 +35,16 @@ describe("UnauthorizedError", () => {
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe("UNAUTHORIZED");
     expect(err.message).toBe("not allowed");
+    expect(err).toBeInstanceOf(AppError);
+  });
+});
+
+describe("PayloadTooLargeError", () => {
+  it("has statusCode 413 and code PAYLOAD_TOO_LARGE", () => {
+    const err = new PayloadTooLargeError("too large");
+    expect(err.statusCode).toBe(413);
+    expect(err.code).toBe("PAYLOAD_TOO_LARGE");
+    expect(err.message).toBe("too large");
     expect(err).toBeInstanceOf(AppError);
   });
 });

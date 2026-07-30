@@ -9,7 +9,7 @@ if (existsSync(envPath)) {
   config({ path: envPath, quiet: true });
 }
 
-const envSchema = z
+export const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "production", "test", "homolog"]).default("development"),
     PORT: z.coerce.number().default(3001),
@@ -54,6 +54,8 @@ const envSchema = z
             .every((p) => ["supabase"].includes(p)),
         "STORAGE_PROVIDER must be one of: supabase"
       ),
+    EMAIL_PROVIDER: z.enum(["resend", "ses"]).default("ses"),
+    AWS_REGION: z.string().default("us-east-1"),
 
     // Gemini (required if AI_PROVIDER or TRANSCRIPTION_PROVIDER includes "gemini")
     GEMINI_API_KEY: z.string().optional(),
@@ -67,12 +69,11 @@ const envSchema = z
     SUPABASE_URL: z.url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     SUPABASE_STORAGE_BUCKET: z.string().default("avatars"),
-    SUPABASE_AUDIO_BUCKET: z.string().default("audio-entries"),
 
     CORS_ORIGIN: z.string().default("http://localhost:3000"),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
     RATE_LIMIT_TIMEWINDOW: z.coerce.number().int().positive().default(60000),
-    RESEND_API_KEY: z.string().min(1),
+    RESEND_API_KEY: z.string().min(1).optional(),
     APP_URL: z.string().url().default("http://localhost:3000"),
   })
   .superRefine((data, ctx) => {
@@ -110,6 +111,14 @@ const envSchema = z
         code: "custom",
         message: "SUPABASE_SERVICE_ROLE_KEY is required when STORAGE_PROVIDER=supabase",
         path: ["SUPABASE_SERVICE_ROLE_KEY"],
+      });
+    }
+
+    if (data.EMAIL_PROVIDER === "resend" && !data.RESEND_API_KEY) {
+      ctx.addIssue({
+        code: "custom",
+        message: "RESEND_API_KEY is required when EMAIL_PROVIDER=resend",
+        path: ["RESEND_API_KEY"],
       });
     }
   });
