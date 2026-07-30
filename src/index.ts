@@ -1,5 +1,4 @@
-import { env } from "./core/config/env.js";
-import { buildApp } from "./app.js";
+import { loadSecretsFromSsm } from "./core/config/load-secrets.js";
 import { logger } from "./core/config/logger.js";
 import { setTimeout } from "node:timers";
 
@@ -7,6 +6,13 @@ const SHUTDOWN_TIMEOUT = 10_000;
 
 const start = async () => {
   try {
+    // Must resolve before env.js is imported below — it parses process.env
+    // synchronously at import time, so SSM-sourced secrets need to already
+    // be in process.env by then.
+    await loadSecretsFromSsm();
+    const { env } = await import("./core/config/env.js");
+    const { buildApp } = await import("./app.js");
+
     const fastify = await buildApp();
 
     const shutdown = async () => {
