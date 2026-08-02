@@ -1,6 +1,16 @@
+import { config } from "dotenv";
+import { existsSync } from "fs";
+import { resolve } from "path";
 import { loadSecretsFromSsm } from "./core/config/load-secrets.js";
 import { logger } from "./core/config/logger.js";
 import { setTimeout } from "node:timers";
+
+// Must run before loadSecretsFromSsm() reads process.env.NODE_ENV — that's
+// otherwise unset until env.ts's own dotenv call, which happens after.
+const envPath = resolve(process.cwd(), ".env");
+if (existsSync(envPath)) {
+  config({ path: envPath, quiet: true });
+}
 
 const SHUTDOWN_TIMEOUT = 10_000;
 
