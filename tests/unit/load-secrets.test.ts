@@ -42,6 +42,14 @@ describe("loadSecretsFromSsm", () => {
 
     await loadSecretsFromSsm();
 
+    expect(mockSsmSend).toHaveBeenCalledWith({
+      Names: [
+        "/imm/production/DATABASE_URL",
+        "/imm/production/GEMINI_API_KEY",
+        "/imm/production/JWT_SECRET",
+      ],
+      WithDecryption: true,
+    });
     expect(process.env.DATABASE_URL).toBe("postgresql://from-ssm");
     expect(process.env.GEMINI_API_KEY).toBe("gemini-key-from-ssm");
     expect(process.env.JWT_SECRET).toBe("jwt-secret-from-ssm");
