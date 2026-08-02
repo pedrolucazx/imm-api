@@ -14,6 +14,7 @@ describe("loadSecretsFromSsm", () => {
     mockSsmSend.mockReset();
     delete process.env.DATABASE_URL;
     delete process.env.GEMINI_API_KEY;
+    delete process.env.JWT_SECRET;
   });
 
   afterEach(() => {
@@ -35,13 +36,23 @@ describe("loadSecretsFromSsm", () => {
       Parameters: [
         { Name: "/imm/production/DATABASE_URL", Value: "postgresql://from-ssm" },
         { Name: "/imm/production/GEMINI_API_KEY", Value: "gemini-key-from-ssm" },
+        { Name: "/imm/production/JWT_SECRET", Value: "jwt-secret-from-ssm" },
       ],
     });
 
     await loadSecretsFromSsm();
 
+    expect(mockSsmSend).toHaveBeenCalledWith({
+      Names: [
+        "/imm/production/DATABASE_URL",
+        "/imm/production/GEMINI_API_KEY",
+        "/imm/production/JWT_SECRET",
+      ],
+      WithDecryption: true,
+    });
     expect(process.env.DATABASE_URL).toBe("postgresql://from-ssm");
     expect(process.env.GEMINI_API_KEY).toBe("gemini-key-from-ssm");
+    expect(process.env.JWT_SECRET).toBe("jwt-secret-from-ssm");
   });
 
   it("falls back to whatever is already in process.env when SSM fails", async () => {
