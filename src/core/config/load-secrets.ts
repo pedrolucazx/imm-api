@@ -1,7 +1,7 @@
 import { SSMClient, GetParametersCommand } from "@aws-sdk/client-ssm";
 import { logger } from "./logger.js";
 
-const SSM_SECRET_KEYS = ["DATABASE_URL", "GEMINI_API_KEY"] as const;
+const SSM_SECRET_KEYS = ["DATABASE_URL", "GEMINI_API_KEY", "JWT_SECRET"] as const;
 
 // Only in production — local/test keep reading straight from .env. Falls back
 // to whatever's already in process.env (from .env) on any SSM failure, so a
