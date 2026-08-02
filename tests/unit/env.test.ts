@@ -34,3 +34,15 @@ describe("envSchema — EMAIL_PROVIDER conditional validation", () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe("envSchema — Supabase is optional", () => {
+  it("boots without SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY", () => {
+    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ...envWithoutSupabase } = baseEnv;
+    void SUPABASE_URL;
+    void SUPABASE_SERVICE_ROLE_KEY;
+
+    const result = envSchema.safeParse(envWithoutSupabase);
+
+    expect(result.success).toBe(true);
+  });
+});

@@ -65,7 +65,10 @@ export const envSchema = z
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent"
       ),
 
-    // Supabase Storage (required if STORAGE_PROVIDER includes "supabase")
+    // Supabase Storage — optional. Avatar upload bypasses imm-api entirely
+    // now (frontend talks straight to the presigned-url Lambda); this route
+    // is kept only as a fallback to revert to Supabase later, so it must
+    // not force these secrets to exist just to boot.
     SUPABASE_URL: z.url().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     SUPABASE_STORAGE_BUCKET: z.string().default("avatars"),
@@ -91,26 +94,6 @@ export const envSchema = z
         message:
           "GEMINI_API_KEY is required when AI_PROVIDER or TRANSCRIPTION_PROVIDER includes gemini",
         path: ["GEMINI_API_KEY"],
-      });
-    }
-
-    const usesSupabase = data.STORAGE_PROVIDER.split(",")
-      .map((p) => p.trim())
-      .includes("supabase");
-
-    if (usesSupabase && !data.SUPABASE_URL) {
-      ctx.addIssue({
-        code: "custom",
-        message: "SUPABASE_URL is required when STORAGE_PROVIDER=supabase",
-        path: ["SUPABASE_URL"],
-      });
-    }
-
-    if (usesSupabase && !data.SUPABASE_SERVICE_ROLE_KEY) {
-      ctx.addIssue({
-        code: "custom",
-        message: "SUPABASE_SERVICE_ROLE_KEY is required when STORAGE_PROVIDER=supabase",
-        path: ["SUPABASE_SERVICE_ROLE_KEY"],
       });
     }
 
